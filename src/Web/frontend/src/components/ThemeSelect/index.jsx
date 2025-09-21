@@ -8,7 +8,7 @@ import Typography from '@mui/material/Typography';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness';
-import { useThemeMode } from '../../theme-context';
+import { useThemeMode } from '~/theme-context';
 
 const options = {
   light: { label: 'Light', icon: <LightModeIcon fontSize="small" /> },

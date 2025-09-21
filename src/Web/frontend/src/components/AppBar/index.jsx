@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Container } from "@mui/material";
-import ThemeSelect from "../../components/ThemeSelect/index";
+import ThemeSelect from "~/components/ThemeSelect/index";
 
 function AppBar() {
     return (
