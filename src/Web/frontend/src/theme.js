@@ -1,40 +1,18 @@
-import { createTheme } from "@mui/material/styles";
+import { createTheme } from '@mui/material/styles';
 
-export function getAppTheme(mode) {
+const baseCustom = {
+  appBarHeight: '58px',
+  boardBarHeight: '60px',
+};
+
+export function makeTheme(mode = 'light') {
   return createTheme({
-    cssVariables: {
-      colorSchemeSelector: 'data-theme'
+    palette: {
+      mode: mode,
+      primary: {
+        main: mode === 'light' ? '#1976d2' : '#90caf9'
+      }
     },
-    custom: {
-        appBarHeight: '48px',
-        boardBarHeight: '57px'
-    },
-    colorSchemes: {
-      light: {
-        palette: {
-          mode: 'light',
-          primary: { 
-            main: "#1976d2" 
-          },
-          background: {
-            default: '#ffffff',
-            paper: '#ffffff'
-          }
-        },
-      },
-      dark: {
-        palette: {
-          mode: 'dark',
-          primary: { 
-            main: "#121212" 
-          },
-          background: {
-            default: '#121212',
-            paper: '#1e1e1e'
-          }
-        },
-      },
-    },
-    defaultColorScheme: mode,
+    custom: baseCustom,
   });
 }
