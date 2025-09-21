@@ -8,11 +8,68 @@ const baseCustom = {
 export function makeTheme(mode = 'light') {
   return createTheme({
     palette: {
-      mode: mode,
-      primary: {
-        main: mode === 'light' ? '#1976d2' : '#90caf9'
-      }
+      mode,
+      ...(mode === 'light'
+        ? {
+          primary: {
+            light: '#63a4ff',
+            main: '#1976d2',
+            dark: '#004ba0',
+          },
+          background: { default: '#f5f5f5', paper: '#fff' },
+          text: { primary: '#000' },
+        }
+        : {
+          primary: {
+            light: '#bbdefb',
+            main: '#90caf9',
+            dark: '#42a5f5',
+          },
+          background: { default: '#121212', paper: '#1e1e1e' },
+          text: { primary: '#fff' },
+        }),
     },
     custom: baseCustom,
+    components: {
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            textTransform: 'none',
+          },
+        },
+      },
+      MuiInputLabel: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            color: theme.palette.primary.main,
+            fontSize: '0.875rem',
+          }),
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            color: theme.palette.primary.main,
+            fontSize: '0.875rem',
+            '.MuiOutlinedInput-notchedOutline': {
+              borderColor: theme.palette.primary.light,
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: theme.palette.primary.main,
+            },
+            '& fieldset': {
+              borderWidth: '1px !important',
+            },
+          }),
+        },
+      },
+      MuiSelect: {
+        styleOverrides: {
+          icon: ({ theme }) => ({
+            color: theme.palette.primary.main,
+          }),
+        },
+      },
+    },
   });
 }
