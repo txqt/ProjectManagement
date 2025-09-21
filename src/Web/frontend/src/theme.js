@@ -16,7 +16,7 @@ export function makeTheme(mode = 'light') {
             main: '#1976d2',
             dark: '#004ba0',
           },
-          background: { default: '#f5f5f5', paper: '#fff' },
+          background: { default: '#fff', paper: '#fff' },
           text: { primary: '#000' },
         }
         : {
