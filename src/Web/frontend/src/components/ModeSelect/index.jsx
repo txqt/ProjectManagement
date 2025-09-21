@@ -13,11 +13,23 @@ const options = {
 function ModeSelect({ label, value, onChange }) {
   return (
     <FormControl size="small" sx={{ minWidth: '120px' }}>
-      <InputLabel>{label}</InputLabel>
+      <InputLabel sx={{
+        color: 'white',
+        '&.Mui-focused': { color: 'white' }
+      }}>
+        {label}
+      </InputLabel>
       <Select
         value={value}
         label={label}
         onChange={(e) => onChange(e.target.value)}
+        sx={{
+          color: 'white',
+          '.MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
+          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
+          '.MuiSvgIcon-root': { color: 'white' },
+        }}
         renderValue={(selected) => {
           const option = options[selected];
           return (

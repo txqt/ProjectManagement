@@ -9,25 +9,6 @@ export function makeTheme(mode = 'light') {
   return createTheme({
     palette: {
       mode,
-      ...(mode === 'light'
-        ? {
-          primary: {
-            light: '#63a4ff',
-            main: '#1976d2',
-            dark: '#004ba0',
-          },
-          background: { default: '#fff', paper: '#fff' },
-          text: { primary: '#000' },
-        }
-        : {
-          primary: {
-            light: '#bbdefb',
-            main: '#90caf9',
-            dark: '#42a5f5',
-          },
-          background: { default: '#121212', paper: '#1e1e1e' },
-          text: { primary: '#fff' },
-        }),
     },
     custom: baseCustom,
     components: {
@@ -39,12 +20,12 @@ export function makeTheme(mode = 'light') {
               height: '8px'
             },
             '*::-webkit-scrollbar-thumb': {
-              backgroundColor: '#bdc3c7',
+              backgroundColor: '#dcdde1',
               borderRadius: '8px'
             }
             ,
             '*::-webkit-scrollbar-thumb:hover': {
-              backgroundColor: '#00b894'
+              backgroundColor: 'white'
             }
           }
         }
@@ -53,39 +34,32 @@ export function makeTheme(mode = 'light') {
         styleOverrides: {
           root: {
             textTransform: 'none',
+            borderWidth: '0.5px',
+            '&:hover': { borderWidth: '0.5px' }
           },
         },
       },
       MuiInputLabel: {
         styleOverrides: {
-          root: ({ theme }) => ({
-            color: theme.palette.primary.main,
+          root: {
             fontSize: '0.875rem',
-          }),
+          },
         },
       },
       MuiOutlinedInput: {
         styleOverrides: {
-          root: ({ theme }) => ({
-            color: theme.palette.primary.main,
+          root: {
             fontSize: '0.875rem',
-            '.MuiOutlinedInput-notchedOutline': {
-              borderColor: theme.palette.primary.light,
-            },
-            '&:hover .MuiOutlinedInput-notchedOutline': {
-              borderColor: theme.palette.primary.main,
-            },
             '& fieldset': {
+              borderWidth: '0.5px !important',
+            },
+            '&:hover fieldset': {
               borderWidth: '1px !important',
             },
-          }),
-        },
-      },
-      MuiSelect: {
-        styleOverrides: {
-          icon: ({ theme }) => ({
-            color: theme.palette.primary.main,
-          }),
+            '&.Mui-focused fieldset': {
+              borderWidth: '0.5px !important',
+            },
+          },
         },
       },
     },

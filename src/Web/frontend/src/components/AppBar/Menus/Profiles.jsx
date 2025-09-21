@@ -32,7 +32,7 @@ function Profiles() {
                     aria-haspopup="true"
                     aria-expanded={open ? 'true' : undefined}
                 >
-                    <Avatar sx={{ width: 34, height: 34 }}
+                    <Avatar sx={{ width: 36, height: 36 }}
                         alt='Avatar'
                         src="https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/avatar_vo_tri_a49436c5de.jpg"
                     />

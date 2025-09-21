@@ -4,7 +4,7 @@ function BoardContent() {
     return (
         <Box
             sx={(theme) => ({
-                backgroundColor: "primary.main",
+                bgcolor: (theme) => (theme.palette.mode === 'dark' ? '#34495e' : '#1976b2'),
                 width: "100%",
                 height: `calc(100vh - ${theme.custom.appBarHeight} - ${theme.custom.boardBarHeight})`,
                 display: "flex",
