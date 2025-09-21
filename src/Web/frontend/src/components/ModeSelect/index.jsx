@@ -12,7 +12,7 @@ const options = {
 
 function ModeSelect({ label, value, onChange }) {
   return (
-    <FormControl size="small">
+    <FormControl size="small" sx={{ minWidth: '120px' }}>
       <InputLabel>{label}</InputLabel>
       <Select
         value={value}
