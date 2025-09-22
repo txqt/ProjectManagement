@@ -3,6 +3,9 @@ import { createTheme } from '@mui/material/styles';
 const baseCustom = {
   appBarHeight: '58px',
   boardBarHeight: '60px',
+  get boardContentHeight() {
+    return `calc(100vh - ${this.appBarHeight} - ${this.boardBarHeight})`;
+  }
 };
 
 export function makeTheme(mode = 'light') {
@@ -25,7 +28,7 @@ export function makeTheme(mode = 'light') {
             }
             ,
             '*::-webkit-scrollbar-thumb:hover': {
-              backgroundColor: 'white'
+              backgroundColor: 'white',
             }
           }
         }
@@ -43,6 +46,13 @@ export function makeTheme(mode = 'light') {
         styleOverrides: {
           root: {
             fontSize: '0.875rem',
+          },
+        },
+      },
+      MuiTypography: {
+        styleOverrides: {
+          root: {
+            '&.MuiTypography-body1': { fontSize: '0.875rem' },
           },
         },
       },
