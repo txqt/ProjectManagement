@@ -16,6 +16,8 @@ import { ContentCopy, ContentPaste } from "@mui/icons-material";
 import DragHandleIcon from '@mui/icons-material/DragHandle';
 import ListCards from './ListCards/ListCards';
 import { sortByOrder } from '~/utils/sorts';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 function Column({ column }) {
     const [anchorEl, setAnchorEl] = useState(null);
@@ -27,17 +29,36 @@ function Column({ column }) {
         setAnchorEl(null);
     };
 
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+    } = useSortable({ id: column.id, data: { ...column } });
+
+    const dndKitColumnStyle = {
+        
+        transform: CSS.Translate.toString(transform),
+        transition,
+    };
+
     const orderedCards = sortByOrder(column?.cards, column?.cardOrderIds, 'id');
     return (
-        <Box sx={(theme) => ({
-            minWidth: '300px',
-            maxWidth: '300px',
-            bgcolor: theme.palette.mode === 'dark' ? '#333643' : '#ebecf0',
-            ml: 2,
-            borderRadius: '6px',
-            height: 'fit-content',
-            maxHeight: `calc(${theme.custom.boardContentHeight} - ${theme.spacing(5)})`
-        })}>
+        <Box
+            ref={setNodeRef} 
+            style={dndKitColumnStyle} 
+            {...attributes} 
+            {...listeners}
+            sx={(theme) => ({
+                minWidth: '300px',
+                maxWidth: '300px',
+                bgcolor: theme.palette.mode === 'dark' ? '#333643' : '#ebecf0',
+                ml: 2,
+                borderRadius: '6px',
+                height: 'fit-content',
+                maxHeight: `calc(${theme.custom.boardContentHeight} - ${theme.spacing(5)})`
+            })}>
             {/* Box Column Header */}
             <Box sx={(theme) => ({
                 height: theme.custom.columnHeaderHeight,
