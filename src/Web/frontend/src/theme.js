@@ -5,7 +5,9 @@ const baseCustom = {
   boardBarHeight: '60px',
   get boardContentHeight() {
     return `calc(100vh - ${this.appBarHeight} - ${this.boardBarHeight})`;
-  }
+  },
+  columnHeaderHeight: '50px',
+  columnFooterHeight: '56px'
 };
 
 export function makeTheme(mode = 'light') {

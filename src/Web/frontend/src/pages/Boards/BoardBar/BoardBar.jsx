@@ -34,10 +34,9 @@ function BoardBar() {
                 alignItems: "center",
                 justifyContent: 'space-between',
                 gap: 2,
+                paddingX: 2,
                 overflowX: 'auto',
                 bgcolor: (theme) => (theme.palette.mode === 'dark' ? '#34495e' : '#1976b2'),
-                borderBottom: '1px solid white',
-                paddingX: 2
             })}
         >
             <Box sx={{

@@ -1,6 +1,6 @@
 import { React, useState } from 'react'
 import { Box, Button, Typography, TextField, Badge, InputAdornment } from "@mui/material";
-import ModeSelect from "~/components/ModeSelect";
+import ModeSelect from "~/components/ModeSelect/ModeSelect";
 import useThemeMode from '~/hooks/useThemeMode';
 import AppsIcon from '@mui/icons-material/Apps';
 import TrelloIcon from '~/assets/trello.svg?react';
