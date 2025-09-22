@@ -2,7 +2,7 @@ import React from 'react'
 import { Box } from "@mui/material";
 import Card from './Card/Card';
 
-function ListCards() {
+function ListCards({ cards }) {
     return (
         <Box sx={{
             p: '0 5px',
@@ -27,9 +27,9 @@ function ListCards() {
             }
         }}
         >
-
-            <Card />
-            <Card temoraryHideMedia/>
+            {cards?.map((card) => {
+                return (<Card key={card.id} card={card} />)
+            })}
         </Box>
     )
 }

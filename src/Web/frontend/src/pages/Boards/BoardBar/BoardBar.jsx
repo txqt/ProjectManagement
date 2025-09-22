@@ -9,6 +9,7 @@ import Avatar from '@mui/material/Avatar';
 import AvatarGroup from '@mui/material/AvatarGroup';
 import Button from "@mui/material/Button";
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { capitalizeFirstLetter } from "~/utils/formatter";
 
 const MENU_STYPES = {
     color: 'white',
@@ -24,7 +25,8 @@ const MENU_STYPES = {
     }
 }
 
-function BoardBar() {
+function BoardBar({ board }) {
+
     return (
         <Box
             sx={(theme) => ({
@@ -47,13 +49,13 @@ function BoardBar() {
                 <Chip
                     sx={MENU_STYPES}
                     icon={<DashboardIcon />}
-                    label="txqt"
+                    label={board?.title}
                     clickable
                 />
                 <Chip
                     sx={MENU_STYPES}
                     icon={<VpnLockIcon />}
-                    label="Public/Private Workspace"
+                    label={capitalizeFirstLetter(board?.type)}
                     clickable
                 />
                 <Chip
@@ -103,7 +105,7 @@ function BoardBar() {
                             border: 'none',
                             color: 'white',
                             cursor: 'pointer',
-                            '&:first-of-type': {bgcolor: '#a4b0be'}
+                            '&:first-of-type': { bgcolor: '#a4b0be' }
                         }
                     }}
                 >
