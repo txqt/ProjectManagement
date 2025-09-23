@@ -15,7 +15,7 @@ import AddCardIcon from '@mui/icons-material/AddCard';
 import { ContentCopy, ContentPaste } from "@mui/icons-material";
 import DragHandleIcon from '@mui/icons-material/DragHandle';
 import ListCards from './ListCards/ListCards';
-import { sortByOrder } from '~/utils/sorts';
+import { mapOrder } from '~/utils/sorts';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -50,7 +50,7 @@ function Column({ column }) {
         opacity: isDragging ? 0.5 : undefined
     };
 
-    const orderedCards = sortByOrder(column?.cards, column?.cardOrderIds, 'id');
+    const orderedCards = mapOrder(column?.cards, column?.cardOrderIds, 'id');
     return (
         <div
             ref={setNodeRef}

@@ -1,4 +1,4 @@
-export function sortByOrder(items, order, key = "id") {
+export function mapOrder(items, order, key = "id") {
     if (!items || !order || !key) return [];
 
     const orderMap = new Map();

@@ -9,7 +9,7 @@ import Avatar from '@mui/material/Avatar';
 import AvatarGroup from '@mui/material/AvatarGroup';
 import Button from "@mui/material/Button";
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import { capitalizeFirstLetter } from "~/utils/formatter";
+import { capitalizeFirstLetter } from "~/utils/formatters";
 
 const MENU_STYPES = {
     color: 'white',
