@@ -7,6 +7,6 @@ import { ToastContainer } from 'react-toastify';
 createRoot(document.getElementById("root")).render(
     <ThemeModeProvider>
         <App />
-        <ToastContainer position='bottom-left' theme='colored' />
+        <ToastContainer />
     </ThemeModeProvider>
 );

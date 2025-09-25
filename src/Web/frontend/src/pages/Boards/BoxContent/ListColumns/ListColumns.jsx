@@ -1,33 +1,42 @@
-import CloseIcon from '@mui/icons-material/Close'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Column from './Column/Column'
-import NoteAddIcon from '@mui/icons-material/NoteAdd'
+import CloseIcon from '@mui/icons-material/Close';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Column from './Column/Column';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import {
   SortableContext,
   horizontalListSortingStrategy
-} from '@dnd-kit/sortable'
-import { useState } from 'react'
-import { TextField } from '@mui/material'
-import { toast } from 'react-toastify'
+} from '@dnd-kit/sortable';
+import { useState } from 'react';
+import { TextField } from '@mui/material';
+import { toast } from 'react-toastify';
 
-function ListColumns({ columns }) {
-  const [openNewColumnForm, setOpenNewColumnForm] = useState(false)
-  const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm)
+function ListColumns({ columns, createColumn, createCard, deleteColumn}) {
+  const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
+  const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm);
 
-  const [newColumnTitle, setNewColumnTitle] = useState('')
+  const [newColumnTitle, setNewColumnTitle] = useState('');
 
-  const addNewColumn = () => {
+  const addNewColumn = async () => {
     if (!newColumnTitle) {
-      toast.error('Please enter Column Title')
-      return
+      toast.error('Please enter Column Title');
+      return;
     }
-    // console.log('newColumnTitle:', newColumnTitle)
-    // Gọi API ở đây...
 
-    // Đóng trạng thái thêm Column mới & Clear Input
-    toggleOpenNewColumnForm()
-    setNewColumnTitle('')
+    try {
+
+      await createColumn({
+        title: newColumnTitle,
+        description: 'description',
+        type: 'public'
+      });
+
+      toggleOpenNewColumnForm();
+      setNewColumnTitle('');
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || 'Có lỗi xảy ra');
+    }
   }
 
   /**
@@ -52,7 +61,7 @@ function ListColumns({ columns }) {
         }}
       >
         {columns?.map((column) => (
-          <Column key={column.id} column={column} />
+          <Column key={column.id} column={column} createCard={createCard} deleteColumn={deleteColumn}/>
         ))}
 
         {/* Box Add new column CTA */}

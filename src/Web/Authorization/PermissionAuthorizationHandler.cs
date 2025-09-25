@@ -86,7 +86,7 @@ namespace ProjectManagement.Authorization
             AuthorizationHandlerContext context)
         {
             // Try to get board ID from route or resource
-            var boardId = GetBoardIdFromContext(context);
+            var boardId = await GetBoardIdFromContext(context);
             if (string.IsNullOrEmpty(boardId))
             {
                 return false;
@@ -117,14 +117,34 @@ namespace ProjectManagement.Authorization
             };
         }
 
-        private string? GetBoardIdFromContext(AuthorizationHandlerContext context)
+        private async Task<string?> GetBoardIdFromContext(AuthorizationHandlerContext context)
         {
-            // Try to get board ID from HTTP context route values
             if (context.Resource is HttpContext httpContext)
             {
+                // Thử lấy boardId từ route
                 if (httpContext.Request.RouteValues.TryGetValue("boardId", out var boardIdValue))
-                {
                     return boardIdValue?.ToString();
+
+                // Nếu chỉ có columnId
+                if (httpContext.Request.RouteValues.TryGetValue("columnId", out var columnIdValue))
+                {
+                    var columnId = columnIdValue?.ToString();
+                    if (!string.IsNullOrEmpty(columnId))
+                    {
+                        var column = await _context.Columns.FirstOrDefaultAsync(c => c.Id == columnId);
+                        return column?.BoardId;
+                    }
+                }
+
+                // Nếu chỉ có cardId
+                if (httpContext.Request.RouteValues.TryGetValue("cardId", out var cardIdValue))
+                {
+                    var cardId = cardIdValue?.ToString();
+                    if (!string.IsNullOrEmpty(cardId))
+                    {
+                        var card = await _context.Cards.FirstOrDefaultAsync(c => c.Id == cardId);
+                        return card?.BoardId;
+                    }
                 }
             }
 

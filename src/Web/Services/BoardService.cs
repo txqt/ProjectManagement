@@ -42,6 +42,7 @@ namespace ProjectManagement.Services
                     .ThenInclude(c => c.Cards)
                         .ThenInclude(card => card.Attachments)
                 .Where(b => b.OwnerId == userId || b.Members.Any(m => m.UserId == userId))
+                .AsSplitQuery()
                 .ToListAsync();
 
             return _mapper.Map<IEnumerable<BoardDto>>(boards);
@@ -64,6 +65,7 @@ namespace ProjectManagement.Services
                 .Include(b => b.Columns)
                     .ThenInclude(c => c.Cards)
                         .ThenInclude(card => card.Attachments)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(b => b.Id == boardId);
 
             if (board == null || !HasBoardAccess(board, userId))

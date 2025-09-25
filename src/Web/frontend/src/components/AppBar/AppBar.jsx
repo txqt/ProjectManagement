@@ -2,6 +2,7 @@ import { React, useState } from 'react'
 import { Box, Button, Typography, TextField, Badge, InputAdornment } from "@mui/material";
 import ModeSelect from "~/components/ModeSelect/ModeSelect";
 import useThemeMode from '~/hooks/useThemeMode';
+import { useAuth } from '~/hooks/useAuth';
 import AppsIcon from '@mui/icons-material/Apps';
 import TrelloIcon from '~/assets/trello.svg?react';
 import SvgIcon from '@mui/material/SvgIcon';
@@ -19,6 +20,7 @@ import CloseIcon from '@mui/icons-material/Close';
 
 function AppBar() {
     const { themeMode, setThemeMode } = useThemeMode();
+    const { user } = useAuth();
     const [searchValue, setSearchValue] = useState('');
 
     return (
@@ -108,20 +110,18 @@ function AppBar() {
                     }}
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
-                    InputProps={{
+                    slotProps={{
                         startAdornment: (
                             <InputAdornment position='start'>
                                 <SearchIcon sx={{ color: 'white' }} />
                             </InputAdornment>
                         ),
                         endAdornment: (
-                            <InputAdornment position='end'>
-                                <CloseIcon
-                                    fontSize='small'
-                                    sx={{ color: searchValue ? 'white' : 'transparent', cursor: 'pointer' }}
-                                    onClick={() => setSearchValue('')}
-                                />
-                            </InputAdornment>
+                            <CloseIcon
+                                fontSize='small'
+                                sx={{ color: searchValue ? 'white' : 'transparent', cursor: 'pointer' }}
+                                onClick={() => setSearchValue('')}
+                            />
                         )
                     }}
                 />
@@ -138,7 +138,7 @@ function AppBar() {
                     <HelpOutlineIcon />
                 </Tooltip>
 
-                <Profiles />
+                <Profiles user={user} />
             </Box>
         </Box>
     )

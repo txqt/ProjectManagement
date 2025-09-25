@@ -1,4 +1,5 @@
 ﻿using ProjectManagement.Models.DTOs.Attachment;
+using ProjectManagement.Models.DTOs.Column;
 using ProjectManagement.Models.DTOs.Comment;
 
 namespace ProjectManagement.Models.DTOs.Board
@@ -14,6 +15,7 @@ namespace ProjectManagement.Models.DTOs.Board
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
+        public List<ColumnDto> Columns { get; set; } = new List<ColumnDto>();
         public List<UserDto> Members { get; set; } = new List<UserDto>();
         public List<CommentDto> Comments { get; set; } = new List<CommentDto>();
         public List<AttachmentDto> Attachments { get; set; } = new List<AttachmentDto>();

@@ -1,10 +1,29 @@
-import { Box, Container } from "@mui/material";
-import AppBar from "~/components/AppBar/AppBar"
+import { Box, Container, CircularProgress, Alert } from "@mui/material";
+import { useParams } from 'react-router-dom';
+import AppBar from "~/components/AppBar/AppBar";
 import BoardBar from "./BoardBar/BoardBar";
 import BoardContent from "./BoxContent/BoardContent";
-import { mockData } from "~/apis/mock-data";
+import { useBoard } from "~/hooks/useBoard";
 
 function Board() {
+    const { boardId } = useParams();
+    const { board, error, createColumn, createCard, deleteColumn } = useBoard(boardId);
+
+    if (error) {
+        return (
+            <Container
+                disableGutters
+                maxWidth={false}
+                sx={{ height: "100vh", p: 2 }}
+            >
+                <AppBar />
+                <Alert severity="error">
+                    Error loading board: {error}
+                </Alert>
+            </Container>
+        );
+    }
+
     return (
         <Container
             disableGutters
@@ -17,13 +36,12 @@ function Board() {
             <AppBar />
 
             {/* BoardBar */}
-            <BoardBar board={mockData?.board}/>
+            <BoardBar board={board} />
 
             {/* Board Content */}
-            <BoardContent board={mockData?.board}/>
-            
+            <BoardContent board={board} createColumn={createColumn} createCard={createCard} deleteColumn={deleteColumn}/>
         </Container>
     );
 }
 
-export default Board
+export default Board;

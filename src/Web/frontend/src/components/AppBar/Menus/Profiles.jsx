@@ -1,6 +1,5 @@
 import React from 'react'
 import Box from "@mui/material/Box"
-import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
@@ -11,16 +10,26 @@ import IconButton from '@mui/material/IconButton';
 import PersonAdd from '@mui/icons-material/PersonAdd';
 import Settings from '@mui/icons-material/Settings';
 import Logout from '@mui/icons-material/Logout';
+import { useAuth } from '~/hooks/useAuth';
 
-function Profiles() {
+function Profiles({ user }) {
     const [anchorEl, setAnchorEl] = React.useState(null);
     const open = Boolean(anchorEl);
+    const { logout } = useAuth();
+    
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     };
+    
     const handleClose = () => {
         setAnchorEl(null);
     };
+
+    const handleLogout = () => {
+        logout();
+        handleClose();
+    };
+    
     return (
         <Box>
             <Tooltip title="Account settings">
@@ -33,8 +42,8 @@ function Profiles() {
                     aria-expanded={open ? 'true' : undefined}
                 >
                     <Avatar sx={{ width: 36, height: 36 }}
-                        alt='Avatar'
-                        src="https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/avatar_vo_tri_a49436c5de.jpg"
+                        alt={user?.userName || 'User'}
+                        src={user?.avatar || "https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/avatar_vo_tri_a49436c5de.jpg"}
                     />
                 </IconButton>
             </Tooltip>
@@ -49,26 +58,26 @@ function Profiles() {
                     },
                 }}
             >
-                <MenuItem>
+                <MenuItem onClick={handleClose}>
                     <Avatar sx={{width: '28px', height: '28px', mr: 2}}/> Profile
                 </MenuItem>
-                <MenuItem>
+                <MenuItem onClick={handleClose}>
                     <Avatar sx={{width: '28px', height: '28px', mr: 2}}/> My account
                 </MenuItem>
                 <Divider />
-                <MenuItem>
+                <MenuItem onClick={handleClose}>
                     <ListItemIcon>
                         <PersonAdd fontSize="small" />
                     </ListItemIcon>
                     Add another account
                 </MenuItem>
-                <MenuItem>
+                <MenuItem onClick={handleClose}>
                     <ListItemIcon>
                         <Settings fontSize="small" />
                     </ListItemIcon>
                     Settings
                 </MenuItem>
-                <MenuItem>
+                <MenuItem onClick={handleLogout}>
                     <ListItemIcon>
                         <Logout fontSize="small" />
                     </ListItemIcon>

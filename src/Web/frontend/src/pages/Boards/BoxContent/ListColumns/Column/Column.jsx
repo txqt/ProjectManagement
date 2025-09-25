@@ -1,32 +1,32 @@
-import { toast } from 'react-toastify'
-import 'react-toastify/dist/ReactToastify.css'
-import { TextField } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
-import DragHandleIcon from '@mui/icons-material/DragHandle'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import AddCardIcon from '@mui/icons-material/AddCard'
-import Tooltip from '@mui/material/Tooltip'
-import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'
-import Divider from '@mui/material/Divider'
-import Button from '@mui/material/Button'
-import ListItemText from '@mui/material/ListItemText'
-import ListItemIcon from '@mui/material/ListItemIcon'
-import ContentCut from '@mui/icons-material/ContentCut'
-import ContentCopy from '@mui/icons-material/ContentCopy'
-import ContentPaste from '@mui/icons-material/ContentPaste'
-import Cloud from '@mui/icons-material/Cloud'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { useState } from 'react'
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
-import ListCards from './ListCards/ListCards'
-import { mapOrder } from '~/utils/sorts'
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { TextField } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import DragHandleIcon from '@mui/icons-material/DragHandle';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import AddCardIcon from '@mui/icons-material/AddCard';
+import Tooltip from '@mui/material/Tooltip';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
+import Button from '@mui/material/Button';
+import ListItemText from '@mui/material/ListItemText';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ContentCut from '@mui/icons-material/ContentCut';
+import ContentCopy from '@mui/icons-material/ContentCopy';
+import ContentPaste from '@mui/icons-material/ContentPaste';
+import Cloud from '@mui/icons-material/Cloud';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { useState } from 'react';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import ListCards from './ListCards/ListCards';
+import { mapOrder } from '~/utils/sorts';
 
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
-function Column({ column }) {
+function Column({ column, createCard, deleteColumn }) {
   const {
     attributes,
     listeners,
@@ -64,17 +64,25 @@ function Column({ column }) {
 
   const [newCardTitle, setNewCardTitle] = useState('')
 
-  const addNewCard = () => {
+  const addNewCard = async () => {
     if (!newCardTitle) {
       toast.error('Please enter Card Title', { position: 'bottom-right' })
-      return
+      return;
     }
-    // console.log('newCardTitle:', newCardTitle)
-    // Gọi API ở đây...
+    console.log('newCardTitle:', newCardTitle)
+    try {
+      await createCard(column.id, {
+        title: newCardTitle,
+        description: 'Description',
+        cover: 'Cover'
+      });
 
-    // Đóng trạng thái thêm Card mới & Clear Input
-    toggleOpenNewCardForm()
-    setNewCardTitle('')
+      // Đóng trạng thái thêm Card mới & Clear Input
+      toggleOpenNewCardForm();
+      setNewCardTitle('');
+    } catch {
+      //
+    }
   }
 
   // Phải bọc div ở đây vì vấn đề chiều cao của column khi kéo thả sẽ có bug kiểu kiểu flickering (video 32)
@@ -172,24 +180,24 @@ function Column({ column }) {
                 </Typography>
               </MenuItem>
               <Divider />
-              <MenuItem>
+              {/* <MenuItem>
                 <ListItemIcon>
                   <DeleteForeverIcon fontSize='small' />
                 </ListItemIcon>
                 <ListItemText>Remove Archive this column</ListItemText>
-              </MenuItem>
+              </MenuItem> */}
               <MenuItem>
                 <ListItemIcon>
-                  <Cloud fontSize='small' />
+                  <DeleteForeverIcon fontSize='small' />
                 </ListItemIcon>
-                <ListItemText>Archive this column</ListItemText>
+                <ListItemText onClick={() => deleteColumn(column.id)}>Delete this column (cannot undo this action)</ListItemText>
               </MenuItem>
             </Menu>
           </Box>
         </Box>
 
         {/* List Cards */}
-        <ListCards cards={orderedCards} />
+        <ListCards cards={orderedCards} createCard={createCard}/>
 
         {/* Box Column Footer */}
         <Box

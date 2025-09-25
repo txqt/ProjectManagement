@@ -15,13 +15,13 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0" />
     <!-- Authentication & Authorization -->
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
     <!-- SignalR -->
     <PackageVersion Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
     <!-- Utilities -->
-    <PackageVersion Include="AutoMapper" Version="15.0.1" />
-    <PackageVersion Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageVersion Include="AutoMapper" Version="12.0.0" />
+    <PackageVersion Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
     <PackageVersion Include="FluentValidation" Version="11.8.0" />
     <PackageVersion Include="FluentValidation.AspNetCore" Version="11.3.0" />
     <!-- Documentation -->
