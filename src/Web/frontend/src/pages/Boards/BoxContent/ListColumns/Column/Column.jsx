@@ -74,7 +74,6 @@ function Column({ column, createCard, deleteColumn }) {
       await createCard(column.id, {
         title: newCardTitle,
         description: 'Description',
-        cover: 'Cover'
       });
 
       // Đóng trạng thái thêm Card mới & Clear Input
@@ -197,7 +196,7 @@ function Column({ column, createCard, deleteColumn }) {
         </Box>
 
         {/* List Cards */}
-        <ListCards cards={orderedCards} createCard={createCard}/>
+        <ListCards cards={orderedCards}/>
 
         {/* Box Column Footer */}
         <Box

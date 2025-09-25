@@ -6,6 +6,7 @@ using ProjectManagement.Authorization;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Board;
 using ProjectManagement.Models.DTOs.Card;
+using ProjectManagement.Services;
 using ProjectManagement.Services.Interfaces;
 
 namespace ProjectManagement.Controllers
@@ -90,6 +91,17 @@ namespace ProjectManagement.Controllers
                 return Unauthorized();
 
             var success = await _cardService.MoveCardAsync(cardId, moveCardDto, userId);
+            if (!success)
+                return BadRequest();
+
+            return NoContent();
+        }
+
+        [HttpPut("reorder")]
+        [HasPermission(Permissions.Cards.Reorder)]
+        public async Task<ActionResult> ReorderCards(string columnId, [FromBody] List<string> cardOrderIds)
+        {
+            var success = await _cardService.ReorderCardsAsync(columnId, cardOrderIds);
             if (!success)
                 return BadRequest();
 

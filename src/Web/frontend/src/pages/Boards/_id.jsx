@@ -7,7 +7,7 @@ import { useBoard } from "~/hooks/useBoard";
 
 function Board() {
     const { boardId } = useParams();
-    const { board, error, createColumn, createCard, deleteColumn } = useBoard(boardId);
+    const { board, error, createColumn, createCard, deleteColumn, reorderColumns, reorderCards, moveCard } = useBoard(boardId);
 
     if (error) {
         return (
@@ -39,7 +39,14 @@ function Board() {
             <BoardBar board={board} />
 
             {/* Board Content */}
-            <BoardContent board={board} createColumn={createColumn} createCard={createCard} deleteColumn={deleteColumn}/>
+            <BoardContent
+                board={board}
+                createColumn={createColumn}
+                createCard={createCard}
+                deleteColumn={deleteColumn}
+                reorderColumns={reorderColumns}
+                reorderCards={reorderCards}
+                moveCard={moveCard} />
         </Container>
     );
 }

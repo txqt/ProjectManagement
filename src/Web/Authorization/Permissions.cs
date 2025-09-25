@@ -33,6 +33,7 @@
             public const string Assign = "cards.assign";
             public const string Comment = "cards.comment";
             public const string Attach = "cards.attach";
+            public const string Reorder = "cards.reorder";
         }
 
         // Admin permissions

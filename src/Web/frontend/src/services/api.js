@@ -85,8 +85,8 @@ class ApiService {
     return this.request(`/boards/${boardId}`);
   }
 
-  async createBoard(boardId, boardData) {
-    return this.request(`/boards/${boardId}/columns`, {
+  async createBoard(boardData) {
+    return this.request(`/boards`, {
       method: 'POST',
       body: JSON.stringify(boardData),
     });
@@ -154,6 +154,14 @@ class ApiService {
     return this.request(`/boards/${boardId}/columns/reorder`, {
       method: 'PUT',
       body: JSON.stringify(columnOrderIds),
+    });
+  }
+
+  
+  async reorderCards(columnId, cardOrderIds) {
+    return this.request(`/columns/${columnId}/cards/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify(cardOrderIds),
     });
   }
 

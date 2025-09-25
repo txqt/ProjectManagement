@@ -38,9 +38,6 @@ namespace ProjectManagement.Services
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
-            if (card == null || !HasBoardAccess(card.Board, userId))
-                return null;
-
             return _mapper.Map<CardDto>(card);
         }
 
@@ -51,8 +48,8 @@ namespace ProjectManagement.Services
                     .ThenInclude(b => b.Members)
                 .FirstOrDefaultAsync(c => c.Id == columnId);
 
-            if (column == null || !CanEditBoard(column.Board, userId))
-                throw new UnauthorizedAccessException("Access denied");
+            if (column == null)
+                return null;
 
             var card = _mapper.Map<Card>(createCardDto);
             card.Id = Guid.NewGuid().ToString();
@@ -81,7 +78,7 @@ namespace ProjectManagement.Services
                 .Include(c => c.Column)
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
-            if (card == null || !CanEditBoard(card.Board, userId))
+            if (card == null)
                 return null;
 
             // Handle column change
@@ -119,7 +116,7 @@ namespace ProjectManagement.Services
                 .Include(c => c.Column)
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
-            if (card == null || !CanEditBoard(card.Board, userId))
+            if (card == null)
                 return false;
 
             // Remove card from column's order
@@ -141,7 +138,7 @@ namespace ProjectManagement.Services
                 .Include(c => c.Column)
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
-            if (card == null || !CanEditBoard(card.Board, userId))
+            if (card == null)
                 return false;
 
             var destinationColumn = await _context.Columns
@@ -169,29 +166,24 @@ namespace ProjectManagement.Services
             return true;
         }
 
+        public async Task<bool> ReorderCardsAsync(string columnId, List<string> cardOrderIds)
+        {
+            var column = await _context.Columns
+                .Include(x=>x.Board)
+                .FirstOrDefaultAsync(b => b.Id == columnId);
+
+            column.CardOrderIds = cardOrderIds;
+            column.LastModified = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> AssignMemberAsync(string cardId, string memberEmail, string userId)
         {
-            var card = await _context.Cards
-                .Include(c => c.Board)
-                    .ThenInclude(b => b.Members)
-                .Include(c => c.Members)
-                .FirstOrDefaultAsync(c => c.Id == cardId);
-
-            if (card == null || !CanEditBoard(card.Board, userId))
-                return false;
 
             var user = await _userManager.FindByEmailAsync(memberEmail);
             if (user == null)
-                return false;
-
-            // Check if user is a board member
-            var isBoardMember = card.Board.OwnerId == user.Id ||
-                               card.Board.Members.Any(m => m.UserId == user.Id);
-            if (!isBoardMember)
-                return false;
-
-            // Check if already assigned
-            if (card.Members.Any(cm => cm.UserId == user.Id))
                 return false;
 
             var cardMember = new CardMember
@@ -210,14 +202,6 @@ namespace ProjectManagement.Services
 
         public async Task<bool> UnassignMemberAsync(string cardId, string memberId, string userId)
         {
-            var card = await _context.Cards
-                .Include(c => c.Board)
-                    .ThenInclude(b => b.Members)
-                .FirstOrDefaultAsync(c => c.Id == cardId);
-
-            if (card == null || !CanEditBoard(card.Board, userId))
-                return false;
-
             var cardMember = await _context.CardMembers
                 .FirstOrDefaultAsync(cm => cm.Id == memberId && cm.CardId == cardId);
 
@@ -228,19 +212,6 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
             return true;
-        }
-
-        private bool HasBoardAccess(Board board, string userId)
-        {
-            return board.OwnerId == userId ||
-                   board.Members.Any(m => m.UserId == userId) ||
-                   board.Type == "public";
-        }
-
-        private bool CanEditBoard(Board board, string userId)
-        {
-            return board.OwnerId == userId ||
-                   board.Members.Any(m => m.UserId == userId && (m.Role == "admin" || m.Role == "member"));
         }
     }
 }
