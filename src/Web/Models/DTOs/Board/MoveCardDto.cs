@@ -5,8 +5,11 @@ namespace ProjectManagement.Models.DTOs.Board
     public class MoveCardDto
     {
         [Required]
-        public string DestinationColumnId { get; set; } = string.Empty;
+        public string FromColumnId { get; set; } = string.Empty;
 
-        public int Position { get; set; }
+        [Required]
+        public string ToColumnId { get; set; } = string.Empty;
+
+        public int NewIndex { get; set; }
     }
 }

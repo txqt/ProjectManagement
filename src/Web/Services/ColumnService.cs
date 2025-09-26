@@ -84,7 +84,7 @@ namespace ProjectManagement.Services
             return await GetColumnAsync(columnId, userId);
         }
 
-        public async Task<bool> DeleteColumnAsync(string columnId, string userId)
+        public async Task<ColumnDto> DeleteColumnAsync(string columnId, string userId)
         {
             var column = await _context.Columns
                 .Include(c => c.Board)
@@ -92,7 +92,7 @@ namespace ProjectManagement.Services
                 .FirstOrDefaultAsync(c => c.Id == columnId);
 
             if (column == null || !CanEditBoard(column.Board, userId))
-                return false;
+                return null;
 
             // Remove column from board's order
             var board = column.Board;
@@ -102,7 +102,9 @@ namespace ProjectManagement.Services
             _context.Columns.Remove(column);
             await _context.SaveChangesAsync();
 
-            return true;
+            var columnDto = _mapper.Map<ColumnDto>(column);
+
+            return columnDto;
         }
 
         public async Task<bool> ReorderColumnsAsync(string boardId, List<string> columnOrderIds, string userId)

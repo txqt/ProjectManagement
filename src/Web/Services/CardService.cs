@@ -108,7 +108,7 @@ namespace ProjectManagement.Services
             return await GetCardAsync(cardId, userId);
         }
 
-        public async Task<bool> DeleteCardAsync(string cardId, string userId)
+        public async Task<CardDto> DeleteCardAsync(string cardId, string userId)
         {
             var card = await _context.Cards
                 .Include(c => c.Board)
@@ -117,7 +117,7 @@ namespace ProjectManagement.Services
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
             if (card == null)
-                return false;
+                return null;
 
             // Remove card from column's order
             var column = card.Column;
@@ -127,10 +127,12 @@ namespace ProjectManagement.Services
             _context.Cards.Remove(card);
             await _context.SaveChangesAsync();
 
-            return true;
+            var dto = _mapper.Map<CardDto>(card);
+
+            return dto;
         }
 
-        public async Task<bool> MoveCardAsync(string cardId, MoveCardDto moveCardDto, string userId)
+        public async Task<CardDto> MoveCardAsync(string cardId, MoveCardDto moveCardDto, string userId)
         {
             var card = await _context.Cards
                 .Include(c => c.Board)
@@ -139,13 +141,13 @@ namespace ProjectManagement.Services
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
             if (card == null)
-                return false;
+                return null;
 
             var destinationColumn = await _context.Columns
-                .FirstOrDefaultAsync(c => c.Id == moveCardDto.DestinationColumnId);
+                .FirstOrDefaultAsync(c => c.Id == moveCardDto.ToColumnId);
 
             if (destinationColumn == null || destinationColumn.BoardId != card.BoardId)
-                return false;
+                return null;
 
             var sourceColumn = card.Column;
 
@@ -154,19 +156,21 @@ namespace ProjectManagement.Services
             sourceColumn.LastModified = DateTime.UtcNow;
 
             // Add to destination column at specified position
-            var position = Math.Max(0, Math.Min(moveCardDto.Position, destinationColumn.CardOrderIds.Count));
+            var position = Math.Max(0, Math.Min(moveCardDto.NewIndex, destinationColumn.CardOrderIds.Count));
             destinationColumn.CardOrderIds.Insert(position, cardId);
             destinationColumn.LastModified = DateTime.UtcNow;
 
             // Update card's column
-            card.ColumnId = moveCardDto.DestinationColumnId;
+            card.ColumnId = moveCardDto.ToColumnId;
             card.LastModified = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return true;
+
+            var dto = _mapper.Map<CardDto>(card);
+            return dto;
         }
 
-        public async Task<bool> ReorderCardsAsync(string columnId, List<string> cardOrderIds)
+        public async Task<CardsReorderedResponse> ReorderCardsAsync(string columnId, List<string> cardOrderIds)
         {
             var column = await _context.Columns
                 .Include(x=>x.Board)
@@ -176,7 +180,13 @@ namespace ProjectManagement.Services
             column.LastModified = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return true;
+            return new CardsReorderedResponse()
+            {
+                BoardId = column.BoardId,
+                ColumnId = columnId,
+                CardOrderIds = cardOrderIds,
+                Timestamp = DateTime.UtcNow
+            };
         }
 
         public async Task<bool> AssignMemberAsync(string cardId, string memberEmail, string userId)

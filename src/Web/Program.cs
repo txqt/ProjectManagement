@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using ProjectManagement.Authorization;
+using ProjectManagement.Hubs;
 using ProjectManagement.Mappings;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Services;
@@ -47,6 +48,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
+builder.Services.AddSignalR();
+
 // Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key not found"));
@@ -72,6 +75,20 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ClockSkew = TimeSpan.Zero
     };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/board"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // Add Authorization with custom permission system
@@ -87,6 +104,8 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IBoardService, BoardService>();
 builder.Services.AddScoped<IColumnService, ColumnService>();
 builder.Services.AddScoped<ICardService, CardService>();
+builder.Services.AddSingleton<BoardPresenceTracker>();
+builder.Services.AddScoped<IBoardNotificationService, BoardNotificationService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -150,6 +169,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapHub<BoardHub>("/hubs/board");
+
 // Initialize database and roles
 await InitializeDatabase(app);
 
@@ -174,7 +195,7 @@ static async Task InitializeDatabase(WebApplication app)
         await CreateRoles(roleManager);
 
         // Create admin user
-        await CreateAdminUser(userManager);
+        await CreateUser(userManager);
     }
     catch (Exception ex)
     {
@@ -226,7 +247,7 @@ static async Task CreateRoles(RoleManager<IdentityRole> roleManager)
     }
 }
 
-static async Task CreateAdminUser(UserManager<ApplicationUser> userManager)
+static async Task CreateUser(UserManager<ApplicationUser> userManager)
 {
     const string adminEmail = "admin@trello.com";
     const string adminPassword = "Admin123!";
@@ -247,6 +268,28 @@ static async Task CreateAdminUser(UserManager<ApplicationUser> userManager)
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(adminUser, "Admin");
+        }
+    }
+
+    const string userEmail = "user@trello.com";
+    const string userPassword = "Admin123!";
+
+    if (await userManager.FindByEmailAsync(userEmail) == null)
+    {
+        var user = new ApplicationUser
+        {
+            UserName = "user",
+            Email = userEmail,
+            EmailConfirmed = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var result = await userManager.CreateAsync(user, userPassword);
+
+        if (result.Succeeded)
+        {
+            await userManager.AddToRoleAsync(user, "User");
         }
     }
 }

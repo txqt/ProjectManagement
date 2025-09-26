@@ -18,11 +18,13 @@ namespace ProjectManagement.Controllers
     {
         private readonly ICardService _cardService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IBoardNotificationService _boardNotificationService;
 
-        public CardsController(ICardService cardService, UserManager<ApplicationUser> userManager)
+        public CardsController(ICardService cardService, UserManager<ApplicationUser> userManager, IBoardNotificationService boardNotificationService)
         {
             _cardService = cardService;
             _userManager = userManager;
+            _boardNotificationService = boardNotificationService;
         }
 
         [HttpGet("{cardId}")]
@@ -49,6 +51,10 @@ namespace ProjectManagement.Controllers
                 return Unauthorized();
 
             var card = await _cardService.CreateCardAsync(columnId, createCardDto, userId);
+            if (card == null)
+                return NotFound();
+
+            await _boardNotificationService.BroadcastCardCreated(card.BoardId, card.ColumnId, card, userId);
             return CreatedAtAction(nameof(GetCard), new { columnId, cardId = card.Id }, card);
         }
 
@@ -64,6 +70,8 @@ namespace ProjectManagement.Controllers
             if (card == null)
                 return NotFound();
 
+            await _boardNotificationService.BroadcastCardUpdated(card.BoardId, card.ColumnId, card, userId);
+
             return Ok(card);
         }
 
@@ -75,9 +83,11 @@ namespace ProjectManagement.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            var success = await _cardService.DeleteCardAsync(cardId, userId);
-            if (!success)
+            var result = await _cardService.DeleteCardAsync(cardId, userId);
+            if (result == null)
                 return NotFound();
+
+            await _boardNotificationService.BroadcastCardDeleted(result.BoardId, result.ColumnId, cardId, userId);
 
             return NoContent();
         }
@@ -90,9 +100,11 @@ namespace ProjectManagement.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            var success = await _cardService.MoveCardAsync(cardId, moveCardDto, userId);
-            if (!success)
+            var result = await _cardService.MoveCardAsync(cardId, moveCardDto, userId);
+            if (result == null)
                 return BadRequest();
+
+            await _boardNotificationService.BroadcastCardMoved(result.BoardId, moveCardDto.FromColumnId, moveCardDto.ToColumnId, cardId, moveCardDto.NewIndex, userId);
 
             return NoContent();
         }
@@ -101,9 +113,15 @@ namespace ProjectManagement.Controllers
         [HasPermission(Permissions.Cards.Reorder)]
         public async Task<ActionResult> ReorderCards(string columnId, [FromBody] List<string> cardOrderIds)
         {
-            var success = await _cardService.ReorderCardsAsync(columnId, cardOrderIds);
-            if (!success)
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var result = await _cardService.ReorderCardsAsync(columnId, cardOrderIds);
+            if (result == null)
                 return BadRequest();
+
+            await _boardNotificationService.BroadcastCardsReordered(result.BoardId, result.ColumnId, result.CardOrderIds, userId);
 
             return NoContent();
         }

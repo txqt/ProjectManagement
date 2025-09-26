@@ -1,17 +1,18 @@
-import CommentIcon from '@mui/icons-material/Comment'
-import AttachmentIcon from '@mui/icons-material/Attachment'
-import GroupIcon from '@mui/icons-material/Group'
-import CardActions from '@mui/material/CardActions'
-import CardMedia from '@mui/material/CardMedia'
-import { Card as MuiCard } from '@mui/material'
-import CardContent from '@mui/material/CardContent'
-import Typography from '@mui/material/Typography'
-import Button from '@mui/material/Button'
+import CommentIcon from '@mui/icons-material/Comment';
+import AttachmentIcon from '@mui/icons-material/Attachment';
+import GroupIcon from '@mui/icons-material/Group';
+import CardActions from '@mui/material/CardActions';
+import CardMedia from '@mui/material/CardMedia';
+import { Card as MuiCard } from '@mui/material';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
 
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { memo } from 'react';
 
-function Card({ card }) {
+const Card = memo(({ card }) => {
     const {
         attributes,
         listeners,
@@ -87,6 +88,6 @@ function Card({ card }) {
             )}
         </MuiCard>
     )
-}
+});
 
-export default Card
+export default Card;

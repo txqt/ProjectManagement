@@ -16,7 +16,7 @@ namespace ProjectManagement.Models.DTOs.Board
         public DateTime UpdatedAt { get; set; }
 
         public List<ColumnDto> Columns { get; set; } = new List<ColumnDto>();
-        public List<UserDto> Members { get; set; } = new List<UserDto>();
+        public List<BoardMemberDto> Members { get; set; } = new List<BoardMemberDto>();
         public List<CommentDto> Comments { get; set; } = new List<CommentDto>();
         public List<AttachmentDto> Attachments { get; set; } = new List<AttachmentDto>();
     }

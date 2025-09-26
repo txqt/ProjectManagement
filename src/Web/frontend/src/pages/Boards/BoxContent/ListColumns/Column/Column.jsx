@@ -49,7 +49,7 @@ function Column({ column, createCard, deleteColumn }) {
     transition,
     // Chiều cao phải luôn max 100% vì nếu không sẽ lỗi nếu không có column ngắn qua một cái column dài thì phải kéo ở khu vực giữa giữa rất khó chịu (demo ở video 32). Lưu ý lúc này phải kết hợp với {...listeners} nằm ở Box chứ không phải ở div ngoài cùng để tránh trường hợp kéo vào vùng xanh.
     height: '100%',
-    opacity: isDragging ? 0.5 : undefined
+    opacity: isDragging ? 0.5 : 1
   }
 
   const [anchorEl, setAnchorEl] = useState(null)
@@ -196,7 +196,7 @@ function Column({ column, createCard, deleteColumn }) {
         </Box>
 
         {/* List Cards */}
-        <ListCards cards={orderedCards}/>
+        <ListCards cards={orderedCards} />
 
         {/* Box Column Footer */}
         <Box

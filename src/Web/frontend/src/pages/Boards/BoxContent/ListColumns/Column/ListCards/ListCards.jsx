@@ -1,8 +1,9 @@
-import Box from '@mui/material/Box'
-import Card from './Card/Card'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import Box from '@mui/material/Box';
+import Card from './Card/Card';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { memo } from 'react';
 
-function ListCards({ cards }) {
+const ListCards = memo(({ cards }) => {
     return (
         <SortableContext
             items={cards?.map((c) => c.id)}
@@ -33,6 +34,6 @@ function ListCards({ cards }) {
             </Box>
         </SortableContext>
     )
-}
+});
 
 export default ListCards

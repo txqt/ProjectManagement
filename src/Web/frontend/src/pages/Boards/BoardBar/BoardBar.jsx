@@ -1,5 +1,4 @@
-import { Box, Tooltip } from "@mui/material";
-import Chip from '@mui/material/Chip';
+import { Box, Tooltip, Chip } from "@mui/material";
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import VpnLockIcon from '@mui/icons-material/VpnLock';
 import AddToDrive from "@mui/icons-material/AddToDrive";
@@ -9,7 +8,11 @@ import Avatar from '@mui/material/Avatar';
 import AvatarGroup from '@mui/material/AvatarGroup';
 import Button from "@mui/material/Button";
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
+import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
 import { capitalizeFirstLetter } from "~/utils/formatters";
+import { useState, useEffect } from 'react';
+import { useSignalR } from '~/hooks/useSignalR';
 
 const MENU_STYPES = {
     color: 'white',
@@ -26,6 +29,28 @@ const MENU_STYPES = {
 }
 
 function BoardBar({ board }) {
+    const { isConnected } = useSignalR(board?.id);
+    const [onlineUsers, setOnlineUsers] = useState([]);
+
+    useEffect(() => {
+        if (!isConnected) return;
+
+        // Mock data - trong thực tế sẽ nhận từ SignalR
+        const mockUsers = [
+            {
+                id: 1,
+                displayName: "John Doe",
+                avatar: "https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/avatar_vo_tri_a49436c5de.jpg"
+            },
+            {
+                id: 2,
+                displayName: "Jane Smith",
+                avatar: "https://cdn-media.sforum.vn/storage/app/media/wp-content/uploads/2023/11/avatar-vo-tri-thumbnail.jpg"
+            }
+        ];
+        
+        setOnlineUsers(mockUsers);
+    }, [isConnected]);
 
     return (
         <Box
@@ -58,6 +83,20 @@ function BoardBar({ board }) {
                     label={capitalizeFirstLetter(board?.type)}
                     clickable
                 />
+                
+                {/* Connection Status */}
+                <Tooltip title={isConnected ? "Real-time sync active" : "Disconnected - changes may not sync"}>
+                    <Chip
+                        sx={{
+                            ...MENU_STYPES,
+                            bgcolor: isConnected ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'
+                        }}
+                        icon={isConnected ? <SignalWifi4BarIcon /> : <SignalWifiOffIcon />}
+                        label={isConnected ? "Live" : "Offline"}
+                        size="small"
+                    />
+                </Tooltip>
+
                 <Chip
                     sx={MENU_STYPES}
                     icon={<AddToDrive />}
@@ -94,6 +133,8 @@ function BoardBar({ board }) {
                 >
                     Invite
                 </Button>
+                
+                {/* Online Users */}
                 <AvatarGroup
                     max={4}
                     sx={{
@@ -105,46 +146,20 @@ function BoardBar({ board }) {
                             border: 'none',
                             color: 'white',
                             cursor: 'pointer',
-                            '&:first-of-type': { bgcolor: '#a4b0be' }
+                            '&:first-of-type': { bgcolor: '#a4b0be' },
+                            // Thêm green border cho online users
+                            boxShadow: isConnected ? '0 0 0 2px #4caf50' : 'none'
                         }
                     }}
                 >
-                    <Tooltip title="txqt">
-                        <Avatar
-                            alt="txqt"
-                            src="https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/avatar_vo_tri_a49436c5de.jpg"
-                        />
-                    </Tooltip>
-                    <Tooltip title="txqt">
-                        <Avatar
-                            alt="txqt"
-                            src="https://cdn-media.sforum.vn/storage/app/media/wp-content/uploads/2023/11/avatar-vo-tri-thumbnail.jpg"
-                        />
-                    </Tooltip>
-                    <Tooltip title="txqt">
-                        <Avatar
-                            alt="txqt"
-                            src="https://sm.ign.com/ign_pk/cover/a/avatar-gen/avatar-generations_rpge.jpg"
-                        />
-                    </Tooltip>
-                    <Tooltip title="txqt">
-                        <Avatar
-                            alt="txqt"
-                            src="https://cdn2.tuoitre.vn/zoom/700_700/2019/5/8/avatar-publicitystill-h2019-1557284559744252594756-crop-15572850428231644565436.jpg"
-                        />
-                    </Tooltip>
-                    <Tooltip title="txqt">
-                        <Avatar
-                            alt="txqt"
-                            src="https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/avatar_dep_cho_nam_0_d82ba08b05.jpg"
-                        />
-                    </Tooltip>
-                    <Tooltip title="txqt">
-                        <Avatar
-                            alt="txqt"
-                            src="https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/small/avatar_hoat_hinh_db4e0e9cf4.jpg"
-                        />
-                    </Tooltip>
+                    {onlineUsers.map((user) => (
+                        <Tooltip key={user.id} title={`${user.displayName} ${isConnected ? '(online)' : ''}`}>
+                            <Avatar
+                                alt={user.displayName}
+                                src={user.avatar}
+                            />
+                        </Tooltip>
+                    ))}
                 </AvatarGroup>
             </Box>
         </Box>

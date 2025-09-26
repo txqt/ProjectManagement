@@ -16,11 +16,13 @@ namespace ProjectManagement.Controllers
     {
         private readonly IColumnService _columnService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IBoardNotificationService _boardNotificationService;
 
-        public ColumnsController(IColumnService columnService, UserManager<ApplicationUser> userManager)
+        public ColumnsController(IColumnService columnService, UserManager<ApplicationUser> userManager, IBoardNotificationService boardNotificationService)
         {
             _columnService = columnService;
             _userManager = userManager;
+            _boardNotificationService = boardNotificationService;
         }
 
         [HttpGet("{columnId}")]
@@ -47,6 +49,10 @@ namespace ProjectManagement.Controllers
                 return Unauthorized();
 
             var column = await _columnService.CreateColumnAsync(boardId, createColumnDto, userId);
+            if (column == null)
+                return NotFound();
+
+            await _boardNotificationService.BroadcastColumnCreated(boardId, column, userId);
             return CreatedAtAction(nameof(GetColumn), new { boardId, columnId = column.Id }, column);
         }
 
@@ -62,6 +68,7 @@ namespace ProjectManagement.Controllers
             if (column == null)
                 return NotFound();
 
+            await _boardNotificationService.BroadcastColumnUpdated(column.BoardId, column, userId);
             return Ok(column);
         }
 
@@ -73,9 +80,11 @@ namespace ProjectManagement.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            var success = await _columnService.DeleteColumnAsync(columnId, userId);
-            if (!success)
+            var result = await _columnService.DeleteColumnAsync(columnId, userId);
+            if (result == null)
                 return NotFound();
+
+            await _boardNotificationService.BroadcastColumnDeleted(result.BoardId, columnId, userId);
 
             return NoContent();
         }
@@ -91,6 +100,8 @@ namespace ProjectManagement.Controllers
             var success = await _columnService.ReorderColumnsAsync(boardId, columnOrderIds, userId);
             if (!success)
                 return BadRequest();
+
+            await _boardNotificationService.BroadcastColumnsReordered(boardId, columnOrderIds, userId);
 
             return NoContent();
         }

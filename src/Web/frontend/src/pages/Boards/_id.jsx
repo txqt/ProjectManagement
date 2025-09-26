@@ -14,7 +14,7 @@ function Board() {
             <Container
                 disableGutters
                 maxWidth={false}
-                sx={{ height: "100vh", p: 2 }}
+                sx={{ height: "100vh" }}
             >
                 <AppBar />
                 <Alert severity="error">

@@ -4,17 +4,19 @@ import { AuthContext } from './AuthContext';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check if user is already logged in
-    const token = localStorage.getItem('authToken');
+    const savedToken = localStorage.getItem('authToken');
     const userData = localStorage.getItem('userData');
     
-    if (token && userData) {
+    if (savedToken && userData) {
       try {
         setUser(JSON.parse(userData));
-        apiService.setAuthToken(token);
+        setToken(savedToken);
+        apiService.setAuthToken(savedToken);
       } catch (error) {
         console.error('Error parsing user data:', error);
         logout();
@@ -27,10 +29,12 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await apiService.login(credentials);
-      const { token, user: userData } = response;
+      const { token: newToken, user: userData } = response;
       
       setUser(userData);
-      apiService.setAuthToken(token);
+      setToken(newToken);
+      apiService.setAuthToken(newToken);
+      localStorage.setItem('authToken', newToken);
       localStorage.setItem('userData', JSON.stringify(userData));
       
       return { success: true, user: userData };
@@ -43,10 +47,12 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await apiService.register(userData);
-      const { token, user: newUser } = response;
+      const { token: newToken, user: newUser } = response;
       
       setUser(newUser);
-      apiService.setAuthToken(token);
+      setToken(newToken);
+      apiService.setAuthToken(newToken);
+      localStorage.setItem('authToken', newToken);
       localStorage.setItem('userData', JSON.stringify(newUser));
       
       return { success: true, user: newUser };
@@ -58,12 +64,15 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    setToken(null);
     apiService.setAuthToken(null);
+    localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
   };
 
   const value = {
     user,
+    token,
     login,
     register,
     logout,
