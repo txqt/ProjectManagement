@@ -11,8 +11,8 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
 import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
 import { capitalizeFirstLetter } from "~/utils/formatters";
-import { useState, useEffect } from 'react';
 import { useSignalR } from '~/hooks/useSignalR';
+import { useEffect } from "react";
 
 const MENU_STYPES = {
     color: 'white',
@@ -136,9 +136,9 @@ function BoardBar({ board }) {
                     }}
                 >
                     {users.map((user) => (
-                        <Tooltip key={user.id} title={`${user.displayName} ${isConnected ? '(online)' : ''}`}>
+                        <Tooltip key={user.id} title={`${user.userName} ${isConnected ? '(online)' : ''}`}>
                             <Avatar
-                                alt={user.displayName}
+                                alt={user.userName}
                                 src={user.avatar}
                             />
                         </Tooltip>

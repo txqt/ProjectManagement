@@ -146,17 +146,21 @@ class SignalRService {
   onCardsReordered(callback) { this._addListener('CardsReordered', callback); }
   onCardMoved(callback) { this._addListener('CardMoved', callback); }
 
-  onUserJoined(callback) { this._addListener('UserJoined', (d) => {
-    // optional: update local cache when user joins
-    // server's UserJoined payload should include user and maybe boardId (if not, client uses getUsersInBoard)
-    try { this._maybeUpdateCacheOnUserJoined(d); } catch {}
-    callback(d);
-  }); }
+  onUserJoined(callback) {
+    this._addListener('UserJoined', (d) => {
+      // optional: update local cache when user joins
+      // server's UserJoined payload should include user and maybe boardId (if not, client uses getUsersInBoard)
+      try { this._maybeUpdateCacheOnUserJoined(d); } catch { }
+      callback(d);
+    });
+  }
 
-  onUserLeft(callback) { this._addListener('UserLeft', (d) => {
-    try { this._maybeUpdateCacheOnUserLeft(d); } catch {}
-    callback(d);
-  }); }
+  onUserLeft(callback) {
+    this._addListener('UserLeft', (d) => {
+      try { this._maybeUpdateCacheOnUserLeft(d); } catch { }
+      callback(d);
+    });
+  }
 
   // NEW: listener for the snapshot that getUsersInBoard returns.
   // usage: signalRService.onUsersInBoard(users => ...)
@@ -167,50 +171,68 @@ class SignalRService {
   }
 
   _addListener(eventName, callback) {
-    if (!this.connection) return;
-    
-    // Remove existing listener nếu có
-    this._removeListener(eventName);
-    
-    // Add new listener
-    this.connection.on(eventName, callback);
+    // luôn lưu callback vào map để có thể re-register sau reconnect
     this.listeners.set(eventName, callback);
+
+    // nếu connection đã sẵn sàng, register thực sự lên connection
+    if (this.connection) {
+      try {
+        // remove existing on the connection first to avoid duplicate handlers
+        try { this.connection.off(eventName, callback); } catch { }
+        this.connection.on(eventName, callback);
+      } catch (e) {
+        console.warn('Failed to register listener on connection', eventName, e);
+      }
+    }
   }
 
   _removeListener(eventName) {
-    if (!this.connection) return;
-    
     const existingCallback = this.listeners.get(eventName);
     if (existingCallback) {
-      this.connection.off(eventName, existingCallback);
+      if (this.connection) {
+        try { this.connection.off(eventName, existingCallback); } catch (e) { /* ignore */ }
+      }
       this.listeners.delete(eventName);
     }
   }
 
   _reRegisterListeners() {
-    // Re-register all listeners after reconnection
+    // re-register all listeners after reconnect (safe when connection exists)
+    if (!this.connection) return;
     for (const [eventName, callback] of this.listeners.entries()) {
-      // don't call .on again if no connection
-      try { this.connection.on(eventName, callback); } catch {}
+      try {
+        // make sure to remove previous then add to avoid duplicates
+        try { this.connection.off(eventName, callback); } catch { }
+        this.connection.on(eventName, callback);
+      } catch (e) {
+        console.warn('Failed to re-register listener', eventName, e);
+      }
     }
   }
 
-  removeAllListeners() {
-    for (const eventName of Array.from(this.listeners.keys())) {
-      this._removeListener(eventName);
-    }
-  }
-
-  // optional helpers to maintain local cache when server emits UserJoined/UserLeft
   _maybeUpdateCacheOnUserJoined(payload) {
-    // payload expected like { user, boardId? } - adjust if server sends different shape
     const { user, boardId } = payload || {};
     if (!user) return;
-    if (!boardId) return; // cannot update cache if server doesn't provide boardId
-    const arr = this.usersByBoard.get(boardId) || [];
+
+    // fallback: if server doesn't provide boardId but client only joined one board, use that
+    const targetBoardId = boardId || (this.joinedBoards.size === 1 ? Array.from(this.joinedBoards)[0] : null);
+
+    if (!targetBoardId) {
+      // as a safe fallback, try to refresh snapshot for all joined boards
+      for (const b of Array.from(this.joinedBoards)) {
+        this.getUsersInBoard(b).then(users => {
+          this.usersByBoard.set(b, users);
+          const cb = this.listeners.get('UsersInBoard');
+          if (cb) cb(users);
+        }).catch(() => {/* ignore */ });
+      }
+      return;
+    }
+
+    const arr = this.usersByBoard.get(targetBoardId) || [];
     if (!arr.some(u => u.id === user.id)) {
       arr.push(user);
-      this.usersByBoard.set(boardId, arr);
+      this.usersByBoard.set(targetBoardId, arr);
       const cb = this.listeners.get('UsersInBoard');
       if (cb) cb(arr);
     }
@@ -219,12 +241,26 @@ class SignalRService {
   _maybeUpdateCacheOnUserLeft(payload) {
     const { user, boardId } = payload || {};
     if (!user) return;
-    if (!boardId) return;
-    const arr = (this.usersByBoard.get(boardId) || []).filter(u => u.id !== user.id);
-    this.usersByBoard.set(boardId, arr);
+
+    const targetBoardId = boardId || (this.joinedBoards.size === 1 ? Array.from(this.joinedBoards)[0] : null);
+
+    if (!targetBoardId) {
+      for (const b of Array.from(this.joinedBoards)) {
+        this.getUsersInBoard(b).then(users => {
+          this.usersByBoard.set(b, users);
+          const cb = this.listeners.get('UsersInBoard');
+          if (cb) cb(users);
+        }).catch(() => {/* ignore */ });
+      }
+      return;
+    }
+
+    const arr = (this.usersByBoard.get(targetBoardId) || []).filter(u => u.id !== user.id);
+    this.usersByBoard.set(targetBoardId, arr);
     const cb = this.listeners.get('UsersInBoard');
     if (cb) cb(arr);
   }
+
 
   // optional: allow consumers lấy cache nhanh (sync)
   getCachedUsersForBoard(boardId) {

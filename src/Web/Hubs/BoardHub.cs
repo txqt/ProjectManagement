@@ -44,7 +44,7 @@ namespace ProjectManagement.Hubs
                     foreach (var boardId in boards)
                     {
                         await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(boardId));
-                        await Clients.Group(GroupName(boardId)).SendAsync("UserLeft", new { user });
+                        await Clients.Group(GroupName(boardId)).SendAsync("UserLeft", new { boardId, user });
                     }
                 }
             }
@@ -74,7 +74,7 @@ namespace ProjectManagement.Hubs
             }
 
             var user = _presence.GetAllConnections().FirstOrDefault(x => x.ConnectionId == Context.ConnectionId).User;
-            await Clients.Group(GroupName(boardId)).SendAsync("UserJoined", new { user });
+            await Clients.Group(GroupName(boardId)).SendAsync("UserJoined", new { boardId, user });
         }
 
         public async Task LeaveBoard(string boardId)

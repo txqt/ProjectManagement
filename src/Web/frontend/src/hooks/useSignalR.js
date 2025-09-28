@@ -15,23 +15,17 @@ export const useSignalR = (boardId) => {
     const initializeConnection = async () => {
       try {
         setConnectionError(null);
-        
-        // Connect to SignalR hub
         await signalRService.connect(token);
-        
-        // Leave previous board if any
+
         if (boardIdRef.current && boardIdRef.current !== boardId) {
           await signalRService.leaveBoard(boardIdRef.current);
         }
-        
-        // Join new board
+
         await signalRService.joinBoard(boardId);
         boardIdRef.current = boardId;
-        
-        // Try get snapshot users from service cache or invoke directly
+
         let snapshot = signalRService.getCachedUsersForBoard(boardId);
         if (!snapshot || snapshot.length === 0) {
-          // fallback: call hub method
           try {
             snapshot = await signalRService.getUsersInBoard(boardId);
           } catch {
@@ -39,15 +33,37 @@ export const useSignalR = (boardId) => {
           }
         }
         setUsers(snapshot || []);
-        
-        // Register snapshot listener so we update users if service refreshes it (e.g. after reconnect)
+
+        // snapshot listener
         signalRService.onUsersInBoard((usersArr) => {
           setUsers(usersArr || []);
         });
 
+        // ALSO: listen to join/leave events so UI updates immediately.
+        signalRService.onUserJoined((payload) => {
+          // if payload contains boardId and matches OR only 1 board joined -> update
+          const bid = payload?.boardId || (boardIdRef.current);
+          if (bid !== boardIdRef.current) {
+            // if not for this board, ignore
+            return;
+          }
+          // try best-effort: update users directly
+          setUsers(prev => {
+            const arr = prev || [];
+            if (!payload?.user) return arr;
+            if (arr.some(u => u.id === payload.user.id)) return arr;
+            return [...arr, payload.user];
+          });
+        });
+
+        signalRService.onUserLeft((payload) => {
+          const bid = payload?.boardId || (boardIdRef.current);
+          if (bid !== boardIdRef.current) return;
+          setUsers(prev => (prev || []).filter(u => u.id !== payload?.user?.id));
+        });
+
         setIsConnected(true);
         console.log(`Joined board: ${boardId}`);
-        
       } catch (error) {
         console.error('SignalR initialization error:', error);
         setConnectionError(error.message);
@@ -58,7 +74,6 @@ export const useSignalR = (boardId) => {
     initializeConnection();
 
     return () => {
-      // Cleanup khi unmount hoặc boardId change
       if (boardIdRef.current) {
         signalRService.leaveBoard(boardIdRef.current)
           .catch(err => console.error('Leave board error:', err));
@@ -66,6 +81,8 @@ export const useSignalR = (boardId) => {
       boardIdRef.current = null;
       setIsConnected(false);
       setUsers([]);
+      // remove all listeners for this instance to avoid leaks
+      signalRService.removeAllListeners?.();
     };
   }, [token, boardId, user]);
 
