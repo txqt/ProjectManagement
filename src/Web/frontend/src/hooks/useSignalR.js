@@ -6,6 +6,7 @@ export const useSignalR = (boardId) => {
   const { user, token } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
+  const [users, setUsers] = useState([]); // <-- danh sách users cho board
   const boardIdRef = useRef(null);
 
   useEffect(() => {
@@ -27,6 +28,23 @@ export const useSignalR = (boardId) => {
         await signalRService.joinBoard(boardId);
         boardIdRef.current = boardId;
         
+        // Try get snapshot users from service cache or invoke directly
+        let snapshot = signalRService.getCachedUsersForBoard(boardId);
+        if (!snapshot || snapshot.length === 0) {
+          // fallback: call hub method
+          try {
+            snapshot = await signalRService.getUsersInBoard(boardId);
+          } catch {
+            snapshot = [];
+          }
+        }
+        setUsers(snapshot || []);
+        
+        // Register snapshot listener so we update users if service refreshes it (e.g. after reconnect)
+        signalRService.onUsersInBoard((usersArr) => {
+          setUsers(usersArr || []);
+        });
+
         setIsConnected(true);
         console.log(`Joined board: ${boardId}`);
         
@@ -47,6 +65,7 @@ export const useSignalR = (boardId) => {
       }
       boardIdRef.current = null;
       setIsConnected(false);
+      setUsers([]);
     };
   }, [token, boardId, user]);
 
@@ -60,6 +79,7 @@ export const useSignalR = (boardId) => {
   return {
     isConnected,
     connectionError,
+    users, // <-- expose users để component sử dụng
     signalRService
   };
 };

@@ -90,7 +90,7 @@ export const useBoard = (boardId) => {
 
     // Try get current user from signalRService if available
     if (typeof signalRService.getCurrentUser === 'function') {
-      try { currentUserRef.current = signalRService.getCurrentUser(); } catch (e) { /* ignore */ }
+      try { currentUserRef.current = signalRService.getCurrentUser(); } catch { /* ignore */ }
     }
 
     // Column created
@@ -320,7 +320,7 @@ export const useBoard = (boardId) => {
 
     // send clientTempId for server to echo (if supported)
     const payload = { ...cardData, clientTempId: tempId };
-    const result = await executeRequest(() => apiService.createCard(columnId, payload));
+    const result = await executeRequest(() => apiService.createCard(boardId, columnId, payload));
 
     pendingTempIdsRef.current.delete(tempId);
 
@@ -366,7 +366,7 @@ export const useBoard = (boardId) => {
   };
 
   const moveCard = async (fromColumnId, toColumnId, cardId, positionIndex) => {
-    const result = await executeRequest(() => apiService.moveCard(fromColumnId, cardId, { fromColumnId, toColumnId, newIndex: positionIndex }));
+    const result = await executeRequest(() => apiService.moveCard(boardId, fromColumnId, cardId, { fromColumnId, toColumnId, newIndex: positionIndex }));
     return result.success;
   };
 
@@ -376,7 +376,7 @@ export const useBoard = (boardId) => {
   };
 
   const reorderCards = async (columnId, cardOrderIds) => {
-    const result = await executeRequest(() => apiService.reorderCards(columnId, cardOrderIds));
+    const result = await executeRequest(() => apiService.reorderCards(boardId, columnId, cardOrderIds));
     return result.success;
   };
 

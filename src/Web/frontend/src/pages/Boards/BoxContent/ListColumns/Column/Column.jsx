@@ -26,6 +26,8 @@ import { mapOrder } from '~/utils/sorts';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+import ConditionalRender from '~/components/ConditionalRender/ConditionalRender';
+
 function Column({ column, createCard, deleteColumn }) {
   const {
     attributes,
@@ -185,12 +187,15 @@ function Column({ column, createCard, deleteColumn }) {
                 </ListItemIcon>
                 <ListItemText>Remove Archive this column</ListItemText>
               </MenuItem> */}
-              <MenuItem>
-                <ListItemIcon>
-                  <DeleteForeverIcon fontSize='small' />
-                </ListItemIcon>
-                <ListItemText onClick={() => deleteColumn(column.id)}>Delete this column (cannot undo this action)</ListItemText>
-              </MenuItem>
+              <ConditionalRender permission="boards.delete">
+                <MenuItem>
+                  <ListItemIcon>
+                    <DeleteForeverIcon fontSize='small' />
+                  </ListItemIcon>
+                  <ListItemText onClick={() => deleteColumn(column.id)}>Delete this column (cannot undo this action)</ListItemText>
+                </MenuItem>
+              </ConditionalRender>
+
             </Menu>
           </Box>
         </Box>

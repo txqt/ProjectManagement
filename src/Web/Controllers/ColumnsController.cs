@@ -26,7 +26,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpGet("{columnId}")]
-        [HasPermission(Permissions.Columns.View)]
+        [RequireBoardPermission(Permissions.Columns.View)]
         public async Task<ActionResult<ColumnDto>> GetColumn(string columnId)
         {
             var userId = _userManager.GetUserId(User);
@@ -41,7 +41,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost]
-        [HasPermission(Permissions.Columns.Create)]
+        [RequireBoardPermission(Permissions.Columns.Create)]
         public async Task<ActionResult<ColumnDto>> CreateColumn(string boardId, [FromBody] CreateColumnDto createColumnDto)
         {
             var userId = _userManager.GetUserId(User);
@@ -57,7 +57,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{columnId}")]
-        [HasPermission(Permissions.Columns.Edit)]
+        [RequireBoardPermission(Permissions.Columns.Edit)]
         public async Task<ActionResult<ColumnDto>> UpdateColumn(string columnId, [FromBody] UpdateColumnDto updateColumnDto)
         {
             var userId = _userManager.GetUserId(User);
@@ -73,7 +73,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{columnId}")]
-        [HasPermission(Permissions.Columns.Delete)]
+        [RequireBoardPermission(Permissions.Columns.Delete)]
         public async Task<ActionResult> DeleteColumn(string columnId)
         {
             var userId = _userManager.GetUserId(User);
@@ -90,7 +90,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("reorder")]
-        [HasPermission(Permissions.Columns.Reorder)]
+        [RequireBoardPermission(Permissions.Columns.Reorder)]
         public async Task<ActionResult> ReorderColumns(string boardId, [FromBody] List<string> columnOrderIds)
         {
             var userId = _userManager.GetUserId(User);

@@ -367,36 +367,65 @@ function BoardContent({ board, createColumn, createCard, deleteColumn, reorderCo
         })
     }
 
-    const collisionDetectionStrategy = useCallback((args) => {
-        if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) {
-            return closestCorners({ ...args });
-        }
-
-        // Tối ưu cho card drag
-        const pointerIntersections = pointerWithin(args);
-        if (!pointerIntersections?.length) return lastOverId.current ? [{ id: lastOverId.current }] : [];
-
-        let overId = getFirstCollision(pointerIntersections, 'id');
-        if (!overId) return lastOverId.current ? [{ id: lastOverId.current }] : [];
-
-        // Cache column lookup để tránh tìm kiếm lại
-        const checkColumn = orderedColumns.find(column => column.id === overId);
-
-        if (checkColumn?.cardOrderIds?.length) {
-            // Chỉ tính toán innerOver khi thực sự cần thiết
-            const droppableContainers = args.droppableContainers.filter(
-                container => container.id !== overId && checkColumn.cardOrderIds.includes(container.id)
-            );
-
-            if (droppableContainers.length > 0) {
-                const innerOver = closestCorners({ ...args, droppableContainers })[0]?.id;
-                if (innerOver) overId = innerOver;
+    const collisionDetectionStrategy = useCallback(
+        // Trường hợp kéo column thì dùng thuật toán closestCorners là chuẩn nhất
+        (args) => {
+            if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) {
+                return closestCorners({ ...args })
             }
-        }
 
-        lastOverId.current = overId;
-        return [{ id: overId }];
-    }, [activeDragItemType, orderedColumns]);
+            // Tìm các điểm giao nhau, va chạm, trả về một mảng các va chạm - intersections với con trỏ
+            const pointerIntersections = pointerWithin(args)
+
+            // Video 37.1: Nếu pointerIntersections là mảng rỗng, return luôn không làm gì hết
+            // Fix triệt để cái bug flickering của thư viện Dnd-kit trong trường hợp sau:
+            // - Kéo một cái card có image cover lớn và kéo lên phía trên cùng ra khỏi khu vực kéo thả
+            if (!pointerIntersections?.length) return
+
+            // Thuật toán phát hiện va chạm sẽ trả về một mảng các va chạm ở đây (không cần bước này nữa - video 37.1)
+            // const intersections = !!pointerIntersections?.length ? pointerIntersections : rectIntersection(args)
+
+            // Tìm overId đầu tiên trong đám intersection ở trên
+            let overId = getFirstCollision(pointerIntersections, 'id')
+            if (overId) {
+                // Video 37: Đoạn này để fix cái vụ flickering nhé
+                // Nếu cái over nó là column thì sẽ tìm tới cái cardId gần nhất bên trong khu vực va chạm đó dựa vào thuật toán phát hiện va chạm closestCenter hoặc closestCorners đều được. Tuy nhiên ở đây dùng closestCorners mình thấy mượt mà hơn
+                const checkColumn = orderedColumns.find(
+                    (column) => column.id === overId
+                )
+                if (checkColumn) {
+                    // Nếu column có cardOrderIds => tìm card gần nhất bên trong column
+                    if (checkColumn?.cardOrderIds?.length) {
+                        const innerOver = closestCorners({
+                            ...args,
+                            droppableContainers: args.droppableContainers.filter(
+                                (container) =>
+                                    container.id !== overId &&
+                                    checkColumn.cardOrderIds.includes(container.id)
+                            )
+                        })[0]?.id
+
+                        // nếu tìm được innerOver thì dùng nó, không thì fallback giữ overId = column.id
+                        if (innerOver) {
+                            overId = innerOver
+                        } else {
+                            // column có cardOrderIds nhưng không tìm được inner => giữ nguyên overId (column)
+                        }
+                    } else {
+                        // column rỗng: giữ overId là column.id để xử lý chèn ở cuối
+                    }
+                }
+
+                lastOverId.current = overId
+                return [{ id: overId }]
+
+            }
+
+            // Nếu overId là null thì trả về mảng rỗng - tránh bug crash trang
+            return lastOverId.current ? [{ id: lastOverId.current }] : []
+        },
+        [activeDragItemType, orderedColumns]
+    )
 
     return (
         <DndContext

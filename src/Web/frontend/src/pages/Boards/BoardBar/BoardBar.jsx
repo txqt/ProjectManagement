@@ -29,27 +29,10 @@ const MENU_STYPES = {
 }
 
 function BoardBar({ board }) {
-    const { isConnected } = useSignalR(board?.id);
-    const [onlineUsers, setOnlineUsers] = useState([]);
+    const { isConnected, users } = useSignalR(board?.id);
 
     useEffect(() => {
         if (!isConnected) return;
-
-        // Mock data - trong thực tế sẽ nhận từ SignalR
-        const mockUsers = [
-            {
-                id: 1,
-                displayName: "John Doe",
-                avatar: "https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/avatar_vo_tri_a49436c5de.jpg"
-            },
-            {
-                id: 2,
-                displayName: "Jane Smith",
-                avatar: "https://cdn-media.sforum.vn/storage/app/media/wp-content/uploads/2023/11/avatar-vo-tri-thumbnail.jpg"
-            }
-        ];
-        
-        setOnlineUsers(mockUsers);
     }, [isConnected]);
 
     return (
@@ -152,7 +135,7 @@ function BoardBar({ board }) {
                         }
                     }}
                 >
-                    {onlineUsers.map((user) => (
+                    {users.map((user) => (
                         <Tooltip key={user.id} title={`${user.displayName} ${isConnected ? '(online)' : ''}`}>
                             <Avatar
                                 alt={user.displayName}

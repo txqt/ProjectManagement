@@ -88,6 +88,15 @@ namespace ProjectManagement.Hubs
             await Clients.Group(GroupName(boardId)).SendAsync("UserLeft", new { user });
         }
 
+        public Task<List<UserDto>> GetUsersInBoard(string boardId)
+        {
+            if (string.IsNullOrWhiteSpace(boardId))
+                return Task.FromResult(new List<UserDto>());
+
+            var users = _presence.GetUsersInBoard(boardId).ToList();
+            return Task.FromResult(users);
+        }
+
         // Lưu ý: không bắt buộc phải có các phương thức create/update/delete ở Hub.
         // Thường backend sẽ thực hiện action qua HTTP API (vì cần lưu DB) rồi dùng IHubContext để broadcast.
         // Tuy nhiên nếu bạn muốn client gọi trực tiếp hub để thực hiện action, triển khai thêm ở đây.

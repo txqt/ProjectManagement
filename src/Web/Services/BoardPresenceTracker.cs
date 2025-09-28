@@ -52,5 +52,51 @@ namespace ProjectManagement.Services
                 yield return (kv.Key, kv.Value);
             }
         }
+
+        public IEnumerable<UserDto> GetUsersInBoard(string boardId)
+        {
+            var seenUserIds = new HashSet<string>();
+            var result = new List<UserDto>();
+
+            // enumerate snapshot trên ConcurrentDictionary — an toàn cho concurrent read
+            foreach (var kv in _connectionBoards)
+            {
+                var connectionId = kv.Key;
+                var set = kv.Value;
+                // lock nhỏ khi đọc set để tránh race với Add/Remove trên cùng set
+                lock (set)
+                {
+                    if (!set.Contains(boardId)) continue;
+                }
+
+                if (_connectionUsers.TryGetValue(connectionId, out var user) && user != null)
+                {
+                    if (seenUserIds.Add(user.Id)) // tránh duplicate khi user có nhiều connection
+                    {
+                        result.Add(user);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public IEnumerable<(string ConnectionId, UserDto User)> GetConnectionsForBoard(string boardId)
+        {
+            foreach (var kv in _connectionBoards)
+            {
+                var connectionId = kv.Key;
+                var set = kv.Value;
+                lock (set)
+                {
+                    if (!set.Contains(boardId)) continue;
+                }
+
+                if (_connectionUsers.TryGetValue(connectionId, out var user) && user != null)
+                {
+                    yield return (connectionId, user);
+                }
+            }
+        }
     }
 }

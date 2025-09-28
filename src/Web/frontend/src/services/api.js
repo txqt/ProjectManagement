@@ -157,57 +157,90 @@ class ApiService {
     });
   }
 
-  
-  async reorderCards(columnId, cardOrderIds) {
-    return this.request(`/columns/${columnId}/cards/reorder`, {
+
+  async reorderCards(boardId, columnId, cardOrderIds) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/reorder`, {
       method: 'PUT',
       body: JSON.stringify(cardOrderIds),
     });
   }
 
-  // Card endpoints
-  async getCard(columnId, cardId) {
-    return this.request(`/columns/${columnId}/cards/${cardId}`);
+  async getCard(boardId, columnId, cardId) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}`);
   }
 
-  async createCard(columnId, cardData) {
-    return this.request(`/columns/${columnId}/cards`, {
+  async createCard(boardId, columnId, cardData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards`, {
       method: 'POST',
       body: JSON.stringify(cardData),
     });
   }
 
-  async updateCard(columnId, cardId, updateData) {
-    return this.request(`/columns/${columnId}/cards/${cardId}`, {
+  async updateCard(boardId, columnId, cardId, updateData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}`, {
       method: 'PUT',
       body: JSON.stringify(updateData),
     });
   }
 
-  async deleteCard(columnId, cardId) {
-    return this.request(`/columns/${columnId}/cards/${cardId}`, {
+  async deleteCard(boardId, columnId, cardId) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}`, {
       method: 'DELETE',
     });
   }
 
-  async moveCard(columnId, cardId, moveData) {
-    return this.request(`/columns/${columnId}/cards/${cardId}/move`, {
+  async moveCard(boardId, columnId, cardId, moveData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/move`, {
       method: 'POST',
       body: JSON.stringify(moveData),
     });
   }
 
-  async assignCardMember(columnId, cardId, memberEmail) {
-    return this.request(`/columns/${columnId}/cards/${cardId}/members`, {
+  async assignCardMember(boardId, columnId, cardId, memberEmail) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/members`, {
       method: 'POST',
       body: JSON.stringify(memberEmail),
     });
   }
 
-  async unassignCardMember(columnId, cardId, memberId) {
-    return this.request(`/columns/${columnId}/cards/${cardId}/members/${memberId}`, {
+  async unassignCardMember(boardId, columnId, cardId, memberId) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/members/${memberId}`, {
       method: 'DELETE',
     });
+  }
+
+  async getMyPermissions() {
+    return this.request('/permissions/my-permissions');
+  }
+
+  async checkBoardPermission(boardId, permission) {
+    return this.request('/permissions/check-board-permission', {
+      method: 'POST',
+      body: JSON.stringify({ boardId, permission }),
+    });
+  }
+
+  async getAvailablePermissions() {
+    return this.request('/permissions/available-permissions');
+  }
+
+  // Admin endpoints
+  async getAllUsers() {
+    return this.request('/admin/users');
+  }
+
+  async getAllBoards() {
+    return this.request('/boards/all');
+  }
+
+  async banUser(userId) {
+    return this.request(`/admin/users/${userId}/ban`, {
+      method: 'POST',
+    });
+  }
+
+  async getSystemStats() {
+    return this.request('/admin/stats');
   }
 }
 
