@@ -242,6 +242,110 @@ class ApiService {
   async getSystemStats() {
     return this.request('/admin/stats');
   }
+
+  async createBoardInvite(boardId, inviteData) {
+    return this.request(`/boards/${boardId}/invites`, {
+      method: 'POST',
+      body: JSON.stringify(inviteData),
+    });
+  }
+
+  async getBoardInvites(boardId) {
+    return this.request(`/boards/${boardId}/invites`);
+  }
+
+  async resendInvite(boardId, inviteId) {
+    return this.request(`/boards/${boardId}/invites/${inviteId}/resend`, {
+      method: 'POST',
+    });
+  }
+
+  async cancelInvite(boardId, inviteId) {
+    return this.request(`/boards/${boardId}/invites/${inviteId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getMyInvites(status = null) {
+    const params = status ? `?status=${status}` : '';
+    return this.request(`/invites/my-invites${params}`);
+  }
+
+  async getInvite(inviteId) {
+    return this.request(`/invites/${inviteId}`);
+  }
+
+  async respondToInvite(inviteId, response) {
+    return this.request(`/invites/${inviteId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({ response }),
+    });
+  }
+
+  // Notification methods
+  async getNotifications(skip = 0, take = 20, unreadOnly = null) {
+    const params = new URLSearchParams();
+    params.append('skip', skip.toString());
+    params.append('take', take.toString());
+    if (unreadOnly !== null) {
+      params.append('unreadOnly', unreadOnly.toString());
+    }
+
+    return this.request(`/notifications?${params}`);
+  }
+
+  async getNotificationSummary() {
+    return this.request('/notifications/summary');
+  }
+
+  async markNotificationAsRead(notificationId) {
+    return this.request(`/notifications/${notificationId}/read`, {
+      method: 'POST',
+    });
+  }
+
+  async markAllNotificationsAsRead() {
+    return this.request('/notifications/mark-all-read', {
+      method: 'POST',
+    });
+  }
+
+  async deleteNotification(notificationId) {
+    return this.request(`/notifications/${notificationId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async bulkNotificationAction(notificationIds, action) {
+    return this.request('/notifications/bulk-action', {
+      method: 'POST',
+      body: JSON.stringify({
+        notificationIds,
+        action
+      }),
+    });
+  }
+
+  async searchUsers(q, page = 1, pageSize = 10) {
+    const trimmed = q ? q.trim() : '';
+    if (!trimmed) {
+      return {
+        items: [],
+        page: 1,
+        pageSize,
+        totalCount: 0,
+        totalPages: 1
+      };
+    }
+
+    const params = new URLSearchParams({
+      q: trimmed,
+      page: String(page),
+      pageSize: String(pageSize)
+    });
+
+    return this.request(`/users/search?${params.toString()}`);
+  }
 }
 
 export const apiService = new ApiService();

@@ -3,9 +3,12 @@ using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs;
 using ProjectManagement.Models.DTOs.Attachment;
 using ProjectManagement.Models.DTOs.Board;
+using ProjectManagement.Models.DTOs.BoardInvite;
 using ProjectManagement.Models.DTOs.Card;
 using ProjectManagement.Models.DTOs.Column;
 using ProjectManagement.Models.DTOs.Comment;
+using ProjectManagement.Models.DTOs.Notification;
+using System.Text.Json;
 
 namespace ProjectManagement.Mappings
 {
@@ -63,6 +66,18 @@ namespace ProjectManagement.Mappings
             CreateMap<UserDto, ApplicationUser>()
                 .ForMember(dest => dest.CreatedAt,
                            opt => opt.MapFrom(src => new DateTimeOffset(src.CreatedAt)));
+
+            // BoardInvite mappings
+            CreateMap<BoardInvite, BoardInviteDto>();
+            CreateMap<CreateBoardInviteDto, BoardInvite>();
+
+            // Notification mappings
+            CreateMap<Notification, NotificationDto>()
+    .ForMember(d => d.Data, opt => opt.MapFrom<NotificationToDtoResolver>());
+
+            CreateMap<CreateNotificationDto, Notification>()
+                .ForMember(d => d.Data, opt => opt.MapFrom<CreateNotificationDtoToNotificationResolver>());
+
         }
     }
 }

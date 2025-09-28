@@ -150,14 +150,14 @@ class SignalRService {
     this._addListener('UserJoined', (d) => {
       // optional: update local cache when user joins
       // server's UserJoined payload should include user and maybe boardId (if not, client uses getUsersInBoard)
-      try { this._maybeUpdateCacheOnUserJoined(d); } catch { }
+      try { this._maybeUpdateCacheOnUserJoined(d); } catch {/* ignore */ }
       callback(d);
     });
   }
 
   onUserLeft(callback) {
     this._addListener('UserLeft', (d) => {
-      try { this._maybeUpdateCacheOnUserLeft(d); } catch { }
+      try { this._maybeUpdateCacheOnUserLeft(d); } catch { /* ignore */ }
       callback(d);
     });
   }
@@ -178,7 +178,7 @@ class SignalRService {
     if (this.connection) {
       try {
         // remove existing on the connection first to avoid duplicate handlers
-        try { this.connection.off(eventName, callback); } catch { }
+        try { this.connection.off(eventName, callback); } catch {/* ignore */ }
         this.connection.on(eventName, callback);
       } catch (e) {
         console.warn('Failed to register listener on connection', eventName, e);
@@ -190,7 +190,7 @@ class SignalRService {
     const existingCallback = this.listeners.get(eventName);
     if (existingCallback) {
       if (this.connection) {
-        try { this.connection.off(eventName, existingCallback); } catch (e) { /* ignore */ }
+        try { this.connection.off(eventName, existingCallback); } catch { /* ignore */ }
       }
       this.listeners.delete(eventName);
     }
@@ -202,7 +202,7 @@ class SignalRService {
     for (const [eventName, callback] of this.listeners.entries()) {
       try {
         // make sure to remove previous then add to avoid duplicates
-        try { this.connection.off(eventName, callback); } catch { }
+        try { this.connection.off(eventName, callback); } catch {/* ignore */ }
         this.connection.on(eventName, callback);
       } catch (e) {
         console.warn('Failed to re-register listener', eventName, e);

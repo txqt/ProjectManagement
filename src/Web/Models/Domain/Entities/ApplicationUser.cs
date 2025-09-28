@@ -13,5 +13,6 @@ namespace ProjectManagement.Models.Domain.Entities
         public virtual ICollection<BoardMember> BoardMemberships { get; set; } = new List<BoardMember>();
         public virtual ICollection<CardMember> CardMemberships { get; set; } = new List<CardMember>();
         public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
+        public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     }
 }

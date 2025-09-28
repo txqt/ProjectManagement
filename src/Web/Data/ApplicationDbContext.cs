@@ -19,7 +19,8 @@ namespace Infrastructure
         public DbSet<CardMember> CardMembers { get; set; }
         public DbSet<Comment> Comments { get; set; }
         public DbSet<Attachment> Attachments { get; set; }
-
+        public DbSet<BoardInvite> BoardInvites { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -147,6 +148,32 @@ namespace Infrastructure
                 entity.HasOne(e => e.Card)
                     .WithMany(c => c.Attachments)
                     .HasForeignKey(e => e.CardId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure BoardInvite
+            builder.Entity<BoardInvite>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.InviteeEmail).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.InviteeId).IsRequired();
+                entity.Property(e => e.Status).HasDefaultValue("pending");
+                entity.HasOne(e => e.Board)
+                    .WithMany(b => b.Invites)
+                    .HasForeignKey(e => e.BoardId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure Notification
+            builder.Entity<Notification>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Type).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.IsRead).HasDefaultValue(false);
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.Notifications)
+                    .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }

@@ -191,7 +191,7 @@ function BoardContent({ board, createColumn, createCard, deleteColumn, reorderCo
             // activeDraggingCard: Là cái card đang được kéo
             const {
                 id: activeDraggingCardId,
-                data: { current: activeDraggingCardData }
+                // data: { current: activeDraggingCardData }
             } = active;
 
             // overCard: là cái card đang tương tác trên hoặc dưới so với cái card được kéo ở trên

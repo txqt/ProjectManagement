@@ -315,6 +315,70 @@ namespace ProjectManagement.Migrations
                     b.ToTable("Boards");
                 });
 
+            modelBuilder.Entity("ProjectManagement.Models.Domain.Entities.BoardInvite", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BoardId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InviteeEmail")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("InviteeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InviterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("pending");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BoardId");
+
+                    b.HasIndex("InviteeId");
+
+                    b.HasIndex("InviterId");
+
+                    b.ToTable("BoardInvites");
+                });
+
             modelBuilder.Entity("ProjectManagement.Models.Domain.Entities.BoardMember", b =>
                 {
                     b.Property<string>("Id")
@@ -493,6 +557,76 @@ namespace ProjectManagement.Migrations
                     b.ToTable("Comments");
                 });
 
+            modelBuilder.Entity("ProjectManagement.Models.Domain.Entities.Notification", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ActionUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BoardId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CardId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("text");
+
+                    b.Property<string>("InviteId")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsRead")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BoardId");
+
+                    b.HasIndex("CardId");
+
+                    b.HasIndex("InviteId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -564,6 +698,33 @@ namespace ProjectManagement.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("ProjectManagement.Models.Domain.Entities.BoardInvite", b =>
+                {
+                    b.HasOne("ProjectManagement.Models.Domain.Entities.Board", "Board")
+                        .WithMany("Invites")
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ProjectManagement.Models.Domain.Entities.ApplicationUser", "Invitee")
+                        .WithMany()
+                        .HasForeignKey("InviteeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ProjectManagement.Models.Domain.Entities.ApplicationUser", "Inviter")
+                        .WithMany()
+                        .HasForeignKey("InviterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Board");
+
+                    b.Navigation("Invitee");
+
+                    b.Navigation("Inviter");
                 });
 
             modelBuilder.Entity("ProjectManagement.Models.Domain.Entities.BoardMember", b =>
@@ -653,6 +814,35 @@ namespace ProjectManagement.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ProjectManagement.Models.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("ProjectManagement.Models.Domain.Entities.Board", "Board")
+                        .WithMany()
+                        .HasForeignKey("BoardId");
+
+                    b.HasOne("ProjectManagement.Models.Domain.Entities.Card", "Card")
+                        .WithMany()
+                        .HasForeignKey("CardId");
+
+                    b.HasOne("ProjectManagement.Models.Domain.Entities.BoardInvite", "Invite")
+                        .WithMany()
+                        .HasForeignKey("InviteId");
+
+                    b.HasOne("ProjectManagement.Models.Domain.Entities.ApplicationUser", "User")
+                        .WithMany("Notifications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Board");
+
+                    b.Navigation("Card");
+
+                    b.Navigation("Invite");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ProjectManagement.Models.Domain.Entities.ApplicationUser", b =>
                 {
                     b.Navigation("BoardMemberships");
@@ -661,12 +851,16 @@ namespace ProjectManagement.Migrations
 
                     b.Navigation("Comments");
 
+                    b.Navigation("Notifications");
+
                     b.Navigation("OwnedBoards");
                 });
 
             modelBuilder.Entity("ProjectManagement.Models.Domain.Entities.Board", b =>
                 {
                     b.Navigation("Columns");
+
+                    b.Navigation("Invites");
 
                     b.Navigation("Members");
                 });

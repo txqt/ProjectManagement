@@ -17,6 +17,7 @@ import Profiles from './Menus/Profiles';
 import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
+import NotificationBell from '~/components/Notifications/NotificationBell';
 
 function AppBar() {
     const { themeMode, setThemeMode } = useThemeMode();
@@ -128,11 +129,7 @@ function AppBar() {
 
                 <ModeSelect label="Theme" value={themeMode} onChange={setThemeMode} />
 
-                <Tooltip title="Notifications">
-                    <Badge color="warning" variant="dot" sx={{ cursor: 'pointer' }}>
-                        <NotificationsNoneIcon sx={{ color: 'white' }} />
-                    </Badge>
-                </Tooltip>
+                <NotificationBell />
 
                 <Tooltip title="Help" sx={{ cursor: 'pointer', color: 'white' }}>
                     <HelpOutlineIcon />

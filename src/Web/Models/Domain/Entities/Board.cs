@@ -23,5 +23,6 @@ namespace ProjectManagement.Models.Domain.Entities
         public virtual ApplicationUser Owner { get; set; } = null!;
         public virtual ICollection<Column> Columns { get; set; } = new List<Column>();
         public virtual ICollection<BoardMember> Members { get; set; } = new List<BoardMember>();
+        public virtual ICollection<BoardInvite> Invites { get; set; } = new List<BoardInvite>();
     }
 }

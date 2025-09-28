@@ -62,7 +62,7 @@ function Profiles({ user }) {
                     <Avatar sx={{width: '28px', height: '28px', mr: 2}}/> Profile
                 </MenuItem>
                 <MenuItem onClick={handleClose}>
-                    <Avatar sx={{width: '28px', height: '28px', mr: 2}}/> My account
+                    <Avatar sx={{width: '28px', height: '28px', mr: 2}}/> {user.userName}
                 </MenuItem>
                 <Divider />
                 <MenuItem onClick={handleClose}>

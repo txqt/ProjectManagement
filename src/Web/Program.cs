@@ -106,6 +106,11 @@ builder.Services.AddScoped<IColumnService, ColumnService>();
 builder.Services.AddScoped<ICardService, CardService>();
 builder.Services.AddSingleton<BoardPresenceTracker>();
 builder.Services.AddScoped<IBoardNotificationService, BoardNotificationService>();
+builder.Services.AddScoped<IBoardInviteService, BoardInviteService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+
+// Add Background Services
+builder.Services.AddHostedService<NotificationCleanupService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
