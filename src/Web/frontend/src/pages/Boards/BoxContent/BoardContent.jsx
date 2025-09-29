@@ -19,7 +19,7 @@ import { arrayMove } from '@dnd-kit/sortable'
 import Column from './ListColumns/Column/Column'
 import Card from './ListColumns/Column/ListCards/Card/Card'
 import { cloneDeep, throttle } from 'lodash'
-import { ACTIVE_DRAG_ITEM_TYPE } from '~/utils/contants'
+import { ACTIVE_DRAG_ITEM_TYPE } from '~/utils/constants'
 
 function BoardContent({ board, createColumn, createCard, deleteColumn, reorderColumns, reorderCards, moveCard }) {
     // https://docs.dndkit.com/api-documentation/sensors

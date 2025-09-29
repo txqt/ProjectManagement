@@ -31,7 +31,7 @@ import BoltIcon from '@mui/icons-material/Bolt';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { capitalizeFirstLetter } from '~/utils/formatters';
 import { useSignalR } from '~/hooks/useSignalR';
-import InviteDialog from './InviteDialog';
+import InviteDialog from '../../../components/BoardInvites/InviteDialog';
 
 const MENU_STYPES = {
   color: 'white',

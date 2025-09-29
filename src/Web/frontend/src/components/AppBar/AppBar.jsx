@@ -1,28 +1,24 @@
-import { React, useState } from 'react'
-import { Box, Button, Typography, TextField, Badge, InputAdornment } from "@mui/material";
-import ModeSelect from "~/components/ModeSelect/ModeSelect";
-import useThemeMode from '~/hooks/useThemeMode';
-import { useAuth } from '~/hooks/useAuth';
 import AppsIcon from '@mui/icons-material/Apps';
-import TrelloIcon from '~/assets/trello.svg?react';
-import SvgIcon from '@mui/material/SvgIcon';
-import Workspaces from './Menus/Workspaces';
-import Recent from './Menus/Recent';
-import Starred from './Menus/Starred';
-import Templates from './Menus/Templates';
-import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
-import Tooltip from '@mui/material/Tooltip';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import Profiles from './Menus/Profiles';
-import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
-import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import SearchIcon from '@mui/icons-material/Search';
+import { Box, InputAdornment, TextField, Typography } from "@mui/material";
+import SvgIcon from '@mui/material/SvgIcon';
+import Tooltip from '@mui/material/Tooltip';
+import { useState } from 'react';
+import { useNavigate } from "react-router-dom";
+import TrelloIcon from '~/assets/trello.svg?react';
+import ModeSelect from "~/components/ModeSelect/ModeSelect";
 import NotificationBell from '~/components/Notifications/NotificationBell';
+import { useAuth } from '~/hooks/useAuth';
+import useThemeMode from '~/hooks/useThemeMode';
+import Profiles from './Menus/Profiles';
 
 function AppBar() {
     const { themeMode, setThemeMode } = useThemeMode();
     const { user } = useAuth();
     const [searchValue, setSearchValue] = useState('');
+    const navigate = useNavigate();
 
     return (
         <Box
@@ -44,22 +40,36 @@ function AppBar() {
                 gap: 2
             }}>
                 <AppsIcon sx={{ color: 'white' }} />
-                <Box sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.5
-                }}>
-                    <SvgIcon component={TrelloIcon} fontSize="small" inheritViewBox sx={{ color: 'white' }} />
-                    <Typography variant='span' sx={{
-                        fontSize: '1.2rem',
-                        fontWeight: 'bold',
-                        color: 'white'
-                    }}>
+                <Box
+                    sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.5,
+                        cursor: "pointer" // thêm để gợi ý người dùng click
+                    }}
+                    onClick={() => navigate("/")}
+                >
+                    <SvgIcon
+                        component={TrelloIcon}
+                        fontSize="small"
+                        inheritViewBox
+                        sx={{ color: "white" }}
+                    />
+                    <Typography
+                        component="span"
+                        variant="h6"
+                        sx={{
+                            fontSize: "1.2rem",
+                            fontWeight: "bold",
+                            color: "white"
+                        }}
+                    >
                         Trello
                     </Typography>
                 </Box>
 
                 <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
+                    {/* 
                     <Workspaces />
                     <Recent />
                     <Starred />
@@ -77,7 +87,8 @@ function AppBar() {
                         startIcon={<LibraryAddIcon />}
                     >
                         Create
-                    </Button>
+                    </Button> 
+                    */}
                 </Box>
             </Box>
 

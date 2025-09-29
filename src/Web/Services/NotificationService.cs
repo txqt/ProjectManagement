@@ -218,7 +218,7 @@ namespace ProjectManagement.Services
                 Type = NotificationTypes.BoardInvite,
                 Title = "Board Invitation",
                 Message = $"{inviterName} has invited you to join the board \"{boardTitle}\"",
-                ActionUrl = $"/invites/{inviteId}",
+                ActionUrl = $"/boards/invites",
                 InviteId = inviteId,
                 Data = new Dictionary<string, object>
                 {

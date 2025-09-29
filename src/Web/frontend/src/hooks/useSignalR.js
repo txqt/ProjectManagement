@@ -89,7 +89,7 @@ export const useSignalR = (boardId) => {
   // Cleanup khi component unmount hoàn toàn
   useEffect(() => {
     return () => {
-      signalRService.removeAllListeners();
+      signalRService.removeAllListeners?.();
     };
   }, []);
 

@@ -7,6 +7,7 @@ import RegisterForm from '~/components/Auth/RegisterForm';
 import { Box, CircularProgress } from '@mui/material';
 import BoardListView from './pages/Boards';
 import AppBar from './components/AppBar/AppBar';
+import MyBoardInvite from './pages/Boards/MyBoardInvite/MyBoardInvite';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -88,6 +89,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Board />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/boards/invites"
+        element={
+          <ProtectedRoute>
+            <AppBar />
+            <MyBoardInvite />
           </ProtectedRoute>
         }
       />

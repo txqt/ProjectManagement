@@ -1,4 +1,4 @@
-import { API_ROOT } from '~/utils/contants';
+import { API_ROOT } from '~/utils/constants';
 
 class ApiService {
   constructor() {

@@ -196,6 +196,20 @@ class SignalRService {
     }
   }
 
+  removeAllListeners() {
+    if (this.connection) {
+      for (const [eventName, callback] of this.listeners.entries()) {
+        try {
+          this.connection.off(eventName, callback);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    this.listeners.clear();
+  }
+
+
   _reRegisterListeners() {
     // re-register all listeners after reconnect (safe when connection exists)
     if (!this.connection) return;

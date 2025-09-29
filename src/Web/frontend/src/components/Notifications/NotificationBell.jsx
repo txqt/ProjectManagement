@@ -6,6 +6,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemButton,
   Typography,
   Box,
   Button,
@@ -132,73 +133,87 @@ const NotificationBell = () => {
             ) : (
               notifications.slice(0, 10).map((notification) => (
                 <React.Fragment key={notification.id}>
-                  <ListItem
-                    button
-                    onClick={() => handleNotificationClick(notification)}
-                    sx={{
-                      bgcolor: notification.isRead ? 'transparent' : 'action.hover',
-                      '&:hover': { bgcolor: 'action.selected' }
-                    }}
-                  >
-                    <Box sx={{ mr: 1, fontSize: '1.2em' }}>
-                      {getNotificationIcon(notification.type)}
-                    </Box>
+                  <ListItem disablePadding>
+                    <ListItemButton
+                      onClick={() => handleNotificationClick(notification)}
+                      sx={{
+                        bgcolor: notification.isRead ? 'transparent' : 'action.hover',
+                        '&:hover': {
+                          bgcolor: 'action.selected',
+                          cursor: 'pointer'
+                        }
+                      }}
+                    >
+                      <Box component="span" sx={{ mr: 1, fontSize: '1.2em' }}>
+                        {getNotificationIcon(notification.type)}
+                      </Box>
 
-                    <ListItemText
-                      primary={
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <Typography
-                            component="span"
-                            variant="body2"
-                            fontWeight={notification.isRead ? 'normal' : 'bold'}
-                            sx={{ flex: 1 }}
-                          >
-                            {notification.title}
-                          </Typography>
-                          {!notification.isRead && (
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                bgcolor: 'primary.main'
-                              }}
-                            />
-                          )}
-                        </Box>
-                      }
-                      secondary={
-                        <Box>
-                          <Typography component="span" variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                            {notification.message}
-                          </Typography>
-                          <Typography component="span" variant="caption" color="text.secondary">
-                            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                          </Typography>
-                        </Box>
-                      }
-                    />
+                      <ListItemText
+                        primary={
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              fontWeight={notification.isRead ? 'normal' : 'bold'}
+                              sx={{ flex: 1 }}
+                            >
+                              {notification.title}
+                            </Typography>
+                            {!notification.isRead && (
+                              <Box
+                                component="span"
+                                sx={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  bgcolor: 'primary.main'
+                                }}
+                              />
+                            )}
+                          </Box>
+                        }
+                        secondary={
+                          <Box component="span">
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ display: 'block', mb: 0.5 }}
+                            >
+                              {notification.message}
+                            </Typography>
+                            <Typography
+                              component="span"
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                            </Typography>
+                          </Box>
+                        }
+                      />
 
-                    <Box display="flex" flexDirection="column" gap={0.5}>
-                      {!notification.isRead && (
-                        <Tooltip title="Mark as read">
+                      <Box display="flex" flexDirection="column" gap={0.5}>
+                        {!notification.isRead && (
+                          <Tooltip title="Mark as read">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleMarkAsRead(notification.id, e)}
+                            >
+                              <Check fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        <Tooltip title="Delete">
                           <IconButton
                             size="small"
-                            onClick={(e) => handleMarkAsRead(notification.id, e)}
+                            onClick={(e) => handleDelete(notification.id, e)}
                           >
-                            <Check fontSize="small" />
+                            <Delete fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                      )}
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => handleDelete(notification.id, e)}
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
+                      </Box>
+                    </ListItemButton>
                   </ListItem>
                   <Divider />
                 </React.Fragment>
