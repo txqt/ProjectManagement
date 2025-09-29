@@ -1,5 +1,6 @@
 ﻿using ProjectManagement.Models.DTOs.Card;
 using ProjectManagement.Models.DTOs.Column;
+using ProjectManagement.Models.DTOs.Notification;
 
 namespace ProjectManagement.Services.Interfaces
 {
@@ -17,5 +18,9 @@ namespace ProjectManagement.Services.Interfaces
         Task BroadcastColumnsReordered(string boardId, IEnumerable<string> columnOrderIds, string userId);
 
         Task BroadcastCardMoved(string boardId, string fromColumnId, string toColumnId, string cardId, int newIndex, string userId);
+
+        Task SendNotificationToUser(string userId, NotificationDto notification);
+        Task BroadcastNotificationRead(string userId, string notificationId);
+        Task BroadcastNotificationDeleted(string userId, string notificationId);
     }
 }

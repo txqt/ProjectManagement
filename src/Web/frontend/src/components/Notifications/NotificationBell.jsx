@@ -54,11 +54,11 @@ const NotificationBell = () => {
     if (!notification.isRead) {
       await markAsRead(notification.id);
     }
-    
+
     if (notification.actionUrl) {
       window.location.href = notification.actionUrl;
     }
-    
+
     handleClose();
   };
 
@@ -124,7 +124,7 @@ const NotificationBell = () => {
               </Box>
             ) : notifications.length === 0 ? (
               <ListItem>
-                <ListItemText 
+                <ListItemText
                   primary="No notifications"
                   secondary="You're all caught up!"
                 />
@@ -143,35 +143,36 @@ const NotificationBell = () => {
                     <Box sx={{ mr: 1, fontSize: '1.2em' }}>
                       {getNotificationIcon(notification.type)}
                     </Box>
-                    
+
                     <ListItemText
                       primary={
                         <Box display="flex" alignItems="center" gap={1}>
-                          <Typography 
-                            variant="body2" 
+                          <Typography
+                            component="span"
+                            variant="body2"
                             fontWeight={notification.isRead ? 'normal' : 'bold'}
                             sx={{ flex: 1 }}
                           >
                             {notification.title}
                           </Typography>
                           {!notification.isRead && (
-                            <Box 
-                              sx={{ 
-                                width: 8, 
-                                height: 8, 
-                                borderRadius: '50%', 
-                                bgcolor: 'primary.main' 
-                              }} 
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                bgcolor: 'primary.main'
+                              }}
                             />
                           )}
                         </Box>
                       }
                       secondary={
                         <Box>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                          <Typography component="span" variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                             {notification.message}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography component="span" variant="caption" color="text.secondary">
                             {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                           </Typography>
                         </Box>
@@ -181,8 +182,8 @@ const NotificationBell = () => {
                     <Box display="flex" flexDirection="column" gap={0.5}>
                       {!notification.isRead && (
                         <Tooltip title="Mark as read">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={(e) => handleMarkAsRead(notification.id, e)}
                           >
                             <Check fontSize="small" />
@@ -190,8 +191,8 @@ const NotificationBell = () => {
                         </Tooltip>
                       )}
                       <Tooltip title="Delete">
-                        <IconButton 
-                          size="small" 
+                        <IconButton
+                          size="small"
                           onClick={(e) => handleDelete(notification.id, e)}
                         >
                           <Delete fontSize="small" />

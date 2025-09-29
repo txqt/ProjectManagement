@@ -13,15 +13,18 @@ namespace ProjectManagement.Services
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly ILogger<NotificationService> _logger;
+        private readonly IBoardNotificationService _boardNotificationService;
 
         public NotificationService(
             ApplicationDbContext context,
             IMapper mapper,
-            ILogger<NotificationService> logger)
+            ILogger<NotificationService> logger,
+            IBoardNotificationService boardNotificationService)
         {
             _context = context;
             _mapper = mapper;
             _logger = logger;
+            _boardNotificationService = boardNotificationService;
         }
 
         public async Task<NotificationDto> CreateNotificationAsync(CreateNotificationDto createNotificationDto)
@@ -47,7 +50,11 @@ namespace ProjectManagement.Services
             _logger.LogInformation("Created notification {NotificationId} for user {UserId} of type {Type}",
                 notification.Id, notification.UserId, notification.Type);
 
-            return _mapper.Map<NotificationDto>(notification);
+            var dto = _mapper.Map<NotificationDto>(notification);
+
+            await _boardNotificationService.SendNotificationToUser(notification.UserId, dto);
+
+            return dto;
         }
 
         public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(string userId, int skip = 0, int take = 20, bool? unreadOnly = null)
@@ -113,6 +120,8 @@ namespace ProjectManagement.Services
             notification.ReadAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            await _boardNotificationService.BroadcastNotificationRead(notification.UserId, notification.Id);
             return true;
         }
 
@@ -129,6 +138,7 @@ namespace ProjectManagement.Services
             {
                 notification.IsRead = true;
                 notification.ReadAt = DateTime.UtcNow;
+                await _boardNotificationService.BroadcastNotificationRead(notification.UserId, notification.Id);
             }
 
             await _context.SaveChangesAsync();
@@ -145,6 +155,8 @@ namespace ProjectManagement.Services
 
             _context.Notifications.Remove(notification);
             await _context.SaveChangesAsync();
+
+            await _boardNotificationService.BroadcastNotificationDeleted(notification.UserId, notification.Id);
             return true;
         }
 

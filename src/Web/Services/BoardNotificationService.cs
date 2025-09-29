@@ -2,6 +2,7 @@
 using ProjectManagement.Hubs;
 using ProjectManagement.Models.DTOs.Card;
 using ProjectManagement.Models.DTOs.Column;
+using ProjectManagement.Models.DTOs.Notification;
 using ProjectManagement.Services.Interfaces;
 
 namespace ProjectManagement.Services
@@ -43,5 +44,20 @@ namespace ProjectManagement.Services
 
         public Task BroadcastCardMoved(string boardId, string fromColumnId, string toColumnId, string cardId, int newIndex, string userId) =>
             _hub.Clients.Group(GroupName(boardId)).SendAsync("CardMoved", new { cardId, fromColumnId, toColumnId, newIndex, userId });
+
+        public async Task SendNotificationToUser(string userId, NotificationDto notification)
+        {
+            await _hub.Clients.User(userId).SendAsync("NotificationReceived", notification);
+        }
+
+        public async Task BroadcastNotificationRead(string userId, string notificationId)
+        {
+            await _hub.Clients.User(userId).SendAsync("NotificationRead", new { notificationId });
+        }
+
+        public async Task BroadcastNotificationDeleted(string userId, string notificationId)
+        {
+            await _hub.Clients.User(userId).SendAsync("NotificationDeleted", new { notificationId });
+        }
     }
 }

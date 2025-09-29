@@ -275,6 +275,24 @@ class SignalRService {
   setCurrentUser(u) {
     this.currentUser = u;
   }
+
+  onNotificationReceived(callback) {
+    this._addListener('NotificationReceived', callback);
+  }
+
+  onNotificationRead(callback) {
+    this._addListener('NotificationRead', callback);
+  }
+
+  onNotificationDeleted(callback) {
+    this._addListener('NotificationDeleted', callback);
+  }
+
+  // Gọi hub method để mark as read từ client (optional)
+  async markNotificationAsRead(notificationId) {
+    if (!this.connection) throw new Error('No connection');
+    await this.connection.invoke('MarkNotificationAsRead', notificationId);
+  }
 }
 
 export const signalRService = new SignalRService();
