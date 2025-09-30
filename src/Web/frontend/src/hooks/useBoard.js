@@ -22,7 +22,7 @@ export const useBoard = (boardId) => {
   // --- Helpers ---
   const makeTempId = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return `temp-${crypto.randomUUID()}`;
-    return `temp-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+    return `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   };
 
   const dedupeById = (arr) => {
@@ -40,17 +40,17 @@ export const useBoard = (boardId) => {
   const findColumn = (columns, columnId) => (columns || []).find(c => c.id === columnId);
 
   // Safe add card: sẽ không thêm nếu id đã tồn tại
-  const addCardToColumn = (columns, columnId, card) =>
-    (columns || []).map(c => {
-      if (c.id !== columnId) return c;
-      const exists = (c.cards || []).some(x => x.id === card.id);
-      if (exists) return c;
-      return {
-        ...c,
-        cards: [...(c.cards || []), card],
-        cardOrderIds: ensureUniqueOrder([...(c.cardOrderIds || []), card.id])
-      };
-    });
+  // const addCardToColumn = (columns, columnId, card) =>
+  //   (columns || []).map(c => {
+  //     if (c.id !== columnId) return c;
+  //     const exists = (c.cards || []).some(x => x.id === card.id);
+  //     if (exists) return c;
+  //     return {
+  //       ...c,
+  //       cards: [...(c.cards || []), card],
+  //       cardOrderIds: ensureUniqueOrder([...(c.cardOrderIds || []), card.id])
+  //     };
+  //   });
 
   const updateCardInColumns = (columns, columnId, cardId, updatedCard) =>
     (columns || []).map(c => c.id === columnId ? {
@@ -81,6 +81,9 @@ export const useBoard = (boardId) => {
       setBoard(result.data);
       // try to extract current user if server returns it
       if (result.data?.currentUser) currentUserRef.current = result.data.currentUser;
+    }
+    else{
+      setBoard([])
     }
   }, [boardId, executeRequest]);
 
@@ -312,11 +315,8 @@ export const useBoard = (boardId) => {
 
   const createCard = async (columnId, cardData) => {
     const tempId = makeTempId();
-    const tempCard = { ...cardData, id: tempId, columnId };
 
     pendingTempIdsRef.current.add(tempId);
-
-    setBoard(prev => ({ ...prev, columns: addCardToColumn(prev?.columns || [], columnId, tempCard) }));
 
     // send clientTempId for server to echo (if supported)
     const payload = { ...cardData, clientTempId: tempId };
@@ -380,6 +380,55 @@ export const useBoard = (boardId) => {
     return result.success;
   };
 
+  const updateCard = async (columnId, cardId) => {
+    
+  }
+
+  const deleteCard = async (columnId, cardId) => {
+    const snapshot = board;
+
+    const removedCard = snapshot?.columns?.find(c => c.id === columnId)?.cards?.find(card => card.id === cardId) || null;
+
+    setBoard(prev => ({
+      ...prev,
+      columns: (prev?.columns || []).map(c => {
+        if (c.id !== columnId) return c;
+        return {
+          ...c,
+          cards: (c.cards || []).filter(card => card.id !== cardId),
+          cardOrderIds: (c.cardOrderIds || []).filter(id => id !== cardId)
+        };
+      })
+    }));
+
+    const result = await executeRequest(() => apiService.deleteCard(boardId, columnId,cardId));
+
+    if (result.success) {
+      return true;
+    }
+
+    if (removedCard) {
+      setBoard(prev => ({
+        ...prev,
+        columns: (prev?.columns || []).map(c => {
+          if (c.id !== columnId) return c;
+          const exists = (c.cards || []).some(x => x.id === removedCard.id);
+          if (exists) return c;
+          return {
+            ...c,
+            cards: dedupeById([...(c.cards || []), removedCard]),
+            cardOrderIds: ensureUniqueOrder([...(c.cardOrderIds || []), removedCard.id])
+          };
+        })
+      }));
+    } else {
+      await loadBoard();
+    }
+
+    toast.error('Xóa card thất bại — đã khôi phục trạng thái.');
+    return false;
+  };
+
   return {
     board,
     loading,
@@ -391,7 +440,8 @@ export const useBoard = (boardId) => {
     createCard,
     moveCard,
     reorderColumns,
-    reorderCards
+    reorderCards,
+    deleteCard
   };
 };
 

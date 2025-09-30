@@ -1,37 +1,22 @@
-import { useState, useEffect } from 'react';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
+import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
+import VpnLockIcon from '@mui/icons-material/VpnLock';
 import {
-  Box,
-  Tooltip,
-  Chip,
-  Button,
   Avatar,
   AvatarGroup,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Pagination,
-  CircularProgress,
-  Snackbar,
-  Alert,
-  Typography
+  Box,
+  Button,
+  Chip,
+  Tooltip
 } from '@mui/material';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
-import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import VpnLockIcon from '@mui/icons-material/VpnLock';
-import AddToDrive from '@mui/icons-material/AddToDrive';
-import BoltIcon from '@mui/icons-material/Bolt';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import { capitalizeFirstLetter } from '~/utils/formatters';
+import { useEffect, useState } from 'react';
 import { useSignalR } from '~/hooks/useSignalR';
+import { capitalizeFirstLetter } from '~/utils/formatters';
 import InviteDialog from '../../../components/BoardInvites/InviteDialog';
+import BoardBarSkeleton from './BoardBarSkeleton';
+import GroupIcon from '@mui/icons-material/Group';
 
 const MENU_STYPES = {
   color: 'white',
@@ -43,9 +28,24 @@ const MENU_STYPES = {
   '&:hover': { bgcolor: 'primary.50' }
 };
 
+function formatMember(count) {
+  return count === 1 ? '1 member' : `${count} members`;
+}
+
 export default function BoardBar({ board }) {
   const { isConnected, users } = useSignalR(board?.id);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [boardMember, setBoardMember] = useState('');
+
+  useEffect(() => {
+    if (board?.members?.length > 0) {
+      const memberNames = board.members.map(m => m.user.userName).join('\n');
+      const text = `${formatMember(board.members.length)}:` + '\n' + memberNames;
+      setBoardMember(text);
+    }
+  }, [boardMember, setBoardMember, board?.members]);
+
+  if (!board) return <BoardBarSkeleton />;
 
   return (
     <Box
@@ -62,8 +62,8 @@ export default function BoardBar({ board }) {
       })}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Chip sx={MENU_STYPES} icon={<DashboardIcon />} label={board?.title} clickable />
-        <Chip sx={MENU_STYPES} icon={<VpnLockIcon />} label={capitalizeFirstLetter(board?.type)} clickable />
+        <Chip sx={MENU_STYPES} icon={<DashboardIcon />} label={board.title} title="Board name" />
+        <Chip sx={MENU_STYPES} icon={<VpnLockIcon />} label={capitalizeFirstLetter(board.type)} title="Board type" />
 
         <Tooltip title={isConnected ? 'Real-time sync active' : 'Disconnected - changes may not sync'}>
           <Chip
@@ -74,9 +74,11 @@ export default function BoardBar({ board }) {
           />
         </Tooltip>
 
-        <Chip sx={MENU_STYPES} icon={<AddToDrive />} label="Add to Google Drive" clickable />
+        {boardMember && <Chip sx={MENU_STYPES} icon={<GroupIcon />} title={boardMember} />}
+
+        {/* <Chip sx={MENU_STYPES} icon={<AddToDrive />} label="Add to Google Drive" clickable />
         <Chip sx={MENU_STYPES} icon={<BoltIcon />} label="Automation" clickable />
-        <Chip sx={MENU_STYPES} icon={<FilterListIcon />} label="Filters" clickable />
+        <Chip sx={MENU_STYPES} icon={<FilterListIcon />} label="Filters" clickable /> */}
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -113,7 +115,7 @@ export default function BoardBar({ board }) {
         </AvatarGroup>
       </Box>
 
-      <InviteDialog open={inviteOpen} onClose={() => setInviteOpen(false)} boardId={board?.id} />
+      <InviteDialog open={inviteOpen} onClose={() => setInviteOpen(false)} board={board} />
     </Box>
   );
 }

@@ -28,7 +28,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender';
 
-function Column({ column, createCard, deleteColumn }) {
+function Column({ column, createCard, deleteColumn, deleteCard }) {
   const {
     attributes,
     listeners,
@@ -71,7 +71,6 @@ function Column({ column, createCard, deleteColumn }) {
       toast.error('Please enter Card Title', { position: 'bottom-right' })
       return;
     }
-    console.log('newCardTitle:', newCardTitle)
     try {
       await createCard(column.id, {
         title: newCardTitle,
@@ -201,7 +200,7 @@ function Column({ column, createCard, deleteColumn }) {
         </Box>
 
         {/* List Cards */}
-        <ListCards cards={orderedCards} />
+        <ListCards cards={orderedCards} deleteCard={deleteCard} />
 
         {/* Box Column Footer */}
         <Box

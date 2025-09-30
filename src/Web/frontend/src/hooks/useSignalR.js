@@ -63,7 +63,6 @@ export const useSignalR = (boardId) => {
         });
 
         setIsConnected(true);
-        console.log(`Joined board: ${boardId}`);
       } catch (error) {
         console.error('SignalR initialization error:', error);
         setConnectionError(error.message);

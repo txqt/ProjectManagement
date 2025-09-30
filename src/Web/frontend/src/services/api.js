@@ -48,7 +48,7 @@ class ApiService {
           } else {
             body = await response.text();
           }
-        } catch (e) {
+        } catch {
           body = null;
         }
 

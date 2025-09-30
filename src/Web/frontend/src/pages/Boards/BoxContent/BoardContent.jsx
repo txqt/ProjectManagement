@@ -21,7 +21,7 @@ import Card from './ListColumns/Column/ListCards/Card/Card'
 import { cloneDeep, throttle } from 'lodash'
 import { ACTIVE_DRAG_ITEM_TYPE } from '~/utils/constants'
 
-function BoardContent({ board, createColumn, createCard, deleteColumn, reorderColumns, reorderCards, moveCard }) {
+function BoardContent({ board, createColumn, createCard, deleteColumn, reorderColumns, reorderCards, moveCard, deleteCard }) {
     // https://docs.dndkit.com/api-documentation/sensors
     // Nếu dùng PointerSensor mặc định thì phải kết hợp thuộc tính CSS touch-action: none ở trong phần tử kéo thả - nhưng mà còn bug
 
@@ -451,7 +451,7 @@ function BoardContent({ board, createColumn, createCard, deleteColumn, reorderCo
                     p: '10px 0'
                 }}
             >
-                <ListColumns columns={orderedColumns} createColumn={createColumn} createCard={createCard} deleteColumn={deleteColumn} />
+                <ListColumns columns={orderedColumns} createColumn={createColumn} createCard={createCard} deleteColumn={deleteColumn} deleteCard={deleteCard}/>
                 <DragOverlay dropAnimation={customDropAnimation}>
                     {!activeDragItemType && null}
                     {activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN && (

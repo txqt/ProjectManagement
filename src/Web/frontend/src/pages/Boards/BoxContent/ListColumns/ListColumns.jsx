@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { TextField } from '@mui/material';
 import { toast } from 'react-toastify';
 
-function ListColumns({ columns, createColumn, createCard, deleteColumn}) {
+function ListColumns({ columns, createColumn, createCard, deleteColumn, deleteCard}) {
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
   const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm);
 
@@ -61,7 +61,7 @@ function ListColumns({ columns, createColumn, createCard, deleteColumn}) {
         }}
       >
         {columns?.map((column) => (
-          <Column key={column.id} column={column} createCard={createCard} deleteColumn={deleteColumn}/>
+          <Column key={column.id} column={column} createCard={createCard} deleteColumn={deleteColumn} deleteCard={deleteCard}/>
         ))}
 
         {/* Box Add new column CTA */}
