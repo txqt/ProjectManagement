@@ -84,7 +84,7 @@ namespace ProjectManagement.Services
             return await GetColumnAsync(columnId, userId);
         }
 
-        public async Task<ColumnDto> DeleteColumnAsync(string columnId, string userId)
+        public async Task<ColumnDto?> DeleteColumnAsync(string columnId, string userId)
         {
             var column = await _context.Columns
                 .Include(c => c.Board)

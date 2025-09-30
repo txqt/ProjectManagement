@@ -27,9 +27,9 @@ namespace ProjectManagement.Hubs
             var userId = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                       ?? Context.User?.FindFirst("sub")?.Value
                       ?? Context.UserIdentifier;
-            var displayName = Context.User?.Identity?.Name ?? userId;
+            var userName = Context.User?.Identity?.Name ?? userId;
 
-            _presence.SetUserForConnection(Context.ConnectionId, new UserDto(userId, displayName));
+            _presence.SetUserForConnection(Context.ConnectionId, new UserDto(userId, userName));
 
             return base.OnConnectedAsync();
         }

@@ -1,35 +1,37 @@
-import React, { useState, useEffect } from "react";
+import LockIcon from "@mui/icons-material/Lock";
+import PublicIcon from "@mui/icons-material/Public";
+import DeleteIcon from "@mui/icons-material/Delete";
 import {
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  CardActionArea,
-  CardMedia,
   Box,
   Button,
+  Card,
+  CardActionArea,
+  CardContent,
+  CardMedia,
   Dialog,
-  DialogTitle,
-  DialogContent,
   DialogActions,
-  TextField,
+  DialogContent,
+  DialogTitle,
   FormControl,
+  Grid,
   InputLabel,
-  Select,
-  MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Menu,
+  MenuItem,
+  Select,
+  TextField,
+  Typography
 } from "@mui/material";
-import LockIcon from "@mui/icons-material/Lock";
-import PeopleIcon from "@mui/icons-material/People";
-import PublicIcon from "@mui/icons-material/Public";
+import { useEffect, useState } from "react";
 
-import { apiService } from "~/services/api";
-import { useApi } from "~/hooks/useApi";
 import { useNavigate } from "react-router-dom";
+import { useApi } from "~/hooks/useApi";
+import { apiService } from "~/services/api";
+import { toast } from "react-toastify";
 
 export default function BoardListView() {
-  const { executeRequest } = useApi();
+  const { error, executeRequest } = useApi();
   const [boards, setBoards] = useState([]);
   const [open, setOpen] = useState(false);
 
@@ -42,29 +44,36 @@ export default function BoardListView() {
     { value: "public", label: "Public", desc: "Anyone with link can view", icon: <PublicIcon fontSize="small" /> }
   ];
 
+  // Context menu state (right-click)
+  const [contextMenu, setContextMenu] = useState(null);
+
+  // Delete confirmation dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedBoardId, setSelectedBoardId] = useState(null);
+
   // load boards
   useEffect(() => {
     const fetchBoards = async () => {
       try {
-        const { success, data, error } = await executeRequest(() =>
+        const { success, data } = await executeRequest(() =>
           apiService.getBoards()
         );
         if (success) {
           setBoards(data);
         } else {
-          console.error("Error loading boards:", error);
+          toast.error(error);
         }
-      } catch (error) {
-        console.error("Unexpected error:", error);
+      } catch (err) {
+        toast.error(`Unexpected error: \n ${err}`);
       }
     };
 
     fetchBoards();
-  }, [executeRequest]);
+  }, [error, executeRequest]);
 
   // create board
   const handleCreateBoard = async () => {
-    const { success, data, error } = await executeRequest(() =>
+    const { success, data, error: apiErr } = await executeRequest(() =>
       apiService.createBoard(newBoard)
     );
     if (success) {
@@ -73,7 +82,54 @@ export default function BoardListView() {
       // reset form to initial state
       setNewBoard(initialBoardState);
     } else {
-      console.error("Error creating board:", error);
+      toast.error(`Error creating board: \n ${apiErr}`);
+    }
+  };
+
+  // Context menu handlers
+  const handleContextMenu = (event, boardId) => {
+    event.preventDefault();
+    setContextMenu({
+      mouseX: event.clientX - 2,
+      mouseY: event.clientY - 4,
+      boardId,
+    });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  // Open confirm dialog (from menu)
+  const openConfirmDialog = (boardId) => {
+    handleCloseContextMenu();
+    setSelectedBoardId(boardId);
+    setConfirmOpen(true);
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmOpen(false);
+    setSelectedBoardId(null);
+  };
+
+  // Actual delete action (called when confirm)
+  const handleConfirmDelete = async () => {
+    const boardId = selectedBoardId;
+    closeConfirmDialog();
+    if (!boardId) return;
+
+    try {
+      const { success, error: apiError } = await executeRequest(() =>
+        apiService.deleteBoard(boardId)
+      );
+      if (success) {
+        setBoards(prev => prev.filter(b => b.id !== boardId));
+        toast.success("Xóa board thành công");
+      } else {
+        toast.error(`Xóa thất bại: ${apiError}`);
+      }
+    } catch (err) {
+      toast.error(`Unexpected error: ${err}`);
     }
   };
 
@@ -102,6 +158,7 @@ export default function BoardListView() {
                 ":hover": { boxShadow: 6, transform: "scale(1.02)" },
                 transition: "0.3s"
               }}
+              onContextMenu={(e) => handleContextMenu(e, board.id)}
             >
               <CardActionArea
                 onClick={() => navigate(`/boards/${board.id}`)}
@@ -151,6 +208,26 @@ export default function BoardListView() {
           </Grid>
         ))}
       </Grid>
+
+      {/* Context menu */}
+      <Menu
+        open={Boolean(contextMenu)}
+        onClose={handleCloseContextMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenu && contextMenu.mouseX != null && contextMenu.mouseY != null
+            ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+            : undefined
+        }
+      >
+        <MenuItem onClick={() => openConfirmDialog(contextMenu ? contextMenu.boardId : null)}>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" />
+          </ListItemIcon>
+          Xóa board
+        </MenuItem>
+        {/* thêm menu item khác nếu cần */}
+      </Menu>
 
       {/* Dialog Create Board */}
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
@@ -209,6 +286,18 @@ export default function BoardListView() {
           <Button variant="contained" onClick={handleCreateBoard}>
             Create
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={confirmOpen} onClose={closeConfirmDialog}>
+        <DialogTitle>Xác nhận xóa</DialogTitle>
+        <DialogContent>
+          <Typography>Bạn có chắc muốn xóa board này? Hành động không thể hoàn tác.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeConfirmDialog}>Hủy</Button>
+          <Button variant="contained" onClick={handleConfirmDelete}>Xóa</Button>
         </DialogActions>
       </Dialog>
     </Box>

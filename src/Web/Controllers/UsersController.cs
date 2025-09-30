@@ -50,9 +50,9 @@ namespace ProjectManagement.Controllers
                 .Select(u => new UserSearchDto
                 {
                     Id = u.Id,
-                    UserName = u.UserName,
-                    Email = u.Email,
-                    Avatar = u.Avatar // đổi theo property model của bạn (null nếu không có)
+                    UserName = u.UserName ?? "Unknown",
+                    Email = u.Email ?? "Unknown",
+                    Avatar = u.Avatar
                 })
                 .ToListAsync();
 

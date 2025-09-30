@@ -2,7 +2,7 @@ import AppsIcon from '@mui/icons-material/Apps';
 import CloseIcon from '@mui/icons-material/Close';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SearchIcon from '@mui/icons-material/Search';
-import { Box, InputAdornment, TextField, Typography } from "@mui/material";
+import { Box, InputAdornment, TextField, Typography, Button } from "@mui/material";
 import SvgIcon from '@mui/material/SvgIcon';
 import Tooltip from '@mui/material/Tooltip';
 import { useState } from 'react';
@@ -13,6 +13,7 @@ import NotificationBell from '~/components/Notifications/NotificationBell';
 import { useAuth } from '~/hooks/useAuth';
 import useThemeMode from '~/hooks/useThemeMode';
 import Profiles from './Menus/Profiles';
+import AddIcon from '@mui/icons-material/Add';
 
 function AppBar() {
     const { themeMode, setThemeMode } = useThemeMode();
@@ -74,8 +75,9 @@ function AppBar() {
                     <Recent />
                     <Starred />
                     <Templates />
-
+                    */}
                     <Button
+                        onClick={() => navigate("/boards/invites")}
                         sx={{
                             color: 'white',
                             border: 'none',
@@ -84,11 +86,10 @@ function AppBar() {
                             }
                         }}
                         variant="outlined"
-                        startIcon={<LibraryAddIcon />}
+                        startIcon={<AddIcon />}
                     >
-                        Create
-                    </Button> 
-                    */}
+                        Board Invites
+                    </Button>
                 </Box>
             </Box>
 

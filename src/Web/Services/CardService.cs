@@ -41,7 +41,7 @@ namespace ProjectManagement.Services
             return _mapper.Map<CardDto>(card);
         }
 
-        public async Task<CardDto> CreateCardAsync(string columnId, CreateCardDto createCardDto, string userId)
+        public async Task<CardDto?> CreateCardAsync(string columnId, CreateCardDto createCardDto, string userId)
         {
             var column = await _context.Columns
                 .Include(c => c.Board)
@@ -108,7 +108,7 @@ namespace ProjectManagement.Services
             return await GetCardAsync(cardId, userId);
         }
 
-        public async Task<CardDto> DeleteCardAsync(string cardId, string userId)
+        public async Task<CardDto?> DeleteCardAsync(string cardId, string userId)
         {
             var card = await _context.Cards
                 .Include(c => c.Board)
@@ -132,7 +132,7 @@ namespace ProjectManagement.Services
             return dto;
         }
 
-        public async Task<CardDto> MoveCardAsync(string cardId, MoveCardDto moveCardDto, string userId)
+        public async Task<CardDto?> MoveCardAsync(string cardId, MoveCardDto moveCardDto, string userId)
         {
             var card = await _context.Cards
                 .Include(c => c.Board)
@@ -175,6 +175,9 @@ namespace ProjectManagement.Services
             var column = await _context.Columns
                 .Include(x=>x.Board)
                 .FirstOrDefaultAsync(b => b.Id == columnId);
+
+            if (column == null)
+                throw new Exception("Column not found");
 
             column.CardOrderIds = cardOrderIds;
             column.LastModified = DateTime.UtcNow;

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Models.Domain.Entities;
+using System.Reflection.Emit;
 using System.Text.Json;
 
 namespace Infrastructure
@@ -175,6 +176,24 @@ namespace Infrastructure
                     .WithMany(u => u.Notifications)
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                entity
+                    .HasOne(n => n.Board)
+                    .WithMany()
+                    .HasForeignKey(n => n.BoardId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity
+                    .HasOne(n => n.Card)
+                    .WithMany()
+                    .HasForeignKey(n => n.CardId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity
+                    .HasOne(n => n.Invite)
+                    .WithMany()
+                    .HasForeignKey(n => n.InviteId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
         }
     }

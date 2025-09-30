@@ -37,19 +37,32 @@ class ApiService {
     try {
       const response = await fetch(url, config);
 
+      const contentType = response.headers.get('content-type');
+
       if (!response.ok) {
-        if (response.status === 401) {
-          // Token expired or invalid
-          this.setAuthToken(null);
-          window.location.href = '/login';
-          return;
+        // parse body nếu có JSON
+        let body = null;
+        try {
+          if (contentType && contentType.includes('application/json')) {
+            body = await response.json();
+          } else {
+            body = await response.text();
+          }
+        } catch (e) {
+          body = null;
         }
 
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP error! status: ${response.status}`);
+        const error = new Error(body?.message || body || `HTTP error ${response.status}`);
+        error.status = response.status;
+        error.body = body;
+
+        if (response.status === 401) {
+          this.setAuthToken(null);
+        }
+
+        throw error;
       }
 
-      const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         return await response.json();
       }
@@ -57,7 +70,7 @@ class ApiService {
       return response;
     } catch (error) {
       console.error('API Request failed:', error);
-      throw error;
+      throw error; // vẫn throw để caller xử lý
     }
   }
 

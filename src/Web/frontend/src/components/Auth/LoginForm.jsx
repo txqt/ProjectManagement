@@ -7,8 +7,11 @@ import {
   Button,
   Typography,
   Alert,
-  Link
+  Link,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '~/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,7 +22,8 @@ const LoginForm = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+  const [showPassword, setShowPassword] = useState(false);
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -29,13 +33,12 @@ const LoginForm = () => {
     setError('');
 
     const result = await login(credentials);
-    
     if (result.success) {
       navigate('/');
     } else {
       setError(result.error);
     }
-    
+
     setLoading(false);
   };
 
@@ -61,7 +64,7 @@ const LoginForm = () => {
           <Typography variant="h4" component="h1" gutterBottom align="center">
             Login to Trello
           </Typography>
-          
+
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
@@ -79,16 +82,28 @@ const LoginForm = () => {
               margin="normal"
               required
             />
-            
+
             <TextField
               fullWidth
               label="Password"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={credentials.password}
               onChange={handleChange}
               margin="normal"
               required
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      edge="end"
+                    >
+                      {showPassword ? <Visibility /> : <VisibilityOff />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
 
             <Button

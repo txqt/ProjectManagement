@@ -1,28 +1,21 @@
-import { Box, Container, CircularProgress, Alert } from "@mui/material";
+import { Container } from "@mui/material";
+import { useEffect } from "react";
 import { useParams } from 'react-router-dom';
+import { toast } from "react-toastify";
 import AppBar from "~/components/AppBar/AppBar";
+import { useBoard } from "~/hooks/useBoard";
 import BoardBar from "./BoardBar/BoardBar";
 import BoardContent from "./BoxContent/BoardContent";
-import { useBoard } from "~/hooks/useBoard";
 
 function Board() {
     const { boardId } = useParams();
     const { board, error, createColumn, createCard, deleteColumn, reorderColumns, reorderCards, moveCard } = useBoard(boardId);
 
-    if (error) {
-        return (
-            <Container
-                disableGutters
-                maxWidth={false}
-                sx={{ height: "100vh" }}
-            >
-                <AppBar />
-                <Alert severity="error">
-                    Error loading board: {error}
-                </Alert>
-            </Container>
-        );
-    }
+    useEffect(() => {
+        if (error) {
+            toast.error(`${error}`);
+        }
+    }, [error]);
 
     return (
         <Container
