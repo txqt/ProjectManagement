@@ -1,59 +1,32 @@
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { TextField } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import DragHandleIcon from '@mui/icons-material/DragHandle';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import AddCardIcon from '@mui/icons-material/AddCard';
-import Tooltip from '@mui/material/Tooltip';
+import CloseIcon from '@mui/icons-material/Close';
+import ContentCopy from '@mui/icons-material/ContentCopy';
+import ContentCut from '@mui/icons-material/ContentCut';
+import ContentPaste from '@mui/icons-material/ContentPaste';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import DragHandleIcon from '@mui/icons-material/DragHandle';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { TextField } from '@mui/material';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import Divider from '@mui/material/Divider';
-import Button from '@mui/material/Button';
-import ListItemText from '@mui/material/ListItemText';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ContentCut from '@mui/icons-material/ContentCut';
-import ContentCopy from '@mui/icons-material/ContentCopy';
-import ContentPaste from '@mui/icons-material/ContentPaste';
-import Cloud from '@mui/icons-material/Cloud';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import { useState } from 'react';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import ListCards from './ListCards/ListCards';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { mapOrder } from '~/utils/sorts';
+import ListCards from './ListCards/ListCards';
 
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender';
 
 function Column({ column, createCard, deleteColumn, deleteCard, pendingTempIds }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({
-    id: column.id,
-    data: { ...column }
-  })
-
-  const dndKitColumnStyles = {
-    /**
-     * touchAction: 'none', // Dành cho sensor default dạng PointerSensor
-     * Nếu sử dụng CSS.Transform như docs sẽ lỗi kiểu stretch
-     * https://github.com/clauderic/dnd-kit/issues/117
-     */
-    transform: CSS.Translate.toString(transform),
-    transition,
-    // Chiều cao phải luôn max 100% vì nếu không sẽ lỗi nếu không có column ngắn qua một cái column dài thì phải kéo ở khu vực giữa giữa rất khó chịu (demo ở video 32). Lưu ý lúc này phải kết hợp với {...listeners} nằm ở Box chứ không phải ở div ngoài cùng để tránh trường hợp kéo vào vùng xanh.
-    height: '100%',
-    opacity: isDragging ? 0.5 : 1
-  }
-
+  
   const [anchorEl, setAnchorEl] = useState(null)
   const open = Boolean(anchorEl)
   const handleClick = (event) => setAnchorEl(event.currentTarget)
@@ -87,9 +60,7 @@ function Column({ column, createCard, deleteColumn, deleteCard, pendingTempIds }
 
   // Phải bọc div ở đây vì vấn đề chiều cao của column khi kéo thả sẽ có bug kiểu kiểu flickering (video 32)
   return (
-    <div ref={setNodeRef} style={dndKitColumnStyles} {...attributes}>
       <Box
-        {...listeners}
         sx={{
           minWidth: '300px',
           maxWidth: '300px',
@@ -243,7 +214,6 @@ function Column({ column, createCard, deleteColumn, deleteCard, pendingTempIds }
                 size='small'
                 variant='outlined'
                 autoFocus
-                data-no-dnd='true'
                 value={newCardTitle}
                 onChange={(e) => setNewCardTitle(e.target.value)}
                 sx={{
@@ -310,7 +280,6 @@ function Column({ column, createCard, deleteColumn, deleteCard, pendingTempIds }
           )}
         </Box>
       </Box>
-    </div>
   )
 }
 

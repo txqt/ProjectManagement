@@ -6,7 +6,6 @@ import ListItemText from '@mui/material/ListItemText';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Card from './Card/Card';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { memo, useCallback, useState } from 'react';
 import ListCardsSkeleton from './ListCardsSkeleton';
 
@@ -63,48 +62,43 @@ const ListCards = memo(({ cards, deleteCard, onEdit, pendingTempIds }) => {
 
     return (
         <>
-            <SortableContext
-                items={cards?.map((c) => c.id)}
-                strategy={verticalListSortingStrategy}
-            >
-                <Box
-                    sx={{
-                        p: '0 5px 5px 5px', // padding
-                        m: '0 5px', // margin
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 1,
-                        overflowX: 'hidden',
-                        overflowY: 'auto',
-                        maxHeight: (theme) => `calc(
+            <Box
+                sx={{
+                    p: '0 5px 5px 5px', // padding
+                    m: '0 5px', // margin
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                    overflowX: 'hidden',
+                    overflowY: 'auto',
+                    maxHeight: (theme) => `calc(
                         ${theme.custom.boardContentHeight} -
                         ${theme.spacing(5)} -
                         ${theme.custom.columnHeaderHeight} -
                         ${theme.custom.columnFooterHeight}
                         )`,
-                        '&::-webkit-scrollbar-thumb': { backgroundColor: '#ced0da' },
-                        '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#dfc2cf' }
-                    }}
-                >
-                    {cards?.map((card) => {
-                        const isCardPending = pendingTempIds?.has?.(card.id) ?? false;
-                        return (
-                            <div
-                                key={card.id}
-                                onContextMenu={(e) => openMenu(e, card)}
-                                style={{
-                                    opacity: isCardPending ? 0.5 : 1,
-                                    pointerEvents: isCardPending ? 'none' : 'auto',
-                                    transition: 'opacity 0.2s ease'
-                                }}
-                            >
-                                <Card card={card} />
-                            </div>
-                        )
+                    '&::-webkit-scrollbar-thumb': { backgroundColor: '#ced0da' },
+                    '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#dfc2cf' }
+                }}
+            >
+                {cards?.map((card) => {
+                    const isCardPending = pendingTempIds?.has?.(card.id) ?? false;
+                    return (
+                        <div
+                            key={card.id}
+                            onContextMenu={(e) => openMenu(e, card)}
+                            style={{
+                                opacity: isCardPending ? 0.5 : 1,
+                                pointerEvents: isCardPending ? 'none' : 'auto',
+                                transition: 'opacity 0.2s ease'
+                            }}
+                        >
+                            <Card card={card} />
+                        </div>
+                    )
 
-                    })}
-                </Box>
-            </SortableContext>
+                })}
+            </Box>
 
             <Menu
                 open={!!menuPos}
