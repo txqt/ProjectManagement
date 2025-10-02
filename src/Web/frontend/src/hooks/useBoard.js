@@ -358,19 +358,27 @@ export const useBoard = (boardId) => {
     return false;
   };
 
-  const moveCard = async (fromColumnId, toColumnId, cardId, positionIndex) => {
+  const moveCard = async (cardId, fromColumnId, toColumnId, positionIndex) => {
     const snapshot = board;
-    // optimistic move
-    setBoard(prev => ({ ...prev, columns: moveCardInState(prev?.columns || [], fromColumnId, toColumnId, cardId, positionIndex) }));
 
-    const result = await executeRequest(() => apiService.moveCard(boardId, fromColumnId, cardId, { fromColumnId, toColumnId, newIndex: positionIndex }));
+    // Optimistic update
+    setBoard(prev => ({
+      ...prev,
+      columns: moveCardInState(prev?.columns || [], fromColumnId, toColumnId, cardId, positionIndex)
+    }));
+
+    const result = await executeRequest(() =>
+      apiService.moveCard(boardId, fromColumnId, cardId, { fromColumnId, toColumnId, newIndex: positionIndex })
+    );
+
     if (result.success) return true;
 
-    // rollback
+    // Rollback
     setBoard(snapshot);
     toast.error('Di chuyển card thất bại — đã khôi phục trạng thái.');
     return false;
   };
+
 
   const reorderColumns = async (columnOrderIds) => {
     const result = await executeRequest(() => apiService.reorderColumns(boardId, columnOrderIds));

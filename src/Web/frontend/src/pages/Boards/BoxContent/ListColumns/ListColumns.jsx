@@ -3,10 +3,6 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Column from './Column/Column';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
-import {
-  SortableContext,
-  horizontalListSortingStrategy
-} from '@dnd-kit/sortable';
 import { useState } from 'react';
 import { TextField } from '@mui/material';
 import { toast } from 'react-toastify';
@@ -45,10 +41,6 @@ function ListColumns({ columns, createColumn, createCard, deleteColumn, deleteCa
    * https://github.com/clauderic/dnd-kit/issues/183#issuecomment-812569512
    */
   return (
-    <SortableContext
-      items={columns?.map((c) => c.id)}
-      strategy={horizontalListSortingStrategy}
-    >
       <Box
         sx={{
           bgcolor: 'inherit',
@@ -177,7 +169,6 @@ function ListColumns({ columns, createColumn, createCard, deleteColumn, deleteCa
           </Box>
         )}
       </Box>
-    </SortableContext>
   )
 }
 
