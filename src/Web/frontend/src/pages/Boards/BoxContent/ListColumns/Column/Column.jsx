@@ -28,7 +28,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender';
 
-function Column({ column, createCard, deleteColumn, deleteCard }) {
+function Column({ column, createCard, deleteColumn, deleteCard, pendingTempIds }) {
   const {
     attributes,
     listeners,
@@ -200,7 +200,7 @@ function Column({ column, createCard, deleteColumn, deleteCard }) {
         </Box>
 
         {/* List Cards */}
-        <ListCards cards={orderedCards} deleteCard={deleteCard} />
+        <ListCards cards={orderedCards} deleteCard={deleteCard} pendingTempIds={pendingTempIds}/>
 
         {/* Box Column Footer */}
         <Box

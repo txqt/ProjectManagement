@@ -10,7 +10,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { memo, useCallback, useState } from 'react';
 import ListCardsSkeleton from './ListCardsSkeleton';
 
-const ListCards = memo(({ cards, deleteCard, onEdit /* optional */ }) => {
+const ListCards = memo(({ cards, deleteCard, onEdit, pendingTempIds }) => {
     // menu state: position-based (use anchorReference="anchorPosition")
     const [menuPos, setMenuPos] = useState(null); // { mouseX, mouseY }
     const [selectedCard, setSelectedCard] = useState(null);
@@ -86,17 +86,23 @@ const ListCards = memo(({ cards, deleteCard, onEdit /* optional */ }) => {
                         '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#dfc2cf' }
                     }}
                 >
-                    {cards?.map((card) => (
-                        // wrapper để bắt sự kiện chuột phải. Nếu Card đã gắn draggable root,
-                        // có thể thay bằng truyền prop onContextMenu vào Card để tránh bọc thêm DOM.
-                        <div
-                            key={card.id}
-                            onContextMenu={(e) => openMenu(e, card)}
-                            style={{ display: 'contents' }} // không tạo box layout thêm
-                        >
-                            <Card card={card} />
-                        </div>
-                    ))}
+                    {cards?.map((card) => {
+                        const isCardPending = pendingTempIds?.has?.(card.id) ?? false;
+                        return (
+                            <div
+                                key={card.id}
+                                onContextMenu={(e) => openMenu(e, card)}
+                                style={{
+                                    opacity: isCardPending ? 0.5 : 1,
+                                    pointerEvents: isCardPending ? 'none' : 'auto',
+                                    transition: 'opacity 0.2s ease'
+                                }}
+                            >
+                                <Card card={card} />
+                            </div>
+                        )
+
+                    })}
                 </Box>
             </SortableContext>
 

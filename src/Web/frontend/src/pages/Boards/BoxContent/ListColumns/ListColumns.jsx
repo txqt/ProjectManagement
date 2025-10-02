@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { TextField } from '@mui/material';
 import { toast } from 'react-toastify';
 
-function ListColumns({ columns, createColumn, createCard, deleteColumn, deleteCard}) {
+function ListColumns({ columns, createColumn, createCard, deleteColumn, deleteCard, pendingTempIds }) {
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
   const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm);
 
@@ -60,9 +60,28 @@ function ListColumns({ columns, createColumn, createCard, deleteColumn, deleteCa
           '&::-webkit-scrollbar-track': { m: 2 }
         }}
       >
-        {columns?.map((column) => (
-          <Column key={column.id} column={column} createCard={createCard} deleteColumn={deleteColumn} deleteCard={deleteCard}/>
-        ))}
+        {columns?.map((column) => {
+          const isColumnPending = pendingTempIds?.has?.(column.id) ?? false;
+
+          return (
+            <div
+              key={column.id}
+              style={{
+                opacity: isColumnPending ? 0.5 : 1,
+                pointerEvents: isColumnPending ? 'none' : 'auto',
+                transition: 'opacity 0.2s ease'
+              }}
+            >
+              <Column
+                column={column}
+                createCard={createCard}
+                deleteColumn={deleteColumn}
+                deleteCard={deleteCard}
+                pendingTempIds={pendingTempIds}
+              />
+            </div>
+          );
+        })}
 
         {/* Box Add new column CTA */}
         {!openNewColumnForm ? (

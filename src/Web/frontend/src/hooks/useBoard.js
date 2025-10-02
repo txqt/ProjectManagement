@@ -10,13 +10,8 @@ export const useBoard = (boardId) => {
   const { loading, error, executeRequest } = useApi();
   const { isConnected, signalRService } = useSignalR(boardId);
 
-  // track pending optimistic ids (temp-...)
   const pendingTempIdsRef = useRef(new Set());
-
-  // track active request cancellation
   const activeRequestRef = useRef({ aborted: false });
-
-  // track current user (nếu có) để ignore event do chính client emit
   const currentUserRef = useRef(null);
 
   // --- Helpers ---
@@ -25,51 +20,62 @@ export const useBoard = (boardId) => {
     return `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   };
 
-  const dedupeById = (arr) => {
+  const dedupeById = (arr = []) => {
     const seen = new Set();
-    return (arr || []).filter(item => {
+    return arr.filter(item => {
+      if (!item) return false;
       if (seen.has(item.id)) return false;
       seen.add(item.id);
       return true;
     });
   };
 
-  const ensureUniqueOrder = (arr) => Array.from(new Set(arr || []));
+  const ensureUniqueOrder = (arr = []) => Array.from(new Set(arr));
 
-  // find column helper
-  const findColumn = (columns, columnId) => (columns || []).find(c => c.id === columnId);
+  const findColumn = (columns = [], columnId) => columns.find(c => c.id === columnId);
 
-  // Safe add card: sẽ không thêm nếu id đã tồn tại
-  // const addCardToColumn = (columns, columnId, card) =>
-  //   (columns || []).map(c => {
-  //     if (c.id !== columnId) return c;
-  //     const exists = (c.cards || []).some(x => x.id === card.id);
-  //     if (exists) return c;
-  //     return {
-  //       ...c,
-  //       cards: [...(c.cards || []), card],
-  //       cardOrderIds: ensureUniqueOrder([...(c.cardOrderIds || []), card.id])
-  //     };
-  //   });
+  // update a card in a specific column (replace full card object)
+  const updateCardInColumns = (columns = [], columnId, cardId, updatedCard) =>
+    columns.map(c => c.id === columnId ? { ...c, cards: (c.cards || []).map(card => card.id === cardId ? updatedCard : card) } : c);
 
-  const updateCardInColumns = (columns, columnId, cardId, updatedCard) =>
-    (columns || []).map(c => c.id === columnId ? {
-      ...c,
-      cards: (c.cards || []).map(card => card.id === cardId ? updatedCard : card)
-    } : c);
+  const addCardToColumn = (columns = [], columnId, card, atIndex = null) =>
+    columns.map(c => {
+      if (c.id !== columnId) return c;
+      const cards = [...(c.cards || [])];
+      if (atIndex == null) cards.push(card);
+      else cards.splice(Math.max(0, Math.min(atIndex, cards.length)), 0, card);
+      return { ...c, cards: dedupeById(cards), cardOrderIds: ensureUniqueOrder((c.cardOrderIds || []).concat(card.id)) };
+    });
 
-  const removeCardFromColumns = (columns, columnId, cardId) =>
-    (columns || []).map(c => c.id === columnId ? {
-      ...c,
-      cards: (c.cards || []).filter(card => card.id !== cardId),
-      cardOrderIds: (c.cardOrderIds || []).filter(id => id !== cardId)
-    } : c);
+  const removeCardFromColumns = (columns = [], columnId, cardId) =>
+    columns.map(c => c.id === columnId ? { ...c, cards: (c.cards || []).filter(card => card.id !== cardId), cardOrderIds: (c.cardOrderIds || []).filter(id => id !== cardId) } : c);
 
-  const replaceColumn = (columns, newColumn) =>
-    (columns || []).map(c => (c.id === newColumn.id ? newColumn : c));
+  const replaceColumn = (columns = [], newColumn) => columns.map(c => (c.id === newColumn.id ? newColumn : c));
+  const removeColumnById = (columns = [], columnId) => columns.filter(c => c.id !== columnId);
 
-  const removeColumnById = (columns, columnId) =>
-    (columns || []).filter(c => c.id !== columnId);
+  const moveCardInState = (columns = [], fromColumnId, toColumnId, cardId, newIndex) => {
+    const from = findColumn(columns, fromColumnId);
+    const to = findColumn(columns, toColumnId);
+    if (!from || !to) return columns;
+
+    const card = (from.cards || []).find(c => c.id === cardId);
+    if (!card) return columns;
+
+    const newCols = columns.map(c => {
+      if (c.id === fromColumnId) {
+        return { ...c, cards: (c.cards || []).filter(x => x.id !== cardId), cardOrderIds: (c.cardOrderIds || []).filter(id => id !== cardId) };
+      }
+      if (c.id === toColumnId) {
+        const newCards = [...(c.cards || [])];
+        const insertAt = Math.max(0, Math.min(newIndex, newCards.length));
+        newCards.splice(insertAt, 0, { ...card, columnId: toColumnId });
+        return { ...c, cards: dedupeById(newCards), cardOrderIds: newCards.map(x => x.id) };
+      }
+      return c;
+    });
+
+    return newCols;
+  };
 
   // --- Load initial board ---
   const loadBoard = useCallback(async () => {
@@ -78,12 +84,11 @@ export const useBoard = (boardId) => {
 
     const result = await executeRequest(() => apiService.getBoard(boardId));
     if (result.success && !activeRequestRef.current.aborted) {
-      setBoard(result.data);
-      // try to extract current user if server returns it
+      setBoard(result.data || { columns: [], columnOrderIds: [] });
       if (result.data?.currentUser) currentUserRef.current = result.data.currentUser;
-    }
-    else{
-      setBoard([])
+    } else {
+      // safer fallback object shape
+      setBoard({ columns: [], columnOrderIds: [] });
     }
   }, [boardId, executeRequest]);
 
@@ -91,29 +96,24 @@ export const useBoard = (boardId) => {
   useEffect(() => {
     if (!isConnected || !signalRService) return;
 
-    // Try get current user from signalRService if available
     if (typeof signalRService.getCurrentUser === 'function') {
       try { currentUserRef.current = signalRService.getCurrentUser(); } catch { /* ignore */ }
     }
 
-    // Column created
     const onColumnCreated = (data) => {
       const { column, userId, clientTempId } = data;
       if (userId === currentUserRef.current?.id) return;
 
       setBoard(prev => {
         const cols = prev?.columns || [];
-        // if already have real column => skip
         if (cols.some(c => c.id === column.id)) return prev;
 
-        // if clientTempId exists and we have the temp -> replace
         if (clientTempId && cols.some(c => c.id === clientTempId)) {
           const replaced = cols.map(c => c.id === clientTempId ? column : c);
           const newOrder = (prev?.columnOrderIds || []).map(id => id === clientTempId ? column.id : id);
           return { ...prev, columns: replaced, columnOrderIds: ensureUniqueOrder(newOrder) };
         }
 
-        // else push to end, ensure uniqueness
         const newCols = dedupeById([...cols, column]);
         const newOrder = ensureUniqueOrder([...(prev?.columnOrderIds || []), column.id]);
         return { ...prev, columns: newCols, columnOrderIds: newOrder };
@@ -131,11 +131,7 @@ export const useBoard = (boardId) => {
     const onColumnDeleted = (data) => {
       const { columnId, userId } = data;
       if (userId === currentUserRef.current?.id) return;
-      setBoard(prev => ({
-        ...prev,
-        columns: removeColumnById(prev?.columns || [], columnId),
-        columnOrderIds: (prev?.columnOrderIds || []).filter(id => id !== columnId)
-      }));
+      setBoard(prev => ({ ...prev, columns: removeColumnById(prev?.columns || [], columnId), columnOrderIds: (prev?.columnOrderIds || []).filter(id => id !== columnId) }));
       toast.info('A column was deleted');
     };
 
@@ -148,7 +144,6 @@ export const useBoard = (boardId) => {
       });
     };
 
-    // Card events
     const onCardCreated = (data) => {
       const { card, columnId, userId, clientTempId } = data;
       if (userId === currentUserRef.current?.id) return;
@@ -158,28 +153,21 @@ export const useBoard = (boardId) => {
         const col = findColumn(cols, columnId);
         if (!col) return prev;
 
-        // if already have real card id -> skip
         if ((col.cards || []).some(c => c.id === card.id)) return prev;
 
-        // if clientTempId provided, replace that temp
         if (clientTempId && (col.cards || []).some(c => c.id === clientTempId)) {
-          const newCols = cols.map(c => {
-            if (c.id !== columnId) return c;
-            const newCards = (c.cards || []).map(x => x.id === clientTempId ? card : x);
-            const newOrder = (c.cardOrderIds || []).map(id => id === clientTempId ? card.id : id);
-            return { ...c, cards: dedupeById(newCards), cardOrderIds: ensureUniqueOrder(newOrder) };
-          });
-          return { ...prev, columns: newCols };
+          return {
+            ...prev,
+            columns: cols.map(c => {
+              if (c.id !== columnId) return c;
+              const newCards = (c.cards || []).map(x => x.id === clientTempId ? card : x);
+              const newOrder = (c.cardOrderIds || []).map(id => id === clientTempId ? card.id : id);
+              return { ...c, cards: dedupeById(newCards), cardOrderIds: ensureUniqueOrder(newOrder) };
+            })
+          };
         }
 
-        // fallback: push card but ensure no duplicates
-        const newCols = cols.map(c => c.id === columnId ? {
-          ...c,
-          cards: dedupeById([...(c.cards || []), card]),
-          cardOrderIds: ensureUniqueOrder([...(c.cardOrderIds || []), card.id])
-        } : c);
-
-        return { ...prev, columns: newCols };
+        return { ...prev, columns: cols.map(c => c.id === columnId ? { ...c, cards: dedupeById([...(c.cards || []), card]), cardOrderIds: ensureUniqueOrder([...(c.cardOrderIds || []), card.id]) } : c) };
       });
 
       toast.success(`New card "${card.title}" created`);
@@ -216,33 +204,7 @@ export const useBoard = (boardId) => {
     const onCardMoved = (data) => {
       const { cardId, fromColumnId, toColumnId, newIndex, userId } = data;
       if (userId === currentUserRef.current?.id) return;
-      setBoard(prev => {
-        const fromColumn = findColumn(prev?.columns || [], fromColumnId);
-        const toColumn = findColumn(prev?.columns || [], toColumnId);
-        const card = fromColumn?.cards?.find(c => c.id === cardId);
-        if (!card || !fromColumn || !toColumn) return prev;
-
-        const updatedCard = { ...card, columnId: toColumnId };
-
-        return {
-          ...prev,
-          columns: (prev?.columns || []).map(col => {
-            if (col.id === fromColumnId) {
-              return {
-                ...col,
-                cards: (col.cards || []).filter(c => c.id !== cardId),
-                cardOrderIds: (col.cardOrderIds || []).filter(id => id !== cardId)
-              };
-            }
-            if (col.id === toColumnId) {
-              const newCards = [...(col.cards || [])];
-              newCards.splice(newIndex, 0, updatedCard);
-              return { ...col, cards: newCards, cardOrderIds: newCards.map(c => c.id) };
-            }
-            return col;
-          })
-        };
-      });
+      setBoard(prev => ({ ...prev, columns: moveCardInState(prev?.columns || [], fromColumnId, toColumnId, cardId, newIndex) }));
       toast.info('A card was moved');
     };
 
@@ -262,8 +224,38 @@ export const useBoard = (boardId) => {
     signalRService.onUserLeft?.((d) => toast.info(`${d.user.userName} left the board`, { position: 'bottom-left', autoClose: 2000 }));
 
     return () => {
-      // remove listeners safely
-      signalRService.removeAllListeners?.();
+      // best-effort cleanup: prefer removeAllListeners, else try per-listener offs
+      if (typeof signalRService.removeAllListeners === 'function') {
+        signalRService.removeAllListeners();
+        return;
+      }
+
+      // try common patterns (some SignalR wrappers expose .off or specific offX functions)
+      signalRService.offColumnCreated?.(onColumnCreated);
+      signalRService.offColumnUpdated?.(onColumnUpdated);
+      signalRService.offColumnDeleted?.(onColumnDeleted);
+      signalRService.offColumnsReordered?.(onColumnsReordered);
+
+      signalRService.offCardCreated?.(onCardCreated);
+      signalRService.offCardUpdated?.(onCardUpdated);
+      signalRService.offCardDeleted?.(onCardDeleted);
+      signalRService.offCardsReordered?.(onCardsReordered);
+      signalRService.offCardMoved?.(onCardMoved);
+
+      if (typeof signalRService.off === 'function') {
+        try {
+          signalRService.off('columnCreated', onColumnCreated);
+          signalRService.off('columnUpdated', onColumnUpdated);
+          signalRService.off('columnDeleted', onColumnDeleted);
+          signalRService.off('columnsReordered', onColumnsReordered);
+
+          signalRService.off('cardCreated', onCardCreated);
+          signalRService.off('cardUpdated', onCardUpdated);
+          signalRService.off('cardDeleted', onCardDeleted);
+          signalRService.off('cardsReordered', onCardsReordered);
+          signalRService.off('cardMoved', onCardMoved);
+        } catch (e) { /* ignore */ }
+      }
     };
   }, [isConnected, signalRService]);
 
@@ -288,7 +280,6 @@ export const useBoard = (boardId) => {
       columnOrderIds: [...(prev?.columnOrderIds || []), tempId]
     }));
 
-    // send clientTempId so server can echo it (if server supports)
     const payload = { ...columnData, clientTempId: tempId };
     const result = await executeRequest(() => apiService.createColumn(boardId, payload));
 
@@ -298,7 +289,6 @@ export const useBoard = (boardId) => {
       const real = result.data;
       setBoard(prev => {
         const cols = prev?.columns || [];
-        // loại bỏ temp và bất kỳ column có id trùng real.id
         const filtered = cols.filter(c => c.id !== tempId && c.id !== real.id);
         const tempIndex = cols.findIndex(c => c.id === tempId);
         if (tempIndex !== -1) filtered.splice(tempIndex, 0, real); else filtered.push(real);
@@ -308,17 +298,24 @@ export const useBoard = (boardId) => {
       return result.data;
     }
 
-    // on failure, rollback optimistic
+    // rollback
     setBoard(prev => ({ ...prev, columns: (prev?.columns || []).filter(c => c.id !== tempId), columnOrderIds: (prev?.columnOrderIds || []).filter(id => id !== tempId) }));
+    toast.error('Tạo column thất bại');
     return null;
   };
 
   const createCard = async (columnId, cardData) => {
     const tempId = makeTempId();
+    const tempCard = { ...cardData, id: tempId };
 
     pendingTempIdsRef.current.add(tempId);
 
-    // send clientTempId for server to echo (if supported)
+    // optimistic insert
+    setBoard(prev => ({
+      ...prev,
+      columns: addCardToColumn(prev?.columns || [], columnId, tempCard)
+    }));
+
     const payload = { ...cardData, clientTempId: tempId };
     const result = await executeRequest(() => apiService.createCard(boardId, columnId, payload));
 
@@ -326,33 +323,29 @@ export const useBoard = (boardId) => {
 
     if (result.success) {
       const real = result.data;
-
       setBoard(prev => {
         const cols = prev?.columns || [];
-        const newCols = cols.map(col => {
-          if (col.id !== columnId) return col;
-
-          const cards = col.cards || [];
-          const tempIndex = cards.findIndex(c => c.id === tempId);
-          const filtered = cards.filter(c => c.id !== tempId && c.id !== real.id);
-
-          if (tempIndex !== -1) filtered.splice(tempIndex, 0, real); else filtered.push(real);
-
-          let newOrder = (col.cardOrderIds || []).map(id => id === tempId ? real.id : id);
-          if (!newOrder.includes(real.id)) newOrder.push(real.id);
-          newOrder = ensureUniqueOrder(newOrder);
-
-          return { ...col, cards: dedupeById(filtered), cardOrderIds: newOrder };
-        });
-
-        return { ...prev, columns: newCols };
+        return {
+          ...prev,
+          columns: cols.map(col => {
+            if (col.id !== columnId) return col;
+            const cards = col.cards || [];
+            const tempIndex = cards.findIndex(c => c.id === tempId);
+            const filtered = cards.filter(c => c.id !== tempId && c.id !== real.id);
+            if (tempIndex !== -1) filtered.splice(tempIndex, 0, real); else filtered.push(real);
+            let newOrder = (col.cardOrderIds || []).map(id => id === tempId ? real.id : id);
+            if (!newOrder.includes(real.id)) newOrder.push(real.id);
+            newOrder = ensureUniqueOrder(newOrder);
+            return { ...col, cards: dedupeById(filtered), cardOrderIds: newOrder };
+          })
+        };
       });
-
       return result.data;
     }
 
-    // rollback optimistic
+    // rollback optimistic card
     setBoard(prev => ({ ...prev, columns: removeCardFromColumns(prev?.columns || [], columnId, tempId) }));
+    toast.error('Tạo card thất bại');
     return null;
   };
 
@@ -366,8 +359,17 @@ export const useBoard = (boardId) => {
   };
 
   const moveCard = async (fromColumnId, toColumnId, cardId, positionIndex) => {
+    const snapshot = board;
+    // optimistic move
+    setBoard(prev => ({ ...prev, columns: moveCardInState(prev?.columns || [], fromColumnId, toColumnId, cardId, positionIndex) }));
+
     const result = await executeRequest(() => apiService.moveCard(boardId, fromColumnId, cardId, { fromColumnId, toColumnId, newIndex: positionIndex }));
-    return result.success;
+    if (result.success) return true;
+
+    // rollback
+    setBoard(snapshot);
+    toast.error('Di chuyển card thất bại — đã khôi phục trạng thái.');
+    return false;
   };
 
   const reorderColumns = async (columnOrderIds) => {
@@ -380,33 +382,34 @@ export const useBoard = (boardId) => {
     return result.success;
   };
 
-  const updateCard = async (columnId, cardId) => {
-    
-  }
+  const updateCard = async (columnId, cardId, updateData) => {
+    const snapshot = board;
+    // optimistic update: merge existing card + updateData
+    const originalCard = snapshot?.columns?.find(c => c.id === columnId)?.cards?.find(x => x.id === cardId) || {};
+    const optimisticCard = { ...originalCard, ...updateData };
+
+    setBoard(prev => ({ ...prev, columns: updateCardInColumns(prev?.columns || [], columnId, cardId, optimisticCard) }));
+
+    const result = await executeRequest(() => apiService.updateCard(boardId, columnId, cardId, updateData));
+    if (result.success) return true;
+
+    // rollback
+    setBoard(snapshot);
+    toast.error('Cập nhật card thất bại — đã khôi phục trạng thái.');
+    return false;
+  };
 
   const deleteCard = async (columnId, cardId) => {
     const snapshot = board;
-
     const removedCard = snapshot?.columns?.find(c => c.id === columnId)?.cards?.find(card => card.id === cardId) || null;
 
-    setBoard(prev => ({
-      ...prev,
-      columns: (prev?.columns || []).map(c => {
-        if (c.id !== columnId) return c;
-        return {
-          ...c,
-          cards: (c.cards || []).filter(card => card.id !== cardId),
-          cardOrderIds: (c.cardOrderIds || []).filter(id => id !== cardId)
-        };
-      })
-    }));
+    // optimistic remove
+    setBoard(prev => ({ ...prev, columns: (prev?.columns || []).map(c => c.id === columnId ? { ...c, cards: (c.cards || []).filter(card => card.id !== cardId), cardOrderIds: (c.cardOrderIds || []).filter(id => id !== cardId) } : c) }));
 
-    const result = await executeRequest(() => apiService.deleteCard(boardId, columnId,cardId));
+    const result = await executeRequest(() => apiService.deleteCard(boardId, columnId, cardId));
+    if (result.success) return true;
 
-    if (result.success) {
-      return true;
-    }
-
+    // rollback
     if (removedCard) {
       setBoard(prev => ({
         ...prev,
@@ -414,11 +417,7 @@ export const useBoard = (boardId) => {
           if (c.id !== columnId) return c;
           const exists = (c.cards || []).some(x => x.id === removedCard.id);
           if (exists) return c;
-          return {
-            ...c,
-            cards: dedupeById([...(c.cards || []), removedCard]),
-            cardOrderIds: ensureUniqueOrder([...(c.cardOrderIds || []), removedCard.id])
-          };
+          return { ...c, cards: dedupeById([...(c.cards || []), removedCard]), cardOrderIds: ensureUniqueOrder([...(c.cardOrderIds || []), removedCard.id]) };
         })
       }));
     } else {
@@ -441,7 +440,9 @@ export const useBoard = (boardId) => {
     moveCard,
     reorderColumns,
     reorderCards,
-    deleteCard
+    deleteCard,
+    updateCard,
+    pendingTempIds: pendingTempIdsRef.current,
   };
 };
 
