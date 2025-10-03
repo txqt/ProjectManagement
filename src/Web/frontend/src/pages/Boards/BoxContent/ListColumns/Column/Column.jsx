@@ -22,11 +22,12 @@ import {
 } from '@mui/material';
 import { memo, useEffect, useRef, useState } from 'react';
 import Card from './ListCards/Card/Card';
-
+import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview';
 
 
 const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTempIds, onReorderCards, onMoveCard }) => {
   const columnRef = useRef(null);
+  const headerRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [closestEdge, setClosestEdge] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -39,21 +40,49 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
   const toggleOpenNewCardForm = () => setOpenNewCardForm(!openNewCardForm);
 
   useEffect(() => {
-    const el = columnRef.current;
-    if (!el) return;
+    const columnEl = columnRef.current;
+    const headerEl = headerRef.current;
+    if (!columnEl || !headerEl) return;
 
     return combine(
+      // 👇 draggable chỉ gắn cho header
       draggable({
-        element: el,
-        getInitialData: () => ({ 
-          type: 'column', 
-          columnId: column.id 
+        element: headerEl,
+        getInitialData: () => ({
+          type: 'column',
+          columnId: column.id
         }),
+        onGenerateDragPreview({ nativeSetDragImage, location }) {
+          // 👉 clone nguyên column để làm drag preview
+          const rect = columnEl.getBoundingClientRect();
+          const preview = columnEl.cloneNode(true);
+          if (preview instanceof HTMLElement) {
+            preview.style.width = `${rect.width}px`;
+            preview.style.height = `${rect.height}px`;
+
+            // xoay nhẹ cho đẹp (Safari thì bỏ do không support)
+            if (!/Safari/.test(navigator.userAgent) || /Chrome/.test(navigator.userAgent)) {
+              preview.style.transform = 'rotate(4deg)';
+            }
+
+            setCustomNativeDragPreview({
+              nativeSetDragImage,
+              getOffset: () => ({
+                x: location.current.input.clientX - rect.left,
+                y: location.current.input.clientY - rect.top,
+              }),
+              render({ container }) {
+                container.appendChild(preview);
+              }
+            });
+          }
+        },
         onDragStart: () => setIsDragging(true),
         onDrop: () => setIsDragging(false),
       }),
+      // 👇 dropTarget vẫn gắn cho toàn column
       dropTargetForElements({
-        element: el,
+        element: columnEl,
         getData: ({ input, element }) => {
           const data = { type: 'column', columnId: column.id };
           return attachClosestEdge(data, {
@@ -66,27 +95,21 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
           if (source.data.type === 'column') {
             return source.data.columnId !== column.id;
           }
-          // Allow cards to be dropped on column
           return source.data.type === 'card';
         },
         onDrag: ({ self, source }) => {
           if (source.data.type === 'column') {
-            const edge = extractClosestEdge(self.data);
-            setClosestEdge(edge);
+            setClosestEdge(extractClosestEdge(self.data));
           }
         },
         onDragLeave: () => setClosestEdge(null),
         onDrop: ({ source }) => {
           setClosestEdge(null);
-          
-          // Handle card drop on empty column or between cards
           if (source.data.type === 'card') {
             const sourceColumnId = source.data.columnId;
             const targetColumnId = column.id;
             const cardId = source.data.cardId;
-            
             if (sourceColumnId !== targetColumnId) {
-              // Move to different column - append to end
               onMoveCard?.(cardId, sourceColumnId, targetColumnId, column.cards?.length || 0);
             }
           }
@@ -94,7 +117,6 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
       })
     );
   }, [column.id, column.cards?.length, onMoveCard]);
-
   const addNewCard = async () => {
     if (!newCardTitle) {
       alert('Please enter Card Title');
@@ -115,12 +137,12 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
   return (
     <Box sx={{ position: 'relative' }}>
       {closestEdge === 'left' && (
-        <Box sx={{ 
-          position: 'absolute', 
-          left: -2, 
-          top: 0, 
-          bottom: 0, 
-          width: 2, 
+        <Box sx={{
+          position: 'absolute',
+          left: -2,
+          top: 0,
+          bottom: 0,
+          width: 2,
           bgcolor: '#1976d2',
           zIndex: 1
         }} />
@@ -141,12 +163,12 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
         }}
       >
         {/* Column Header */}
-        <Box sx={{ 
-          height: '50px', 
-          p: 2, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between' 
+        <Box ref={headerRef} sx={{
+          height: '50px',
+          p: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
         }}>
           <Typography variant='h6' sx={{ fontSize: '1rem', fontWeight: 'bold' }}>
             {column?.title}
@@ -170,7 +192,7 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
         </Box>
 
         {/* Cards List */}
-        <Box sx={{ 
+        <Box sx={{
           p: '0 5px 5px 5px',
           m: '0 5px',
           display: 'flex',
@@ -180,10 +202,28 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
           flex: 1,
           minHeight: '50px'
         }}>
+          {column?.cards?.length === 0 && (
+            <Box
+              sx={{
+                height: '60px',
+                border: '2px dashed #ccc',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#666',
+                fontSize: '14px',
+                backgroundColor: closestEdge ? '#e3f2fd' : 'transparent',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              No card here
+            </Box>
+          )}
           {column?.cards?.map((card) => {
             const isCardPending = pendingTempIds?.has?.(card.id) ?? false;
             return (
-              <div key={card.id} style={{ 
+              <div key={card.id} style={{
                 opacity: isCardPending ? 0.5 : 1,
                 pointerEvents: isCardPending ? 'none' : 'auto',
               }}>
@@ -194,7 +234,7 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
         </Box>
 
         {/* Column Footer */}
-        <Box sx={{ height: '50px', p: 2 }}>
+        <Box sx={{ height: (theme) => theme.custom.columnFooterHeight, p: 2 }}>
           {!openNewCardForm ? (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Button startIcon={<AddCardIcon />} onClick={toggleOpenNewCardForm}>
@@ -212,7 +252,7 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
                 autoFocus
                 value={newCardTitle}
                 onChange={(e) => setNewCardTitle(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addNewCard()}
+                onKeyDown={(e) => e.key === 'Enter' && addNewCard()}
                 sx={{ flex: 1 }}
               />
               <Button onClick={addNewCard} variant='contained' color='success' size='small'>
@@ -225,12 +265,12 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
       </Box>
 
       {closestEdge === 'right' && (
-        <Box sx={{ 
-          position: 'absolute', 
-          right: -2, 
-          top: 0, 
-          bottom: 0, 
-          width: 2, 
+        <Box sx={{
+          position: 'absolute',
+          right: -2,
+          top: 0,
+          bottom: 0,
+          width: 2,
           bgcolor: '#1976d2',
           zIndex: 1
         }} />
