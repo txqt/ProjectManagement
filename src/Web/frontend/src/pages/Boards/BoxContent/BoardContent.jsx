@@ -2,12 +2,15 @@ import {
     extractClosestEdge
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-import { useEffect, useRef } from 'react';
-
+import CloseIcon from '@mui/icons-material/Close';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import {
-    Box
+    Box,
+    Button,
+    TextField
 } from '@mui/material';
-import ListColumns from './ListColumns/ListColumns';
+import { useEffect, useRef, useState } from 'react';
+import Column from './Column/Column';
 
 export default function BoardContent({
     board,
@@ -21,6 +24,10 @@ export default function BoardContent({
     pendingTempIds
 }) {
     const boardRef = useRef(null);
+    const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
+    const [newColumnTitle, setNewColumnTitle] = useState('');
+
+    const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm);
 
     // Handle drop events
     useEffect(() => {
@@ -97,6 +104,24 @@ export default function BoardContent({
         });
     }, [board, reorderColumns, reorderCards, moveCard]);
 
+    const addNewColumn = async () => {
+        if (!newColumnTitle) {
+            alert('Please enter Column Title');
+            return;
+        }
+        try {
+            await createColumn({
+                title: newColumnTitle,
+                description: 'description',
+                type: 'public'
+            });
+            toggleOpenNewColumnForm();
+            setNewColumnTitle('');
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     return (
         <Box sx={{
             bgcolor: '#1976d2',
@@ -115,18 +140,79 @@ export default function BoardContent({
                     px: 2,
                 }}
             >
-                <ListColumns
-                    columns={board?.columns}
-                    createCard={createCard}
-                    deleteColumn={deleteColumn}
-                    deleteCard={deleteCard}
-                    pendingTempIds={pendingTempIds}
-                    onReorderCards={reorderCards}
-                    onMoveCard={moveCard}
-                    onReorderColumns={reorderColumns}
-                    createColumn={createColumn}
-                />
+                {board?.columns?.map((column) => {
+                    const isColumnPending = pendingTempIds?.has?.(column.id) ?? false;
+                    return (
+                        <div key={column.id} style={{
+                            opacity: isColumnPending ? 0.5 : 1,
+                            pointerEvents: isColumnPending ? 'none' : 'auto',
+                        }}>
+                            <Column
+                                column={column}
+                                createCard={createCard}
+                                deleteColumn={deleteColumn}
+                                deleteCard={deleteCard}
+                                pendingTempIds={pendingTempIds}
+                                onReorderCards={reorderCards}
+                                onMoveCard={moveCard}
+                            />
+                        </div>
+                    );
+                })}
 
+                {/* Add New Column */}
+                {!openNewColumnForm ? (
+                    <Box onClick={toggleOpenNewColumnForm} sx={{
+                        minWidth: '250px',
+                        borderRadius: '6px',
+                        height: 'fit-content',
+                        bgcolor: '#ffffff3d',
+                        cursor: 'pointer'
+                    }}>
+                        <Button startIcon={<NoteAddIcon />} sx={{
+                            color: 'white',
+                            width: '100%',
+                            justifyContent: 'flex-start',
+                            pl: 2.5,
+                            py: 1
+                        }}>
+                            Add new column
+                        </Button>
+                    </Box>
+                ) : (
+                    <Box sx={{
+                        minWidth: '250px',
+                        p: 1,
+                        borderRadius: '6px',
+                        height: 'fit-content',
+                        bgcolor: '#ffffff3d',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1
+                    }}>
+                        <TextField
+                            label='Enter column title...'
+                            size='small'
+                            autoFocus
+                            value={newColumnTitle}
+                            onChange={(e) => setNewColumnTitle(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && addNewColumn()}
+                            sx={{
+                                '& label': { color: 'white' },
+                                '& input': { color: 'white' },
+                                '& .MuiOutlinedInput-root': {
+                                    '& fieldset': { borderColor: 'white' },
+                                }
+                            }}
+                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Button onClick={addNewColumn} variant='contained' color='success' size='small'>
+                                Add Column
+                            </Button>
+                            <CloseIcon fontSize='small' sx={{ color: 'white', cursor: 'pointer' }} onClick={toggleOpenNewColumnForm} />
+                        </Box>
+                    </Box>
+                )}
             </Box>
         </Box>
     );

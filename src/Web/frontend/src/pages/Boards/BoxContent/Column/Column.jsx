@@ -21,8 +21,9 @@ import {
   Typography
 } from '@mui/material';
 import { memo, useEffect, useRef, useState } from 'react';
-import Card from './ListCards/Card/Card';
+import Card from './Card/Card';
 import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview';
+
 
 
 const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTempIds, onReorderCards, onMoveCard }) => {
@@ -45,7 +46,6 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
     if (!columnEl || !headerEl) return;
 
     return combine(
-      // 👇 draggable chỉ gắn cho header
       draggable({
         element: headerEl,
         getInitialData: () => ({
@@ -80,9 +80,9 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
         onDragStart: () => setIsDragging(true),
         onDrop: () => setIsDragging(false),
       }),
-      // 👇 dropTarget vẫn gắn cho toàn column
       dropTargetForElements({
         element: columnEl,
+        getIsSticky: () => true,
         getData: ({ input, element }) => {
           const data = { type: 'column', columnId: column.id };
           return attachClosestEdge(data, {
@@ -117,6 +117,8 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
       })
     );
   }, [column.id, column.cards?.length, onMoveCard]);
+
+
   const addNewCard = async () => {
     if (!newCardTitle) {
       alert('Please enter Card Title');
@@ -163,16 +165,23 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
         }}
       >
         {/* Column Header */}
-        <Box ref={headerRef} sx={{
-          height: '50px',
-          p: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <Typography variant='h6' sx={{ fontSize: '1rem', fontWeight: 'bold' }}>
-            {column?.title}
-          </Typography>
+        <Box
+          ref={headerRef}
+          sx={{
+            height: '50px',
+            p: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'grab'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <DragHandleIcon sx={{ cursor: 'grab' }} />
+            <Typography variant='h6' sx={{ fontSize: '1rem', fontWeight: 'bold' }}>
+              {column?.title}
+            </Typography>
+          </Box>
           <Box>
             <Tooltip title='More options'>
               <ExpandMoreIcon
@@ -202,24 +211,6 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
           flex: 1,
           minHeight: '50px'
         }}>
-          {column?.cards?.length === 0 && (
-            <Box
-              sx={{
-                height: '60px',
-                border: '2px dashed #ccc',
-                borderRadius: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#666',
-                fontSize: '14px',
-                backgroundColor: closestEdge ? '#e3f2fd' : 'transparent',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              No card here
-            </Box>
-          )}
           {column?.cards?.map((card) => {
             const isCardPending = pendingTempIds?.has?.(card.id) ?? false;
             return (
@@ -234,7 +225,7 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
         </Box>
 
         {/* Column Footer */}
-        <Box sx={{ height: (theme) => theme.custom.columnFooterHeight, p: 2 }}>
+        <Box sx={(theme) => ({ height: theme.custom.columnFooterHeight, p: 2 })}>
           {!openNewCardForm ? (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Button startIcon={<AddCardIcon />} onClick={toggleOpenNewCardForm}>
@@ -252,7 +243,7 @@ const Column = memo(({ column, createCard, deleteColumn, deleteCard, pendingTemp
                 autoFocus
                 value={newCardTitle}
                 onChange={(e) => setNewCardTitle(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addNewCard()}
+                onKeyPress={(e) => e.key === 'Enter' && addNewCard()}
                 sx={{ flex: 1 }}
               />
               <Button onClick={addNewCard} variant='contained' color='success' size='small'>
