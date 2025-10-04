@@ -28,7 +28,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender';
 
-function Column({ column, createCard, deleteColumn, deleteCard, pendingTempIds }) {
+function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pendingTempIds }) {
   const {
     attributes,
     listeners,
@@ -64,7 +64,9 @@ function Column({ column, createCard, deleteColumn, deleteCard, pendingTempIds }
   const [openNewCardForm, setOpenNewCardForm] = useState(false)
   const toggleOpenNewCardForm = () => setOpenNewCardForm(!openNewCardForm)
 
-  const [newCardTitle, setNewCardTitle] = useState('')
+  const [newCardTitle, setNewCardTitle] = useState('');
+
+  const [editMode, setEditMode] = useState(null);
 
   const addNewCard = async () => {
     if (!newCardTitle) {
@@ -112,16 +114,41 @@ function Column({ column, createCard, deleteColumn, deleteCard, pendingTempIds }
             justifyContent: 'space-between'
           }}
         >
-          <Typography
-            variant='h6'
-            sx={{
-              fontSize: '1rem',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
-          >
-            {column?.title}
-          </Typography>
+          {editMode &&
+            <TextField
+              autoFocus
+              variant="outlined"
+              onKeyDown={async (e) => {
+                if (e.key !== 'Enter') return;
+                await updateColumn(column.id, { title: e.target.value });
+                setEditMode(false);
+              }}
+              onBlur={() => setEditMode(false)}
+              slotProps={{
+                input: {
+                  sx: {
+                    height: 28,
+                    padding: '0 8px',
+                    fontWeight: 'bold',
+                  },
+                }
+              }}
+              defaultValue={column?.title}
+            />
+          }
+          {!editMode &&
+            <Typography
+              variant='h6'
+              onClick={() => setEditMode(true)}
+              sx={{
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              {column?.title}
+            </Typography>
+          }
 
           <Box>
             <Tooltip title='More options'>
@@ -143,49 +170,6 @@ function Column({ column, createCard, deleteColumn, deleteCard, pendingTempIds }
                 'aria-labelledby': 'basic-column-dropdown'
               }}
             >
-              <MenuItem>
-                <ListItemIcon>
-                  <AddCardIcon fontSize='small' />
-                </ListItemIcon>
-                <ListItemText>Add new card</ListItemText>
-                <Typography variant='body2' color='text.secondary'>
-                  ⌘X
-                </Typography>
-              </MenuItem>
-              <MenuItem>
-                <ListItemIcon>
-                  <ContentCut fontSize='small' />
-                </ListItemIcon>
-                <ListItemText>Cut</ListItemText>
-                <Typography variant='body2' color='text.secondary'>
-                  ⌘X
-                </Typography>
-              </MenuItem>
-              <MenuItem>
-                <ListItemIcon>
-                  <ContentCopy fontSize='small' />
-                </ListItemIcon>
-                <ListItemText>Copy</ListItemText>
-                <Typography variant='body2' color='text.secondary'>
-                  ⌘C
-                </Typography>
-              </MenuItem>
-              <MenuItem>
-                <ListItemIcon>
-                  <ContentPaste fontSize='small' />
-                </ListItemIcon>
-                <ListItemText>Paste</ListItemText>
-                <Typography variant='body2' color='text.secondary'>
-                  ⌘V
-                </Typography>
-              </MenuItem>
-              <Divider />
-              {/* <MenuItem>
-                <ListItemIcon>
-                  <DeleteForeverIcon fontSize='small' />
-                </ListItemIcon>
-                <ListItemText>Remove Archive this column</ListItemText>
-              </MenuItem> */}
               <ConditionalRender permission="boards.delete">
                 <MenuItem>
                   <ListItemIcon>
@@ -194,13 +178,12 @@ function Column({ column, createCard, deleteColumn, deleteCard, pendingTempIds }
                   <ListItemText onClick={() => deleteColumn(column.id)}>Delete this column (cannot undo this action)</ListItemText>
                 </MenuItem>
               </ConditionalRender>
-
             </Menu>
           </Box>
         </Box>
 
         {/* List Cards */}
-        <ListCards cards={orderedCards} deleteCard={deleteCard} pendingTempIds={pendingTempIds}/>
+        <ListCards cards={orderedCards} deleteCard={deleteCard} pendingTempIds={pendingTempIds} />
 
         {/* Box Column Footer */}
         <Box

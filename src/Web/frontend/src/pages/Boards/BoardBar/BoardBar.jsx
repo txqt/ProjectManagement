@@ -17,6 +17,7 @@ import { capitalizeFirstLetter } from '~/utils/formatters';
 import InviteDialog from '../../../components/BoardInvites/InviteDialog';
 import BoardBarSkeleton from './BoardBarSkeleton';
 import GroupIcon from '@mui/icons-material/Group';
+import { useAuth } from '~/hooks/useAuth';
 
 const MENU_STYPES = {
   color: 'white',
@@ -36,6 +37,7 @@ export default function BoardBar({ board }) {
   const { isConnected, users } = useSignalR(board?.id);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [boardMember, setBoardMember] = useState('');
+  const { user } = useAuth();
 
   useEffect(() => {
     if (board?.members?.length > 0) {
@@ -108,7 +110,7 @@ export default function BoardBar({ board }) {
           }}
         >
           {users.map(u => (
-            <Tooltip key={u.id} title={`${u.userName} ${isConnected ? '(online)' : ''}`}>
+            <Tooltip key={u.id} title={`${u.userName} ${u.userName === user.userName ? '(me)' : ''}`}>
               <Avatar alt={u.userName} src={u.avatar} />
             </Tooltip>
           ))}

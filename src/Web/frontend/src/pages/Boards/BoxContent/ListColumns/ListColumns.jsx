@@ -10,12 +10,17 @@ import {
 import { useState } from 'react';
 import { TextField } from '@mui/material';
 import { toast } from 'react-toastify';
+import { useMemo } from 'react';
 
-function ListColumns({ columns, createColumn, createCard, deleteColumn, deleteCard, pendingTempIds }) {
+function ListColumns({ columns, createColumn, updateColumn, createCard, deleteColumn, deleteCard, pendingTempIds }) {
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
   const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm);
 
   const [newColumnTitle, setNewColumnTitle] = useState('');
+
+  const columnsId = useMemo(() => {
+    return columns?.map((c) => c.id);
+  }, [columns]);
 
   const addNewColumn = async () => {
     if (!newColumnTitle) {
@@ -46,7 +51,7 @@ function ListColumns({ columns, createColumn, createCard, deleteColumn, deleteCa
    */
   return (
     <SortableContext
-      items={columns?.map((c) => c.id)}
+      items={columnsId}
       strategy={horizontalListSortingStrategy}
     >
       <Box
@@ -75,6 +80,7 @@ function ListColumns({ columns, createColumn, createCard, deleteColumn, deleteCa
               <Column
                 column={column}
                 createCard={createCard}
+                updateColumn={updateColumn}
                 deleteColumn={deleteColumn}
                 deleteCard={deleteCard}
                 pendingTempIds={pendingTempIds}

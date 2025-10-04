@@ -304,6 +304,30 @@ export const useBoard = (boardId) => {
     return null;
   };
 
+  const updateColumn = async (columnId, updateData) => {
+    const snapshot = board;
+    // Lấy column gốc
+    const originalColumn = snapshot?.columns?.find(c => c.id === columnId) || {};
+    // Tạo bản optimistic update
+    const optimisticColumn = { ...originalColumn, ...updateData };
+
+    // Optimistic update
+    setBoard(prev => ({
+      ...prev,
+      columns: replaceColumn(prev?.columns || [], optimisticColumn)
+    }));
+
+    // Gọi API
+    const result = await executeRequest(() => apiService.updateColumn(boardId, columnId, updateData));
+    if (result.success) return true;
+
+    // Rollback nếu thất bại
+    setBoard(snapshot);
+    toast.error('Cập nhật column thất bại — đã khôi phục trạng thái.');
+    return false;
+  };
+
+
   const createCard = async (columnId, cardData) => {
     const tempId = makeTempId();
     const tempCard = { ...cardData, id: tempId };
@@ -435,6 +459,7 @@ export const useBoard = (boardId) => {
     isConnected,
     loadBoard,
     createColumn,
+    updateColumn,
     deleteColumn,
     createCard,
     moveCard,

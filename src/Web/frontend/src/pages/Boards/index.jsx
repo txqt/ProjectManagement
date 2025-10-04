@@ -151,9 +151,9 @@ export default function BoardListView() {
               sx={{
                 height: 300,
                 width: 300,
-                display: "flex",
-                flexDirection: "column",
+                position: "relative",
                 borderRadius: 3,
+                overflow: "hidden",
                 boxShadow: 3,
                 ":hover": { boxShadow: 6, transform: "scale(1.02)" },
                 transition: "0.3s"
@@ -162,26 +162,45 @@ export default function BoardListView() {
             >
               <CardActionArea
                 onClick={() => navigate(`/boards/${board.id}`)}
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "stretch"
-                }}
+                sx={{ height: "100%", position: "relative" }}
               >
+                {/* Hình nền full card */}
                 <CardMedia
                   component="img"
-                  height="140"
-                  image={board.cover}
+                  image={
+                    board.cover ||
+                    "https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
+                  }
                   alt={board.title}
-                  sx={{ flexShrink: 0 }}
+                  sx={{
+                    height: "100%",
+                    width: "100%",
+                    objectFit: "cover",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    zIndex: 1
+                  }}
                 />
-                <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
+
+                {/* Overlay gradient + chữ */}
+                <Box
+                  sx={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    p: 2,
+                    zIndex: 2,
+                    background:
+                      "linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0))"
+                  }}
+                >
                   <Typography
-                    gutterBottom
                     variant="h6"
-                    component="div"
                     sx={{
+                      color: "white",
+                      fontWeight: "bold",
                       overflow: "hidden",
                       whiteSpace: "nowrap",
                       textOverflow: "ellipsis"
@@ -192,9 +211,8 @@ export default function BoardListView() {
 
                   <Typography
                     variant="body2"
-                    color="text.secondary"
                     sx={{
-                      flexGrow: 1,
+                      color: "white",
                       overflow: "hidden",
                       whiteSpace: "nowrap",
                       textOverflow: "ellipsis"
@@ -202,9 +220,10 @@ export default function BoardListView() {
                   >
                     {board.description}
                   </Typography>
-                </CardContent>
+                </Box>
               </CardActionArea>
             </Card>
+
           </Grid>
         ))}
       </Grid>

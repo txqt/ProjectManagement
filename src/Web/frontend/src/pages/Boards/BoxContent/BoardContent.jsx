@@ -21,7 +21,7 @@ import Card from './ListColumns/Column/ListCards/Card/Card'
 import { cloneDeep, throttle } from 'lodash'
 import { ACTIVE_DRAG_ITEM_TYPE } from '~/utils/constants'
 
-function BoardContent({ board, createColumn, createCard, deleteColumn, reorderColumns, reorderCards, moveCard, deleteCard, pendingTempIds }) {
+function BoardContent({ board, createColumn, updateColumn, createCard, deleteColumn, reorderColumns, reorderCards, moveCard, deleteCard, pendingTempIds }) {
     // https://docs.dndkit.com/api-documentation/sensors
     // Nếu dùng PointerSensor mặc định thì phải kết hợp thuộc tính CSS touch-action: none ở trong phần tử kéo thả - nhưng mà còn bug
 
@@ -191,7 +191,7 @@ function BoardContent({ board, createColumn, createCard, deleteColumn, reorderCo
             // activeDraggingCard: Là cái card đang được kéo
             const {
                 id: activeDraggingCardId,
-                // data: { current: activeDraggingCardData }
+                data: { current: activeDraggingCardData }
             } = active;
 
             // overCard: là cái card đang tương tác trên hoặc dưới so với cái card được kéo ở trên
@@ -207,15 +207,15 @@ function BoardContent({ board, createColumn, createCard, deleteColumn, reorderCo
             // Xử lý logic ở đây chỉ khi kéo card qua 2 column khác nhau, còn nếu kéo card trong chính column ban đầu của nó thì không làm gì
             // Vì đây đang làm đoạn xử lý lúc kéo (handleDragOver), còn xử lý lúc kéo xong xuôi thì nó lại là vấn đề khác ở (handleDragEnd)
             if (activeColumn.id !== overColumn.id) {
-                // moveCardBetweenDifferentColumns(
-                //     overColumn,
-                //     overCardId,
-                //     active,
-                //     over,
-                //     activeColumn,
-                //     activeDraggingCardId,
-                //     activeDraggingCardData
-                // )
+                moveCardBetweenDifferentColumns(
+                    overColumn,
+                    overCardId,
+                    active,
+                    over,
+                    activeColumn,
+                    activeDraggingCardId,
+                    activeDraggingCardData
+                )
             }
         }, 16), // ~60fps
         [activeDragItemType, orderedColumns]
@@ -454,6 +454,7 @@ function BoardContent({ board, createColumn, createCard, deleteColumn, reorderCo
                 <ListColumns
                     columns={orderedColumns}
                     createColumn={createColumn}
+                    updateColumn={updateColumn}
                     createCard={createCard}
                     deleteColumn={deleteColumn}
                     deleteCard={deleteCard}

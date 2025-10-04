@@ -58,25 +58,25 @@ function Profiles({ user }) {
                     },
                 }}
             >
-                <MenuItem onClick={handleClose}>
+                {/* <MenuItem onClick={handleClose}>
                     <Avatar sx={{width: '28px', height: '28px', mr: 2}}/> Profile
-                </MenuItem>
+                </MenuItem> */}
                 <MenuItem onClick={handleClose}>
                     <Avatar sx={{width: '28px', height: '28px', mr: 2}}/> {user.userName}
                 </MenuItem>
                 <Divider />
-                <MenuItem onClick={handleClose}>
+                {/* <MenuItem onClick={handleClose}>
                     <ListItemIcon>
                         <PersonAdd fontSize="small" />
                     </ListItemIcon>
                     Add another account
-                </MenuItem>
-                <MenuItem onClick={handleClose}>
+                </MenuItem> */}
+                {/* <MenuItem onClick={handleClose}>
                     <ListItemIcon>
                         <Settings fontSize="small" />
                     </ListItemIcon>
                     Settings
-                </MenuItem>
+                </MenuItem> */}
                 <MenuItem onClick={handleLogout}>
                     <ListItemIcon>
                         <Logout fontSize="small" />
