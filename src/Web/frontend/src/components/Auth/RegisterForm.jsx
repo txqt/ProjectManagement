@@ -7,8 +7,11 @@ import {
   Button,
   Typography,
   Alert,
-  Link
+  Link,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '~/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,7 +24,9 @@ const RegisterForm = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -38,13 +43,18 @@ const RegisterForm = () => {
 
     const { ...registerData } = formData;
     const result = await register(registerData);
-    
+
     if (result.success) {
       navigate('/');
     } else {
-      setError(result.error);
+      if (Array.isArray(result.error)) {
+        const message = result.error.map(e => e.description).join('\n');
+        setError(message);
+      } else {
+        setError(result.error?.message || 'Registration failed');
+      }
     }
-    
+
     setLoading(false);
   };
 
@@ -70,9 +80,9 @@ const RegisterForm = () => {
           <Typography variant="h4" component="h1" gutterBottom align="center">
             Sign up for Trello
           </Typography>
-          
+
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2, whiteSpace: 'pre-line' }}>
               {error}
             </Alert>
           )}
@@ -98,27 +108,51 @@ const RegisterForm = () => {
               margin="normal"
               required
             />
-            
+
             <TextField
               fullWidth
               label="Password"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={formData.password}
               onChange={handleChange}
               margin="normal"
               required
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      edge="end"
+                    >
+                      {showPassword ? <Visibility /> : <VisibilityOff />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
 
             <TextField
               fullWidth
               label="Confirm Password"
               name="confirmPassword"
-              type="password"
+              type={showConfirmPassword ? 'text' : 'password'}
               value={formData.confirmPassword}
               onChange={handleChange}
               margin="normal"
               required
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      edge="end"
+                    >
+                      {showConfirmPassword ? <Visibility /> : <VisibilityOff />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
 
             <Button

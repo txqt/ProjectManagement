@@ -25,18 +25,18 @@ export const useInvites = () => {
   const respondToInvite = useCallback(async (inviteId, response) => {
     try {
       const result = await apiService.respondToInvite(inviteId, response);
-      
+
       if (result.success) {
         // Update local state
-        setMyInvites(prev => 
-          prev.map(invite => 
-            invite.id === inviteId 
+        setMyInvites(prev =>
+          prev.map(invite =>
+            invite.id === inviteId
               ? { ...invite, status: response === 'accept' ? 'accepted' : 'declined', respondedAt: new Date().toISOString() }
               : invite
           )
         );
       }
-      
+
       return result;
     } catch (error) {
       console.error('Failed to respond to invite:', error);
@@ -54,9 +54,9 @@ export const useInvites = () => {
     }
   }, []);
 
-  const loadBoardInvites = useCallback(async (boardId) => {
+  const loadBoardInvites = useCallback(async (boardId, status = 'pending') => {
     try {
-      return await apiService.getBoardInvites(boardId);
+      return await apiService.getBoardInvites(boardId, status);
     } catch (error) {
       console.error('Failed to load board invites:', error);
       throw error;

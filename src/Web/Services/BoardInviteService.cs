@@ -101,7 +101,7 @@ namespace ProjectManagement.Services
             return _mapper.Map<BoardInviteDto>(createdInvite);
         }
 
-        public async Task<IEnumerable<BoardInviteDto>> GetBoardInvitesAsync(string boardId, string userId)
+        public async Task<IEnumerable<BoardInviteDto>> GetBoardInvitesAsync(string boardId, string userId, string? status)
         {
             var board = await _context.Boards
                 .Include(b => b.Members)
@@ -109,17 +109,17 @@ namespace ProjectManagement.Services
 
             if (board == null)
                 throw new ArgumentException("Board not found");
-
-            // Only owner and admins can see board invites
-            if (board.OwnerId != userId &&
-                !board.Members.Any(m => m.UserId == userId && (m.Role == "admin" || m.Role == "owner")))
-                throw new UnauthorizedAccessException("You don't have permission to view board invites");
-
-            var invites = await _context.BoardInvites
-                .Include(i => i.Board)
+            
+            var query = _context.BoardInvites
                 .Include(i => i.Inviter)
-                .Include(i => i.Invitee)
-                .Where(i => i.BoardId == boardId)
+                .Where(i => i.BoardId == boardId);
+
+            if (!string.IsNullOrEmpty(status))
+            {
+                query = query.Where(i => i.Status == status);
+            }
+
+            var invites = await query
                 .OrderByDescending(i => i.Created)
                 .ToListAsync();
 

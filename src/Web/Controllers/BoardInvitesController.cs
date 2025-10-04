@@ -18,7 +18,8 @@ namespace ProjectManagement.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly INotificationService _notificationService;
 
-        public BoardInvitesController(IBoardInviteService inviteService, UserManager<ApplicationUser> userManager, INotificationService notificationService)
+        public BoardInvitesController(IBoardInviteService inviteService, UserManager<ApplicationUser> userManager,
+            INotificationService notificationService)
         {
             _inviteService = inviteService;
             _userManager = userManager;
@@ -41,7 +42,8 @@ namespace ProjectManagement.Controllers
                 if (invite == null)
                     return BadRequest("Failed to create invite");
 
-                await _notificationService.CreateBoardInviteNotificationAsync(userId, User?.Identity?.Name ?? "", invite.Board.Title, invite.Id);
+                await _notificationService.CreateBoardInviteNotificationAsync(invite.InviteeId,
+                    User?.Identity?.Name ?? "", invite.Board.Title, invite.Id);
                 return Ok(invite);
             }
             catch (ArgumentException ex)
@@ -60,7 +62,8 @@ namespace ProjectManagement.Controllers
 
         [HttpGet]
         [RequireBoardPermission(Permissions.Boards.ManageMembers)]
-        public async Task<ActionResult<IEnumerable<BoardInviteDto>>> GetBoardInvites(string boardId)
+        public async Task<ActionResult<IEnumerable<BoardInviteDto>>> GetBoardInvites(string boardId,
+            [FromQuery] string? status = "pending")
         {
             try
             {
@@ -68,7 +71,7 @@ namespace ProjectManagement.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                var invites = await _inviteService.GetBoardInvitesAsync(boardId, userId);
+                var invites = await _inviteService.GetBoardInvitesAsync(boardId, userId, status);
                 return Ok(invites);
             }
             catch (ArgumentException ex)

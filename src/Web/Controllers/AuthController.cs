@@ -46,7 +46,7 @@ namespace ProjectManagement.Controllers
 
             if (!result.Succeeded)
             {
-                return BadRequest(result.Errors);
+                return BadRequest(string.Join("\n", result.Errors.Select(e => e.Description)));
             }
 
             // Add default role
@@ -78,7 +78,7 @@ namespace ProjectManagement.Controllers
 
             if (!result.Succeeded)
             {
-                return Unauthorized("Invalid credentials");
+                return Unauthorized("Email or password are incorrect.");
             }
 
             var token = await _tokenService.GenerateTokenAsync(user);

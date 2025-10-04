@@ -26,7 +26,6 @@ import { useInvites } from '~/hooks/useInvites';
 import { apiService } from '~/services/api';
 
 function InviteDialog({ open, onClose, board }) {
-  // now expects cancelInvite(board.id, inviteId) and resendInvite(board.id, inviteId)
   const { createBoardInvite, loadBoardInvites, cancelInvite, resendInvite } = useInvites();
 
   const [query, setQuery] = useState('');
@@ -42,18 +41,23 @@ function InviteDialog({ open, onClose, board }) {
 
   // invitedMap: email(lowercase) => inviteId
   const [invitedMap, setInvitedMap] = useState(new Map());
+  const [invitedMapLoaded, setInvitedMapLoaded] = useState(false);
 
-  const [role, setRole] = useState('member'); // default role
+  const [role, setRole] = useState('member');
   const [message, setMessage] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, severity: 'success', message: '' });
 
   // load existing invites (by email) when dialog opens
   useEffect(() => {
     let mounted = true;
-    if (!open || !board.id) return;
+    if (!open || !board.id) {
+      setInvitedMapLoaded(false);
+      return;
+    }
+    setInvitedMapLoaded(false);
     (async () => {
       try {
-        const invites = await loadBoardInvites(board.id);
+        const invites = await loadBoardInvites(board.id, 'pending');
         if (!mounted) return;
         const map = new Map();
         (invites || []).forEach(i => {
@@ -61,19 +65,21 @@ function InviteDialog({ open, onClose, board }) {
           if (email) map.set(email, i.id || i.inviteId || null);
         });
         setInvitedMap(map);
+        setInvitedMapLoaded(true);
       } catch (err) {
         console.error('loadBoardInvites failed', err);
         setInvitedMap(new Map());
+        setInvitedMapLoaded(true);
       }
     })();
     return () => { mounted = false; };
   }, [open, board.id, loadBoardInvites]);
 
-  // debounced search
+  // debounced search - only run if invitedMap is loaded
   useEffect(() => {
     const t = setTimeout(() => {
       const q = (query || '').trim();
-      if (!q) {
+      if (!q || !invitedMapLoaded) {
         setResults([]);
         setTotalPages(1);
         return;
@@ -102,7 +108,7 @@ function InviteDialog({ open, onClose, board }) {
       })();
     }, 300);
     return () => clearTimeout(t);
-  }, [query, page, invitedMap]);
+  }, [query, page, invitedMap, invitedMapLoaded]);
 
   // reset non-persistent fields when close
   useEffect(() => {
@@ -116,6 +122,7 @@ function InviteDialog({ open, onClose, board }) {
       setResendingEmails(new Set());
       setCancellingEmails(new Set());
       setInvitedMap(new Map());
+      setInvitedMapLoaded(false);
       setRole('member');
       setMessage('');
     }
@@ -142,7 +149,6 @@ function InviteDialog({ open, onClose, board }) {
       };
       const result = await createBoardInvite(board.id, dto);
       if (result && result.success) {
-        // try to get created invite id from result.data (depends on API)
         const created = result.data || {};
         const newInviteId = created.id || created.inviteId || null;
 
@@ -169,7 +175,6 @@ function InviteDialog({ open, onClose, board }) {
     }
   };
 
-  // resend using inviteId (from invitedMap or user.inviteId)
   const handleResend = async (user) => {
     const inviteeEmail = (user.email || '').trim();
     if (!inviteeEmail) {
@@ -177,7 +182,8 @@ function InviteDialog({ open, onClose, board }) {
       return;
     }
     const emailKey = inviteeEmail.toLowerCase();
-    const inviteId = user.inviteId || invitedMap.get(emailKey);
+    // Always get inviteId from invitedMap (current state)
+    const inviteId = invitedMap.get(emailKey);
 
     if (!inviteId) {
       showSnackbar('error', 'Không tìm thấy inviteId để gửi lại.');
@@ -204,7 +210,6 @@ function InviteDialog({ open, onClose, board }) {
     }
   };
 
-  // cancel using inviteId
   const handleCancel = async (user) => {
     const inviteeEmail = (user.email || '').trim();
     if (!inviteeEmail) {
@@ -212,7 +217,8 @@ function InviteDialog({ open, onClose, board }) {
       return;
     }
     const emailKey = inviteeEmail.toLowerCase();
-    const inviteId = user.inviteId || invitedMap.get(emailKey);
+    // Always get inviteId from invitedMap (current state)
+    const inviteId = invitedMap.get(emailKey);
 
     if (!inviteId) {
       showSnackbar('error', 'Không tìm thấy inviteId để hủy.');
@@ -223,7 +229,6 @@ function InviteDialog({ open, onClose, board }) {
       setCancellingEmails(prev => { const s = new Set(prev); s.add(emailKey); return s; });
       const result = await cancelInvite(board.id, inviteId);
       if (result && result.success) {
-        // remove from invitedMap and update results
         setInvitedMap(prev => {
           const m = new Map(prev);
           m.delete(emailKey);
@@ -261,7 +266,6 @@ function InviteDialog({ open, onClose, board }) {
             sx={{ mb: 2 }}
           />
 
-          {/* role + message area (affects next invites) */}
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
             <FormControl size="small" sx={{ minWidth: 140 }}>
               <InputLabel id="invite-role-label">Role</InputLabel>
@@ -287,7 +291,7 @@ function InviteDialog({ open, onClose, board }) {
 
           {loading && <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}><CircularProgress size={28} /></Box>}
 
-          {!loading && results.length === 0 && query.trim() !== '' && (
+          {!loading && results.length === 0 && query.trim() !== '' && invitedMapLoaded && (
             <Typography variant="body2" sx={{ color: 'text.secondary', py: 2 }}>Không tìm thấy người dùng.</Typography>
           )}
 
@@ -297,8 +301,6 @@ function InviteDialog({ open, onClose, board }) {
               const isSending = sendingEmails.has(emailKey);
               const isResending = resendingEmails.has(emailKey);
               const isCancelling = cancellingEmails.has(emailKey);
-
-              // check if user has already joined the board
               const hasJoined = board.members?.some(m => m.user?.email?.toLowerCase() === emailKey);
 
               return (

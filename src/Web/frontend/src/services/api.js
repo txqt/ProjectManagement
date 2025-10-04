@@ -36,11 +36,9 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-
       const contentType = response.headers.get('content-type');
 
       if (!response.ok) {
-        // parse body nếu có JSON
         let body = null;
         try {
           if (contentType && contentType.includes('application/json')) {
@@ -56,8 +54,10 @@ class ApiService {
         error.status = response.status;
         error.body = body;
 
-        if (response.status === 401) {
+        if (response.status === 401 && !options.skipAuthHandling) {
           this.setAuthToken(null);
+          alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          window.location.href = '/login';
         }
 
         throw error;
@@ -70,15 +70,17 @@ class ApiService {
       return response;
     } catch (error) {
       console.error('API Request failed:', error);
-      throw error; // vẫn throw để caller xử lý
+      throw error;
     }
   }
+
 
   // Auth endpoints
   async login(credentials) {
     return this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
+      skipAuthHandling: true,
     });
   }
 
@@ -166,6 +168,9 @@ class ApiService {
   async reorderColumns(boardId, columnOrderIds) {
     return this.request(`/boards/${boardId}/columns/reorder`, {
       method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(columnOrderIds),
     });
   }
@@ -263,8 +268,8 @@ class ApiService {
     });
   }
 
-  async getBoardInvites(boardId) {
-    return this.request(`/boards/${boardId}/invites`);
+  async getBoardInvites(boardId, status = 'pending') {
+    return this.request(`/boards/${boardId}/invites?status=${status}`);
   }
 
   async resendInvite(boardId, inviteId) {

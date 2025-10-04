@@ -13,6 +13,7 @@
             {
                 Permissions.Columns.Create,
                 Permissions.Columns.Edit,
+                Permissions.Columns.Reorder,
                 Permissions.Cards.Create,
                 Permissions.Cards.Edit,
                 Permissions.Cards.Move,
@@ -27,7 +28,6 @@
                 Permissions.Boards.Edit,
                 Permissions.Boards.ManageMembers,
                 Permissions.Columns.Delete,
-                Permissions.Columns.Reorder,
                 Permissions.Cards.Delete
             }).ToArray();
 

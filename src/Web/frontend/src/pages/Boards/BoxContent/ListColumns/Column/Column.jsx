@@ -1,27 +1,22 @@
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { TextField } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import DragHandleIcon from '@mui/icons-material/DragHandle';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import AddCardIcon from '@mui/icons-material/AddCard';
-import Tooltip from '@mui/material/Tooltip';
+import CloseIcon from '@mui/icons-material/Close';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import DragHandleIcon from '@mui/icons-material/DragHandle';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { TextField } from '@mui/material';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import Divider from '@mui/material/Divider';
-import Button from '@mui/material/Button';
-import ListItemText from '@mui/material/ListItemText';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ContentCut from '@mui/icons-material/ContentCut';
-import ContentCopy from '@mui/icons-material/ContentCopy';
-import ContentPaste from '@mui/icons-material/ContentPaste';
-import Cloud from '@mui/icons-material/Cloud';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import { useState } from 'react';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import ListCards from './ListCards/ListCards';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { mapOrder } from '~/utils/sorts';
+import ListCards from './ListCards/ListCards';
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -166,8 +161,10 @@ function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pe
               anchorEl={anchorEl}
               open={open}
               onClose={handleClose}
-              MenuListProps={{
-                'aria-labelledby': 'basic-column-dropdown'
+              slotProps={{
+                menuList: {
+                  'aria-labelledby': 'basic-button',
+                },
               }}
             >
               <ConditionalRender permission="boards.delete">
