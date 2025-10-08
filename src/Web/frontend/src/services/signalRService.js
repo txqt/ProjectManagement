@@ -165,9 +165,10 @@ class SignalRService {
   // NEW: listener for the snapshot that getUsersInBoard returns.
   // usage: signalRService.onUsersInBoard(users => ...)
   onUsersInBoard(callback) {
-    this.listeners.set('UsersInBoard', callback);
-    // if we already have cache for a board, caller probably expects to set it.
-    // But callback signature receives users array only.
+    this._addListener('UsersInBoard', (d) => {
+      try { this._maybeUpdateCacheOnUserLeft(d); } catch { /* ignore */ }
+      callback(d);
+    });
   }
 
   _addListener(eventName, callback) {
@@ -306,6 +307,14 @@ class SignalRService {
   async markNotificationAsRead(notificationId) {
     if (!this.connection) throw new Error('No connection');
     await this.connection.invoke('MarkNotificationAsRead', notificationId);
+  }
+
+  onCardAssigned(callback) {
+    this._addListener('CardAssigned', callback);
+  }
+
+  onCardUnassigned(callback) {
+    this._addListener('CardUnassigned', callback);
   }
 }
 

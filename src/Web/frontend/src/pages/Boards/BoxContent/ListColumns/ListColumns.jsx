@@ -12,7 +12,8 @@ import { TextField } from '@mui/material';
 import { toast } from 'react-toastify';
 import { useMemo } from 'react';
 
-function ListColumns({ columns, createColumn, updateColumn, createCard, deleteColumn, deleteCard, pendingTempIds }) {
+function ListColumns({ columns, createColumn, ...props }) {
+  const { updateColumn, createCard, updateCard, deleteColumn, deleteCard, pendingTempIds } = props;
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
   const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm);
 
@@ -80,6 +81,7 @@ function ListColumns({ columns, createColumn, updateColumn, createCard, deleteCo
               <Column
                 column={column}
                 createCard={createCard}
+                updateCard={updateCard}
                 updateColumn={updateColumn}
                 deleteColumn={deleteColumn}
                 deleteCard={deleteCard}

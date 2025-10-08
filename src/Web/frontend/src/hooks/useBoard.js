@@ -208,6 +208,30 @@ export const useBoard = (boardId) => {
       toast.info('A card was moved');
     };
 
+    const onCardAssigned = (data) => {
+      const { columnId, card, userId, assignedUser } = data;
+      if (userId === currentUserRef.current?.id) return;
+
+      setBoard(prev => ({
+        ...prev,
+        columns: updateCardInColumns(prev?.columns || [], columnId, card.id, card)
+      }));
+
+      toast.info(`${assignedUser.userName || 'Ai đó'} vừa được gán vào thẻ "${card.title}"`);
+    };
+
+    const onCardUnassigned = (data) => {
+      const { columnId, card, userId, unassignedUser } = data;
+      if (userId === currentUserRef.current?.id) return;
+
+      setBoard(prev => ({
+        ...prev,
+        columns: updateCardInColumns(prev?.columns || [], columnId, card.id, card)
+      }));
+
+      toast.info(`${unassignedUser.userName || 'Ai đó'} vừa bị gỡ khỏi thẻ "${card.title}"`);
+    };
+
     // register listeners
     signalRService.onColumnCreated?.(onColumnCreated);
     signalRService.onColumnUpdated?.(onColumnUpdated);
@@ -219,6 +243,8 @@ export const useBoard = (boardId) => {
     signalRService.onCardDeleted?.(onCardDeleted);
     signalRService.onCardsReordered?.(onCardsReordered);
     signalRService.onCardMoved?.(onCardMoved);
+    signalRService.onCardAssigned?.(onCardAssigned);
+    signalRService.onCardUnassigned?.(onCardUnassigned);
 
     signalRService.onUserJoined?.((d) => toast.success(`${d.user.userName} joined the board`, { position: 'bottom-left', autoClose: 2000 }));
     signalRService.onUserLeft?.((d) => toast.info(`${d.user.userName} left the board`, { position: 'bottom-left', autoClose: 2000 }));
@@ -254,7 +280,7 @@ export const useBoard = (boardId) => {
           signalRService.off('cardDeleted', onCardDeleted);
           signalRService.off('cardsReordered', onCardsReordered);
           signalRService.off('cardMoved', onCardMoved);
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
       }
     };
   }, [isConnected, signalRService]);
@@ -452,6 +478,87 @@ export const useBoard = (boardId) => {
     return false;
   };
 
+  const assignCardMember = async (columnId, cardId, memberEmail) => {
+    const snapshot = board;
+
+    // tìm card gốc
+    const card = snapshot?.columns?.find(c => c.id === columnId)?.cards?.find(x => x.id === cardId);
+    if (!card) {
+      toast.error('Không tìm thấy card để gán thành viên.');
+      return false;
+    }
+
+    // optimistic update: thêm "member giả"
+    const tempMember = { email: memberEmail, isTemp: true };
+    const optimisticCard = {
+      ...card,
+      members: [...(card.members || []), tempMember]
+    };
+
+    setBoard(prev => ({
+      ...prev,
+      columns: updateCardInColumns(prev?.columns || [], columnId, cardId, optimisticCard)
+    }));
+
+    // gọi API thật
+    const result = await executeRequest(() =>
+      apiService.assignCardMember(boardId, columnId, cardId, memberEmail)
+    );
+
+    if (result.success) {
+      const updatedCard = result.data; // backend trả về card mới (hoặc chỉ danh sách member mới)
+      setBoard(prev => ({
+        ...prev,
+        columns: updateCardInColumns(prev?.columns || [], columnId, cardId, updatedCard)
+      }));
+      toast.success('Đã gán thành viên vào card.');
+      return true;
+    }
+
+    // rollback nếu thất bại
+    setBoard(snapshot);
+    toast.error('Gán thành viên thất bại — đã khôi phục trạng thái.');
+    return false;
+  };
+
+
+  const unassignCardMember = async (columnId, cardId, memberId) => {
+    const snapshot = board;
+
+    // tìm card
+    const card = snapshot?.columns?.find(c => c.id === columnId)?.cards?.find(x => x.id === cardId);
+    if (!card) {
+      toast.error('Không tìm thấy card để gỡ thành viên.');
+      return false;
+    }
+
+    // optimistic update: xóa tạm
+    const optimisticCard = {
+      ...card,
+      members: (card.members || []).filter(m => m.id !== memberId)
+    };
+
+    setBoard(prev => ({
+      ...prev,
+      columns: updateCardInColumns(prev?.columns || [], columnId, cardId, optimisticCard)
+    }));
+
+    // gọi API thật
+    const result = await executeRequest(() =>
+      apiService.unassignCardMember(boardId, columnId, cardId, memberId)
+    );
+
+    if (result.success) {
+      toast.info('Đã gỡ thành viên khỏi card.');
+      return true;
+    }
+
+    // rollback
+    setBoard(snapshot);
+    toast.error('Gỡ thành viên thất bại — đã khôi phục trạng thái.');
+    return false;
+  };
+
   return {
     board,
     loading,
@@ -467,6 +574,8 @@ export const useBoard = (boardId) => {
     reorderCards,
     deleteCard,
     updateCard,
+    assignCardMember,
+    unassignCardMember,
     pendingTempIds: pendingTempIdsRef.current,
   };
 };

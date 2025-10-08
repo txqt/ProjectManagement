@@ -14,15 +14,20 @@ namespace ProjectManagement.Services
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IBoardNotificationService _boardNotificationService;
+        private readonly INotificationService _notificationService;
 
         public CardService(
             ApplicationDbContext context,
             IMapper mapper,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager, IBoardNotificationService boardNotificationService,
+            INotificationService notificationService)
         {
             _context = context;
             _mapper = mapper;
             _userManager = userManager;
+            _boardNotificationService = boardNotificationService;
+            _notificationService = notificationService;
         }
 
         public async Task<CardDto?> GetCardAsync(string cardId, string userId)
@@ -31,9 +36,9 @@ namespace ProjectManagement.Services
                 .Include(c => c.Board)
                 .Include(c => c.Column)
                 .Include(c => c.Members)
-                    .ThenInclude(cm => cm.User)
+                .ThenInclude(cm => cm.User)
                 .Include(c => c.Comments)
-                    .ThenInclude(comment => comment.User)
+                .ThenInclude(comment => comment.User)
                 .Include(c => c.Attachments)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(c => c.Id == cardId);
@@ -45,7 +50,7 @@ namespace ProjectManagement.Services
         {
             var column = await _context.Columns
                 .Include(c => c.Board)
-                    .ThenInclude(b => b.Members)
+                .ThenInclude(b => b.Members)
                 .FirstOrDefaultAsync(c => c.Id == columnId);
 
             if (column == null)
@@ -66,7 +71,9 @@ namespace ProjectManagement.Services
 
             await _context.SaveChangesAsync();
 
+
             var createdCard = await GetCardAsync(card.Id, userId);
+            await _boardNotificationService.BroadcastCardCreated(card.BoardId, card.ColumnId, createdCard, userId);
             return createdCard!;
         }
 
@@ -74,7 +81,7 @@ namespace ProjectManagement.Services
         {
             var card = await _context.Cards
                 .Include(c => c.Board)
-                    .ThenInclude(b => b.Members)
+                .ThenInclude(b => b.Members)
                 .Include(c => c.Column)
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
@@ -105,14 +112,18 @@ namespace ProjectManagement.Services
 
             await _context.SaveChangesAsync();
 
-            return await GetCardAsync(cardId, userId);
+            var updatedCard = await GetCardAsync(cardId, userId);
+
+            await _boardNotificationService.BroadcastCardUpdated(card.BoardId, card.ColumnId, updatedCard, userId);
+
+            return updatedCard;
         }
 
         public async Task<CardDto?> DeleteCardAsync(string cardId, string userId)
         {
             var card = await _context.Cards
                 .Include(c => c.Board)
-                    .ThenInclude(b => b.Members)
+                .ThenInclude(b => b.Members)
                 .Include(c => c.Column)
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
@@ -129,6 +140,8 @@ namespace ProjectManagement.Services
 
             var dto = _mapper.Map<CardDto>(card);
 
+            await _boardNotificationService.BroadcastCardDeleted(dto.BoardId, dto.ColumnId, cardId, userId);
+
             return dto;
         }
 
@@ -136,7 +149,7 @@ namespace ProjectManagement.Services
         {
             var card = await _context.Cards
                 .Include(c => c.Board)
-                    .ThenInclude(b => b.Members)
+                .ThenInclude(b => b.Members)
                 .Include(c => c.Column)
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
@@ -167,13 +180,16 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
             var dto = _mapper.Map<CardDto>(card);
+
+            await _boardNotificationService.BroadcastCardMoved(dto.BoardId, moveCardDto.FromColumnId,
+                moveCardDto.ToColumnId, cardId, moveCardDto.NewIndex, userId);
             return dto;
         }
 
-        public async Task<CardsReorderedResponse> ReorderCardsAsync(string columnId, List<string> cardOrderIds)
+        public async Task<CardsReorderedResponse> ReorderCardsAsync(string columnId, List<string> cardOrderIds, string userId)
         {
             var column = await _context.Columns
-                .Include(x=>x.Board)
+                .Include(x => x.Board)
                 .FirstOrDefaultAsync(b => b.Id == columnId);
 
             if (column == null)
@@ -183,32 +199,55 @@ namespace ProjectManagement.Services
             column.LastModified = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return new CardsReorderedResponse()
+            var dto = new CardsReorderedResponse()
             {
                 BoardId = column.BoardId,
                 ColumnId = columnId,
                 CardOrderIds = cardOrderIds,
                 Timestamp = DateTime.UtcNow
             };
+            await _boardNotificationService.BroadcastCardsReordered(dto.BoardId, dto.ColumnId,
+                dto.CardOrderIds, userId);
+            return dto;
         }
 
         public async Task<bool> AssignMemberAsync(string cardId, string memberEmail, string userId)
         {
-
             var user = await _userManager.FindByEmailAsync(memberEmail);
             if (user == null)
                 return false;
 
+            var card = await _context.Cards
+                .Include(c => c.Board)
+                .Include(c => c.Column)
+                .FirstOrDefaultAsync(c => c.Id == cardId);
+            if (card == null)
+                return false;
+
             var cardMember = new CardMember
             {
-                Id = Guid.NewGuid().ToString(),
-                CardId = cardId,
-                UserId = user.Id,
-                AssignedAt = DateTime.UtcNow
+                Id = Guid.NewGuid().ToString(), CardId = cardId, UserId = user.Id, AssignedAt = DateTime.UtcNow
             };
 
             _context.CardMembers.Add(cardMember);
             await _context.SaveChangesAsync();
+
+            // 🔄 Real-time cập nhật assignee
+            await _boardNotificationService.BroadcastCardAssigned(
+                card.BoardId,
+                card.ColumnId,
+                card.Id,
+                user.Id,
+                userId);
+
+            // 🔔 Gửi thông báo cho người được assign
+            var assigner = await _userManager.FindByIdAsync(userId);
+            await _notificationService.CreateCardAssignedNotificationAsync(
+                user.Id,
+                assigner?.UserName ?? "Someone",
+                card.Title,
+                card.Board.Title,
+                card.Id);
 
             return true;
         }
@@ -216,6 +255,11 @@ namespace ProjectManagement.Services
         public async Task<bool> UnassignMemberAsync(string cardId, string memberId, string userId)
         {
             var cardMember = await _context.CardMembers
+                .Include(cm => cm.User)
+                .Include(cm => cm.Card)
+                .ThenInclude(c => c.Board)
+                .Include(cm => cm.Card)
+                .ThenInclude(c => c.Column)
                 .FirstOrDefaultAsync(cm => cm.Id == memberId && cm.CardId == cardId);
 
             if (cardMember == null)
@@ -223,6 +267,18 @@ namespace ProjectManagement.Services
 
             _context.CardMembers.Remove(cardMember);
             await _context.SaveChangesAsync();
+
+            // 🔄 Real-time cập nhật UI
+            await _boardNotificationService.BroadcastCardUnassigned(
+                cardMember.Card.BoardId,
+                cardMember.Card.ColumnId,
+                cardMember.CardId,
+                cardMember.UserId,
+                userId);
+
+            // 🔔 Có thể gửi notification nếu muốn (tùy bạn)
+            // VD: “Bạn vừa bị gỡ khỏi thẻ XYZ”
+            // await _notificationService.CreateNotificationAsync(...);
 
             return true;
         }

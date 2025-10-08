@@ -1,3 +1,4 @@
+// ListCards.jsx
 import Box from '@mui/material/Box';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -9,15 +10,20 @@ import Card from './Card/Card';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { memo, useCallback, useState } from 'react';
 import ListCardsSkeleton from './ListCardsSkeleton';
+import CardDetailDialog from './Card/CardDetailDialog'; // component mới
 
-const ListCards = memo(({ cards, deleteCard, onEdit, pendingTempIds }) => {
+const ListCards = memo(({ cards, deleteCard, pendingTempIds, ...props }) => {
+    const { updateCard } = props;
     // menu state: position-based (use anchorReference="anchorPosition")
     const [menuPos, setMenuPos] = useState(null); // { mouseX, mouseY }
     const [selectedCard, setSelectedCard] = useState(null);
 
+    // dialog state
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [dialogCard, setDialogCard] = useState(null);
+
     const openMenu = useCallback((event, card) => {
         event.preventDefault();
-        // stopPropagation in case parent draggable handles right click
         event.stopPropagation();
 
         setSelectedCard(card);
@@ -32,23 +38,10 @@ const ListCards = memo(({ cards, deleteCard, onEdit, pendingTempIds }) => {
         setSelectedCard(null);
     }, []);
 
-    const handleEdit = useCallback(() => {
-        closeMenu();
-        if (typeof onEdit === 'function') {
-            onEdit(selectedCard);
-        } else {
-            // placeholder — bạn có thể mở modal edit ở đây
-            console.log('Edit requested for', selectedCard);
-        }
-    }, [onEdit, selectedCard, closeMenu]);
-
     const handleDelete = useCallback(async () => {
         closeMenu();
         if (!selectedCard) return;
-
-        // assume deleteCard signature is (columnId, cardId)
         if (typeof deleteCard === 'function') {
-            // nếu card có columnId dùng card.columnId, nếu không, chỉ truyền card.id
             try {
                 await deleteCard(selectedCard.columnId, selectedCard.id);
             } catch (e) {
@@ -58,6 +51,17 @@ const ListCards = memo(({ cards, deleteCard, onEdit, pendingTempIds }) => {
             console.warn('deleteCard prop not provided');
         }
     }, [deleteCard, selectedCard, closeMenu]);
+
+    // mở dialog khi click vào card
+    const handleOpenCardDialog = useCallback((card) => {
+        setDialogCard(card);
+        setDialogOpen(true);
+    }, []);
+
+    const handleCloseDialog = useCallback(() => {
+        setDialogOpen(false);
+        setDialogCard(null);
+    }, []);
 
     if (!cards) return <ListCardsSkeleton count={5} />;
 
@@ -69,8 +73,8 @@ const ListCards = memo(({ cards, deleteCard, onEdit, pendingTempIds }) => {
             >
                 <Box
                     sx={{
-                        p: '0 5px 5px 5px', // padding
-                        m: '0 5px', // margin
+                        p: '0 5px 5px 5px',
+                        m: '0 5px',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 1,
@@ -98,10 +102,9 @@ const ListCards = memo(({ cards, deleteCard, onEdit, pendingTempIds }) => {
                                     transition: 'opacity 0.2s ease'
                                 }}
                             >
-                                <Card card={card} />
+                                <Card card={card} onOpen={handleOpenCardDialog} />
                             </div>
                         )
-
                     })}
                 </Box>
             </SortableContext>
@@ -111,15 +114,8 @@ const ListCards = memo(({ cards, deleteCard, onEdit, pendingTempIds }) => {
                 onClose={closeMenu}
                 anchorReference="anchorPosition"
                 anchorPosition={menuPos ? { top: menuPos.mouseY, left: menuPos.mouseX } : undefined}
-                PaperProps={{ onContextMenu: (e) => e.preventDefault() }} // prevent menu from triggering new context menu
+                PaperProps={{ onContextMenu: (e) => e.preventDefault() }}
             >
-                <MenuItem onClick={handleEdit}>
-                    <ListItemIcon>
-                        <EditIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>Edit</ListItemText>
-                </MenuItem>
-
                 <MenuItem onClick={handleDelete}>
                     <ListItemIcon>
                         <DeleteIcon fontSize="small" />
@@ -127,6 +123,13 @@ const ListCards = memo(({ cards, deleteCard, onEdit, pendingTempIds }) => {
                     <ListItemText>Delete</ListItemText>
                 </MenuItem>
             </Menu>
+
+            <CardDetailDialog
+                open={dialogOpen}
+                onClose={handleCloseDialog}
+                card={dialogCard}
+                updateCard={updateCard}
+            />
         </>
     );
 });

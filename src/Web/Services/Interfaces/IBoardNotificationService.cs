@@ -18,6 +18,9 @@ namespace ProjectManagement.Services.Interfaces
         Task BroadcastColumnsReordered(string boardId, IEnumerable<string> columnOrderIds, string userId);
 
         Task BroadcastCardMoved(string boardId, string fromColumnId, string toColumnId, string cardId, int newIndex, string userId);
+        
+        Task BroadcastCardAssigned(string boardId, string columnId, string cardId, string assignedUserId, string userId);
+        Task BroadcastCardUnassigned(string boardId, string columnId, string cardId, string unassignedUserId, string userId);
 
         Task SendNotificationToUser(string userId, NotificationDto notification);
         Task BroadcastNotificationRead(string userId, string notificationId);

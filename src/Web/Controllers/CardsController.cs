@@ -18,13 +18,11 @@ namespace ProjectManagement.Controllers
     {
         private readonly ICardService _cardService;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IBoardNotificationService _boardNotificationService;
 
-        public CardsController(ICardService cardService, UserManager<ApplicationUser> userManager, IBoardNotificationService boardNotificationService)
+        public CardsController(ICardService cardService, UserManager<ApplicationUser> userManager)
         {
             _cardService = cardService;
             _userManager = userManager;
-            _boardNotificationService = boardNotificationService;
         }
 
         [HttpGet("{cardId}")]
@@ -54,7 +52,6 @@ namespace ProjectManagement.Controllers
             if (card == null)
                 return NotFound();
 
-            await _boardNotificationService.BroadcastCardCreated(card.BoardId, card.ColumnId, card, userId);
             return CreatedAtAction(nameof(GetCard), new { boardId = card.BoardId, columnId, cardId = card.Id }, card);
 
         }
@@ -71,8 +68,6 @@ namespace ProjectManagement.Controllers
             if (card == null)
                 return NotFound();
 
-            await _boardNotificationService.BroadcastCardUpdated(card.BoardId, card.ColumnId, card, userId);
-
             return Ok(card);
         }
 
@@ -87,8 +82,6 @@ namespace ProjectManagement.Controllers
             var result = await _cardService.DeleteCardAsync(cardId, userId);
             if (result == null)
                 return NotFound();
-
-            await _boardNotificationService.BroadcastCardDeleted(result.BoardId, result.ColumnId, cardId, userId);
 
             return NoContent();
         }
@@ -105,8 +98,6 @@ namespace ProjectManagement.Controllers
             if (result == null)
                 return BadRequest();
 
-            await _boardNotificationService.BroadcastCardMoved(result.BoardId, moveCardDto.FromColumnId, moveCardDto.ToColumnId, cardId, moveCardDto.NewIndex, userId);
-
             return NoContent();
         }
 
@@ -118,11 +109,9 @@ namespace ProjectManagement.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            var result = await _cardService.ReorderCardsAsync(columnId, cardOrderIds);
+            var result = await _cardService.ReorderCardsAsync(columnId, cardOrderIds, userId);
             if (result == null)
                 return BadRequest();
-
-            await _boardNotificationService.BroadcastCardsReordered(result.BoardId, result.ColumnId, result.CardOrderIds, userId);
 
             return NoContent();
         }

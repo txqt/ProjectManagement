@@ -1,3 +1,4 @@
+// Card/Card.jsx
 import CommentIcon from '@mui/icons-material/Comment';
 import AttachmentIcon from '@mui/icons-material/Attachment';
 import GroupIcon from '@mui/icons-material/Group';
@@ -7,12 +8,11 @@ import { Card as MuiCard } from '@mui/material';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { memo } from 'react';
 
-const Card = memo(({ card }) => {
+const Card = memo(({ card, onOpen }) => {
     const {
         attributes,
         listeners,
@@ -23,27 +23,30 @@ const Card = memo(({ card }) => {
     } = useSortable({
         id: card.id,
         data: { ...card }
-    })
+    });
 
     const dndKitCardStyles = {
-        /**
-         * touchAction: 'none', // Dành cho sensor default dạng PointerSensor
-         * Nếu sử dụng CSS.Transform như docs sẽ lỗi kiểu stretch
-         * https://github.com/clauderic/dnd-kit/issues/117
-         */
         transform: CSS.Translate.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : undefined,
         border: isDragging ? '1px solid #2ecc71' : undefined
-    }
+    };
 
     const shouldShowCardAction = () => {
         return (
             !!card?.memberIds?.length ||
             !!card?.comments?.length ||
             !!card?.attachments?.length
-        )
-    }
+        );
+    };
+
+    const handleClick = (e) => {
+        // tránh mở dialog khi đang kéo
+        if (isDragging) return;
+        // ngăn bubble vì parent có draggable
+        e.stopPropagation();
+        if (typeof onOpen === 'function') onOpen(card);
+    };
 
     return (
         <MuiCard
@@ -58,11 +61,12 @@ const Card = memo(({ card }) => {
                 border: '1px solid transparent',
                 '&:hover': { borderColor: (theme) => theme.palette.primary.main }
             }}
+            onClick={handleClick}
         >
             {card?.cover && <CardMedia sx={{ height: 140 }} image={card?.cover} />}
 
             <CardContent sx={{ p: 1.5, '&:last-child': { p: 1.5 } }}>
-                <Typography>{card?.title}</Typography>
+                <Typography noWrap>{card?.title}</Typography>
             </CardContent>
 
             {shouldShowCardAction() && (
@@ -87,7 +91,7 @@ const Card = memo(({ card }) => {
                 </CardActions>
             )}
         </MuiCard>
-    )
+    );
 });
 
 export default Card;

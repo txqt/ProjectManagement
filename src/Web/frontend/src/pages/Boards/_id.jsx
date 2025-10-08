@@ -9,7 +9,7 @@ import BoardContent from "./BoxContent/BoardContent";
 
 function Board() {
     const { boardId } = useParams();
-    const { board, error, createColumn, updateColumn, createCard, deleteColumn, reorderColumns, reorderCards, moveCard, deleteCard, pendingTempIds } = useBoard(boardId);
+    const { board, error, createColumn, updateColumn, createCard, updateCard, deleteColumn, reorderColumns, reorderCards, moveCard, deleteCard, pendingTempIds } = useBoard(boardId);
 
     useEffect(() => {
         if (error) {
@@ -37,6 +37,7 @@ function Board() {
                 createColumn={createColumn}
                 updateColumn={updateColumn}
                 createCard={createCard}
+                updateCard={updateCard}
                 deleteColumn={deleteColumn}
                 reorderColumns={reorderColumns}
                 reorderCards={reorderCards}

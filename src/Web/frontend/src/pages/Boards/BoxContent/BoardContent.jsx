@@ -21,7 +21,8 @@ import Card from './ListColumns/Column/ListCards/Card/Card'
 import { cloneDeep, throttle } from 'lodash'
 import { ACTIVE_DRAG_ITEM_TYPE } from '~/utils/constants'
 
-function BoardContent({ board, createColumn, updateColumn, createCard, deleteColumn, reorderColumns, reorderCards, moveCard, deleteCard, pendingTempIds }) {
+function BoardContent({ board, ...props }) {
+    const { createColumn, updateColumn, createCard, updateCard, deleteColumn, reorderColumns, reorderCards, moveCard, deleteCard, pendingTempIds } = props;
     // https://docs.dndkit.com/api-documentation/sensors
     // Nếu dùng PointerSensor mặc định thì phải kết hợp thuộc tính CSS touch-action: none ở trong phần tử kéo thả - nhưng mà còn bug
 
@@ -454,6 +455,7 @@ function BoardContent({ board, createColumn, updateColumn, createCard, deleteCol
                 <ListColumns
                     columns={orderedColumns}
                     createColumn={createColumn}
+                    updateCard={updateCard}
                     updateColumn={updateColumn}
                     createCard={createCard}
                     deleteColumn={deleteColumn}

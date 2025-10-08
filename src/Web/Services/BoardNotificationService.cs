@@ -10,16 +10,38 @@ namespace ProjectManagement.Services
     public class BoardNotificationService : IBoardNotificationService
     {
         private readonly IHubContext<BoardHub> _hub;
+        private readonly BoardPresenceTracker _boardPresenceTracker;
 
-        public BoardNotificationService(IHubContext<BoardHub> hub)
+        public BoardNotificationService(IHubContext<BoardHub> hub, BoardPresenceTracker boardPresenceTracker)
         {
             _hub = hub;
+            _boardPresenceTracker = boardPresenceTracker;
         }
 
         private static string GroupName(string boardId) => $"board-{boardId}";
 
-        public Task BroadcastColumnCreated(string boardId, ColumnDto column, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("ColumnCreated", new { column, userId });
+        private string[] GetExcludedConnectionsForUserInBoard(string boardId, string? userId)
+        {
+            if (string.IsNullOrEmpty(userId)) return Array.Empty<string>();
+
+            return _boardPresenceTracker.GetConnectionsForBoard(boardId)
+                .Where(x => x.User?.Id == userId)
+                .Select(x => x.ConnectionId)
+                .ToArray();
+        }
+
+        public Task BroadcastColumnCreated(string boardId, ColumnDto column, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                // fallback
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("ColumnCreated", new { column, userId });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("ColumnCreated", new { column, userId });
+        }
 
         public Task BroadcastColumnUpdated(string boardId, ColumnDto column, string userId) =>
             _hub.Clients.Group(GroupName(boardId)).SendAsync("ColumnUpdated", new { column, userId });
@@ -27,8 +49,18 @@ namespace ProjectManagement.Services
         public Task BroadcastColumnDeleted(string boardId, string columnId, string userId) =>
             _hub.Clients.Group(GroupName(boardId)).SendAsync("ColumnDeleted", new { columnId, userId });
 
-        public Task BroadcastCardCreated(string boardId, string columnId, CardDto card, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("CardCreated", new { card, columnId, userId });
+        public Task BroadcastCardCreated(string boardId, string columnId, CardDto card, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                //fallback
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("CardCreated", new { card, columnId, userId });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("CardCreated", new { card, columnId, userId });
+        }
 
         public Task BroadcastCardUpdated(string boardId, string columnId, CardDto card, string userId) =>
             _hub.Clients.Group(GroupName(boardId)).SendAsync("CardUpdated", new { card, columnId, userId });
@@ -36,14 +68,24 @@ namespace ProjectManagement.Services
         public Task BroadcastCardDeleted(string boardId, string columnId, string cardId, string userId) =>
             _hub.Clients.Group(GroupName(boardId)).SendAsync("CardDeleted", new { cardId, columnId, userId });
 
-        public Task BroadcastCardsReordered(string boardId, string columnId, IEnumerable<string> cardOrderIds, string userId) =>
+        public Task BroadcastCardsReordered(string boardId, string columnId, IEnumerable<string> cardOrderIds,
+            string userId) =>
             _hub.Clients.Group(GroupName(boardId)).SendAsync("CardsReordered", new { columnId, cardOrderIds, userId });
 
         public Task BroadcastColumnsReordered(string boardId, IEnumerable<string> columnOrderIds, string userId) =>
             _hub.Clients.Group(GroupName(boardId)).SendAsync("ColumnsReordered", new { columnOrderIds, userId });
 
-        public Task BroadcastCardMoved(string boardId, string fromColumnId, string toColumnId, string cardId, int newIndex, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("CardMoved", new { cardId, fromColumnId, toColumnId, newIndex, userId });
+        public Task BroadcastCardMoved(string boardId, string fromColumnId, string toColumnId, string cardId,
+            int newIndex, string userId) =>
+            _hub.Clients.Group(GroupName(boardId))
+                .SendAsync("CardMoved", new
+                {
+                    cardId,
+                    fromColumnId,
+                    toColumnId,
+                    newIndex,
+                    userId
+                });
 
         public async Task SendNotificationToUser(string userId, NotificationDto notification)
         {
@@ -59,5 +101,15 @@ namespace ProjectManagement.Services
         {
             await _hub.Clients.User(userId).SendAsync("NotificationDeleted", new { notificationId });
         }
+
+        public Task BroadcastCardAssigned(string boardId, string columnId, string cardId, string assignedUserId,
+            string userId) =>
+            _hub.Clients.Group(GroupName(boardId))
+                .SendAsync("CardAssigned", new { cardId, columnId, assignedUserId, userId });
+
+        public Task BroadcastCardUnassigned(string boardId, string columnId, string cardId, string unassignedUserId,
+            string userId) =>
+            _hub.Clients.Group(GroupName(boardId))
+                .SendAsync("CardUnassigned", new { cardId, columnId, unassignedUserId, userId });
     }
 }

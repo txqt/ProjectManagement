@@ -23,7 +23,8 @@ import { CSS } from '@dnd-kit/utilities';
 
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender';
 
-function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pendingTempIds }) {
+function Column({ column, updateColumn, createCard, ...props }) {
+  const { updateCard, deleteColumn, deleteCard, pendingTempIds } = props;
   const {
     attributes,
     listeners,
@@ -180,7 +181,7 @@ function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pe
         </Box>
 
         {/* List Cards */}
-        <ListCards cards={orderedCards} deleteCard={deleteCard} pendingTempIds={pendingTempIds} />
+        <ListCards cards={orderedCards} updateCard={updateCard} deleteCard={deleteCard} pendingTempIds={pendingTempIds} />
 
         {/* Box Column Footer */}
         <Box
