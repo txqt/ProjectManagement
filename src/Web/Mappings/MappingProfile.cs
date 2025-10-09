@@ -41,13 +41,18 @@ namespace ProjectManagement.Mappings
 
             // Card mappings
             CreateMap<Card, CardDto>()
-                .ForMember(dest => dest.Members, opt => opt.MapFrom(src => src.Members.Select(cm => cm.User)))
+                .ForMember(dest => dest.Members, opt => opt.MapFrom(src => src.Members))
                 .ForMember(dest => dest.Comments, opt => opt.MapFrom(src => src.Comments.OrderBy(c => c.Created)))
-                .ForMember(dest => dest.Attachments, opt => opt.MapFrom(src => src.Attachments.OrderBy(a => a.Created)));
-
+                .ForMember(dest => dest.Attachments,
+                    opt => opt.MapFrom(src => src.Attachments.OrderBy(a => a.Created)));
+            CreateMap<CardMember, CardMemberDto>();
             CreateMap<CreateCardDto, Card>();
-            CreateMap<UpdateCardDto, Card>()
-                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
+            #region Card Mapper
+
+            CreateMap<UpdateCardDto, Card>();
+            #endregion
+
 
             // Comment mappings
             CreateMap<Comment, CommentDto>();
@@ -60,12 +65,12 @@ namespace ProjectManagement.Mappings
             CreateMap<CreateAttachmentDto, Attachment>();
 
             CreateMap<ApplicationUser, UserDto>()
-            .ForMember(dest => dest.CreatedAt,
-                       opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
+                .ForMember(dest => dest.CreatedAt,
+                    opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
 
             CreateMap<UserDto, ApplicationUser>()
                 .ForMember(dest => dest.CreatedAt,
-                           opt => opt.MapFrom(src => new DateTimeOffset(src.CreatedAt)));
+                    opt => opt.MapFrom(src => new DateTimeOffset(src.CreatedAt)));
 
             // BoardInvite mappings
             CreateMap<BoardInvite, BoardInviteDto>();
@@ -73,11 +78,10 @@ namespace ProjectManagement.Mappings
 
             // Notification mappings
             CreateMap<Notification, NotificationDto>()
-    .ForMember(d => d.Data, opt => opt.MapFrom<NotificationToDtoResolver>());
+                .ForMember(d => d.Data, opt => opt.MapFrom<NotificationToDtoResolver>());
 
             CreateMap<CreateNotificationDto, Notification>()
                 .ForMember(d => d.Data, opt => opt.MapFrom<CreateNotificationDtoToNotificationResolver>());
-
         }
     }
 }

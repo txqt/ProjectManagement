@@ -13,7 +13,7 @@ import { toast } from 'react-toastify';
 import { useMemo } from 'react';
 
 function ListColumns({ columns, createColumn, ...props }) {
-  const { updateColumn, createCard, updateCard, deleteColumn, deleteCard, pendingTempIds } = props;
+  const { updateColumn, createCard, updateCard, deleteColumn, deleteCard, pendingTempIds, assignCardMember, unassignCardMember } = props;
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
   const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm);
 
@@ -86,6 +86,8 @@ function ListColumns({ columns, createColumn, ...props }) {
                 deleteColumn={deleteColumn}
                 deleteCard={deleteCard}
                 pendingTempIds={pendingTempIds}
+                assignCardMember={assignCardMember}
+                unassignCardMember={unassignCardMember}
               />
             </div>
           );

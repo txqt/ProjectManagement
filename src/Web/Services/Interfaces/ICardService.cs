@@ -5,7 +5,7 @@ namespace ProjectManagement.Services.Interfaces
 {
     public interface ICardService
     {
-        Task<CardDto?> GetCardAsync(string cardId, string userId);
+        Task<CardDto?> GetCardAsync(string cardId);
         Task<CardDto?> CreateCardAsync(string columnId, CreateCardDto createCardDto, string userId);
         Task<CardDto?> UpdateCardAsync(string cardId, UpdateCardDto updateCardDto, string userId);
         Task<CardDto?> DeleteCardAsync(string cardId, string userId);

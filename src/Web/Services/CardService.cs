@@ -20,7 +20,8 @@ namespace ProjectManagement.Services
         public CardService(
             ApplicationDbContext context,
             IMapper mapper,
-            UserManager<ApplicationUser> userManager, IBoardNotificationService boardNotificationService,
+            UserManager<ApplicationUser> userManager, 
+            IBoardNotificationService boardNotificationService,
             INotificationService notificationService)
         {
             _context = context;
@@ -30,7 +31,7 @@ namespace ProjectManagement.Services
             _notificationService = notificationService;
         }
 
-        public async Task<CardDto?> GetCardAsync(string cardId, string userId)
+        public async Task<CardDto?> GetCardAsync(string cardId)
         {
             var card = await _context.Cards
                 .Include(c => c.Board)
@@ -72,7 +73,7 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
 
-            var createdCard = await GetCardAsync(card.Id, userId);
+            var createdCard = await GetCardAsync(card.Id);
             await _boardNotificationService.BroadcastCardCreated(card.BoardId, card.ColumnId, createdCard, userId);
             return createdCard!;
         }
@@ -112,7 +113,7 @@ namespace ProjectManagement.Services
 
             await _context.SaveChangesAsync();
 
-            var updatedCard = await GetCardAsync(cardId, userId);
+            var updatedCard = await GetCardAsync(cardId);
 
             await _boardNotificationService.BroadcastCardUpdated(card.BoardId, card.ColumnId, updatedCard, userId);
 
@@ -231,12 +232,14 @@ namespace ProjectManagement.Services
 
             _context.CardMembers.Add(cardMember);
             await _context.SaveChangesAsync();
+            
+            var dto = _mapper.Map<CardDto>(card);
 
             // 🔄 Real-time cập nhật assignee
             await _boardNotificationService.BroadcastCardAssigned(
                 card.BoardId,
                 card.ColumnId,
-                card.Id,
+                dto,
                 user.Id,
                 userId);
 
@@ -254,10 +257,16 @@ namespace ProjectManagement.Services
 
         public async Task<bool> UnassignMemberAsync(string cardId, string memberId, string userId)
         {
+            var card = await _context.Cards
+                .Include(c => c.Board)
+                .Include(c => c.Column)
+                .Include(c => c.Members)
+                .FirstOrDefaultAsync(c => c.Id == cardId);
+            if (card == null)
+                return false;
+            
             var cardMember = await _context.CardMembers
                 .Include(cm => cm.User)
-                .Include(cm => cm.Card)
-                .ThenInclude(c => c.Board)
                 .Include(cm => cm.Card)
                 .ThenInclude(c => c.Column)
                 .FirstOrDefaultAsync(cm => cm.Id == memberId && cm.CardId == cardId);
@@ -267,12 +276,14 @@ namespace ProjectManagement.Services
 
             _context.CardMembers.Remove(cardMember);
             await _context.SaveChangesAsync();
+            
+            var dto = _mapper.Map<CardDto>(card);
 
             // 🔄 Real-time cập nhật UI
             await _boardNotificationService.BroadcastCardUnassigned(
                 cardMember.Card.BoardId,
                 cardMember.Card.ColumnId,
-                cardMember.CardId,
+                dto,
                 cardMember.UserId,
                 userId);
 

@@ -102,14 +102,14 @@ namespace ProjectManagement.Services
             await _hub.Clients.User(userId).SendAsync("NotificationDeleted", new { notificationId });
         }
 
-        public Task BroadcastCardAssigned(string boardId, string columnId, string cardId, string assignedUserId,
+        public Task BroadcastCardAssigned(string boardId, string columnId, CardDto cardDto, string assignedUserId,
             string userId) =>
             _hub.Clients.Group(GroupName(boardId))
-                .SendAsync("CardAssigned", new { cardId, columnId, assignedUserId, userId });
+                .SendAsync("CardAssigned", new { card = cardDto, columnId, assignedUserId, userId });
 
-        public Task BroadcastCardUnassigned(string boardId, string columnId, string cardId, string unassignedUserId,
+        public Task BroadcastCardUnassigned(string boardId, string columnId, CardDto cardDto, string unassignedUserId,
             string userId) =>
             _hub.Clients.Group(GroupName(boardId))
-                .SendAsync("CardUnassigned", new { cardId, columnId, unassignedUserId, userId });
+                .SendAsync("CardUnassigned", new { card = cardDto, columnId, unassignedUserId, userId });
     }
 }

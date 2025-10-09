@@ -13,7 +13,7 @@ import ListCardsSkeleton from './ListCardsSkeleton';
 import CardDetailDialog from './Card/CardDetailDialog'; // component mới
 
 const ListCards = memo(({ cards, deleteCard, pendingTempIds, ...props }) => {
-    const { updateCard } = props;
+    const { updateCard, assignCardMember, unassignCardMember } = props;
     // menu state: position-based (use anchorReference="anchorPosition")
     const [menuPos, setMenuPos] = useState(null); // { mouseX, mouseY }
     const [selectedCard, setSelectedCard] = useState(null);
@@ -129,6 +129,8 @@ const ListCards = memo(({ cards, deleteCard, pendingTempIds, ...props }) => {
                 onClose={handleCloseDialog}
                 card={dialogCard}
                 updateCard={updateCard}
+                assignCardMember={assignCardMember}
+                unassignCardMember={unassignCardMember}
             />
         </>
     );

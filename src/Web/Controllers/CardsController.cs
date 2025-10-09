@@ -33,7 +33,7 @@ namespace ProjectManagement.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            var card = await _cardService.GetCardAsync(cardId, userId);
+            var card = await _cardService.GetCardAsync(cardId);
             if (card == null)
                 return NotFound();
 
@@ -128,7 +128,7 @@ namespace ProjectManagement.Controllers
             if (!success)
                 return BadRequest("User not found or already assigned");
 
-            return NoContent();
+            return Ok(await _cardService.GetCardAsync(cardId));
         }
 
         [HttpDelete("{cardId}/members/{memberId}")]
@@ -143,7 +143,7 @@ namespace ProjectManagement.Controllers
             if (!success)
                 return NotFound();
 
-            return NoContent();
+            return Ok(await _cardService.GetCardAsync(cardId));
         }
     }
 }

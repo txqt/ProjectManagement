@@ -17,7 +17,7 @@ namespace ProjectManagement.Models.DTOs.Card
         public DateTime CreatedAt { get; set; }
         public DateTime UpdateAt { get; set; }
 
-        public virtual ICollection<CardMember> Members { get; set; } = new List<CardMember>();
+        public virtual ICollection<CardMemberDto> Members { get; set; } = new List<CardMemberDto>();
         public virtual ICollection<CommentDto> Comments { get; set; } = new List<CommentDto>();
         public virtual ICollection<AttachmentDto> Attachments { get; set; } = new List<AttachmentDto>();
     }

@@ -345,24 +345,18 @@ class ApiService {
   }
 
   async searchUsers(q, page = 1, pageSize = 10) {
-    const trimmed = q ? q.trim() : '';
-    if (!trimmed) {
-      return {
-        items: [],
-        page: 1,
-        pageSize,
-        totalCount: 0,
-        totalPages: 1
-      };
-    }
-
     const params = new URLSearchParams({
-      q: trimmed,
+      q: q.trim(),
       page: String(page),
       pageSize: String(pageSize)
     });
 
     return this.request(`/users/search?${params.toString()}`);
+  }
+
+  async searchUnsplash(query = 'wallpaper', perPage = 12) {
+    const q = encodeURIComponent((query || 'wallpaper').trim());
+    return this.request(`/unsplash/search?query=${q}&per_page=${perPage}`);
   }
 }
 

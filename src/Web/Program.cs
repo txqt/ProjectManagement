@@ -12,6 +12,7 @@ using ProjectManagement.Mappings;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Services;
 using ProjectManagement.Services.Interfaces;
+using StackExchange.Redis;
 using System.Reflection;
 using System.Text;
 
@@ -109,6 +110,18 @@ builder.Services.AddSingleton<BoardPresenceTracker>();
 builder.Services.AddScoped<IBoardNotificationService, BoardNotificationService>();
 builder.Services.AddScoped<IBoardInviteService, BoardInviteService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var configuration = builder.Configuration.GetConnectionString("Redis");
+    return ConnectionMultiplexer.Connect(configuration);
+});
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+});
+
+builder.Services.AddScoped<IUnsplashCacheService, UnsplashRedisCacheService>();
 
 // Add Background Services
 builder.Services.AddHostedService<NotificationCleanupService>();

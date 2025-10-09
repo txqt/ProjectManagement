@@ -22,24 +22,23 @@ namespace ProjectManagement.Controllers
         [HttpGet("search")]
         [Authorize] // hoặc policy phù hợp
         public async Task<ActionResult<PagedResult<UserSearchDto>>> Search(
-            [FromQuery] string q,
+            [FromQuery] string? q,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
-            if (string.IsNullOrWhiteSpace(q))
-                return BadRequest("Query is required.");
-
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
-            // Dùng NormalizedUserName / NormalizedEmail để tìm (tránh tải quá nhiều dữ liệu)
-            var normalized = q.Trim().ToUpperInvariant();
+            IQueryable<ApplicationUser> usersQuery = _userManager.Users;
 
-            var usersQuery = _userManager.Users
-                .Where(u =>
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var normalized = q.Trim().ToUpperInvariant();
+                usersQuery = usersQuery.Where(u =>
                     (!string.IsNullOrEmpty(u.NormalizedUserName) && u.NormalizedUserName.Contains(normalized)) ||
                     (!string.IsNullOrEmpty(u.NormalizedEmail) && u.NormalizedEmail.Contains(normalized))
                 );
+            }
 
             var total = await usersQuery.CountAsync();
 

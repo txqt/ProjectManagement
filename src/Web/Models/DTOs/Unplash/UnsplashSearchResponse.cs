@@ -2,6 +2,6 @@
 {
     public class UnsplashSearchResponse
     {
-        
+        public List<UnsplashImage> Results { get; set; } = new();
     }
 }

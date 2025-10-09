@@ -19,8 +19,8 @@ namespace ProjectManagement.Services.Interfaces
 
         Task BroadcastCardMoved(string boardId, string fromColumnId, string toColumnId, string cardId, int newIndex, string userId);
         
-        Task BroadcastCardAssigned(string boardId, string columnId, string cardId, string assignedUserId, string userId);
-        Task BroadcastCardUnassigned(string boardId, string columnId, string cardId, string unassignedUserId, string userId);
+        Task BroadcastCardAssigned(string boardId, string columnId, CardDto cardDto, string assignedUserId, string userId);
+        Task BroadcastCardUnassigned(string boardId, string columnId, CardDto cardDto, string unassignedUserId, string userId);
 
         Task SendNotificationToUser(string userId, NotificationDto notification);
         Task BroadcastNotificationRead(string userId, string notificationId);
