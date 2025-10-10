@@ -1,19 +1,17 @@
 // ListCards.jsx
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import DeleteIcon from '@mui/icons-material/Delete';
 import Box from '@mui/material/Box';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import Card from './Card/Card';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import { memo, useCallback, useState } from 'react';
-import ListCardsSkeleton from './ListCardsSkeleton';
+import Card from './Card/Card';
 import CardDetailDialog from './Card/CardDetailDialog'; // component mới
+import ListCardsSkeleton from './ListCardsSkeleton';
 
-const ListCards = memo(({ cards, deleteCard, pendingTempIds, ...props }) => {
-    const { updateCard, assignCardMember, unassignCardMember } = props;
+const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
     // menu state: position-based (use anchorReference="anchorPosition")
     const [menuPos, setMenuPos] = useState(null); // { mouseX, mouseY }
     const [selectedCard, setSelectedCard] = useState(null);
@@ -128,9 +126,6 @@ const ListCards = memo(({ cards, deleteCard, pendingTempIds, ...props }) => {
                 open={dialogOpen}
                 onClose={handleCloseDialog}
                 card={dialogCard}
-                updateCard={updateCard}
-                assignCardMember={assignCardMember}
-                unassignCardMember={unassignCardMember}
             />
         </>
     );

@@ -13,7 +13,7 @@ import { useBoardStore } from '~/stores/boardStore';
 import { shallow } from 'zustand/shallow';
 import { toast } from 'react-toastify';
 
-const CardDetailDialog = ({ open, onClose, card, onSaveDescription, onChangeCover, onDeleteCover, ...props }) => {
+const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
   // store functions
   const storeAssign = useBoardStore((s) => s.assignCardMember);
   const storeUnassign = useBoardStore((s) => s.unassignCardMember);
@@ -62,8 +62,8 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription, onChangeCove
     if (typeof onSaveDescription === 'function') onSaveDescription(currentCard, description);
     else console.log('Save description:', currentCard?.id, description);
 
-    if (typeof props.updateCard === 'function') {
-      await props.updateCard(currentCard.columnId, currentCard.id, { ...currentCard, description });
+    if (typeof updateCard === 'function') {
+      await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, description });
     } else {
       console.warn('[CardDetailDialog] updateCard not provided');
     }
@@ -193,8 +193,6 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription, onChangeCove
 
   const assignHandler = async (selectedItem) => {
     if (!currentCard) return;
-    const isBoardMemberItem = !!selectedItem?.user;
-    const userObj = isBoardMemberItem ? selectedItem.user : selectedItem;
     const email = getUserEmailFrom(selectedItem);
     const userId = getUserIdFrom(selectedItem);
 
@@ -216,9 +214,9 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription, onChangeCove
       return;
     }
 
-    if (typeof props.assignCardMember === 'function') {
+    if (typeof storeAssign === 'function') {
       try {
-        await props.assignCardMember(currentCard, userObj);
+        await storeAssign(currentCard.columnId, currentCard.id, email);
       } catch (err) {
         console.error('prop assign error:', err);
       }
@@ -243,9 +241,9 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription, onChangeCove
       return;
     }
 
-    if (typeof props.unassignCardMember === 'function') {
+    if (typeof storeUnassign === 'function') {
       try {
-        await props.unassignCardMember(currentCard, memberId);
+        await storeUnassign(currentCard.columnId, currentCard.id, memberId);
       } catch (err) {
         console.error('prop unassign error:', err);
       }
