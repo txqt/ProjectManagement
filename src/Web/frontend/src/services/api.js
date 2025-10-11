@@ -34,6 +34,8 @@ class ApiService {
       ...options,
     };
 
+    console.log('config', config)
+
     try {
       const response = await fetch(url, config);
       const contentType = response.headers.get('content-type');
@@ -55,9 +57,9 @@ class ApiService {
         error.body = body;
 
         if (response.status === 401 && !options.skipAuthHandling) {
-          this.setAuthToken(null);
+          // this.setAuthToken(null);
           alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-          window.location.href = '/login';
+          // window.location.href = '/login';
         }
 
         throw error;
@@ -168,10 +170,7 @@ class ApiService {
   async reorderColumns(boardId, columnOrderIds) {
     return this.request(`/boards/${boardId}/columns/reorder`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(columnOrderIds),
+      body: JSON.stringify({ columnOrderIds }),
     });
   }
 

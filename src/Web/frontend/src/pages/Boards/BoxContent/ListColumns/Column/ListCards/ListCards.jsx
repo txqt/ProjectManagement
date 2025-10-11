@@ -1,24 +1,59 @@
-// ListCards.jsx
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Box from '@mui/material/Box';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import { memo, useCallback, useState } from 'react';
+import React, { memo, useCallback, useEffect, useRef } from 'react';
 import Card from './Card/Card';
-import CardDetailDialog from './Card/CardDetailDialog'; // component mới
+import CardDetailDialog from './Card/CardDetailDialog';
 import ListCardsSkeleton from './ListCardsSkeleton';
+
+function SortableItem({ card, children, onContextMenu }) {
+    const cardRef = useRef(card);
+    useEffect(() => {
+        cardRef.current = card;
+    }, [card]);
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+        useSortable({ id: card.id, data: cardRef.current });
+
+    const style = {
+        transform: CSS.Translate.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        border: isDragging ? '1px solid #2ecc71' : undefined,
+    };
+
+    // inject isDragging into single React child if possible
+    const childWithProps = React.isValidElement(children)
+        ? React.cloneElement(children, { isDragging })
+        : children;
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            onContextMenu={(e) => {
+                if (typeof onContextMenu === 'function') onContextMenu(e);
+            }}
+        >
+            {childWithProps}
+        </div>
+    );
+}
 
 const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
     // menu state: position-based (use anchorReference="anchorPosition")
-    const [menuPos, setMenuPos] = useState(null); // { mouseX, mouseY }
-    const [selectedCard, setSelectedCard] = useState(null);
+    const [menuPos, setMenuPos] = React.useState(null); // { mouseX, mouseY }
+    const [selectedCard, setSelectedCard] = React.useState(null);
 
     // dialog state
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [dialogCard, setDialogCard] = useState(null);
+    const [dialogOpen, setDialogOpen] = React.useState(false);
+    const [dialogCard, setDialogCard] = React.useState(null);
 
     const openMenu = useCallback((event, card) => {
         event.preventDefault();
@@ -27,7 +62,7 @@ const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
         setSelectedCard(card);
         setMenuPos({
             mouseX: event.clientX + 2,
-            mouseY: event.clientY - 6
+            mouseY: event.clientY - 6,
         });
     }, []);
 
@@ -85,24 +120,28 @@ const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
                         ${theme.custom.columnFooterHeight}
                         )`,
                         '&::-webkit-scrollbar-thumb': { backgroundColor: '#ced0da' },
-                        '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#dfc2cf' }
+                        '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#dfc2cf' },
                     }}
                 >
                     {cards?.map((card) => {
                         const isCardPending = pendingTempIds?.has?.(card.id) ?? false;
                         return (
-                            <div
+                            <SortableItem
                                 key={card.id}
+                                card={card}
                                 onContextMenu={(e) => openMenu(e, card)}
-                                style={{
-                                    opacity: isCardPending ? 0.5 : 1,
-                                    pointerEvents: isCardPending ? 'none' : 'auto',
-                                    transition: 'opacity 0.2s ease'
-                                }}
                             >
-                                <Card card={card} onOpen={handleOpenCardDialog} />
-                            </div>
-                        )
+                                <div
+                                    style={{
+                                        opacity: isCardPending ? 0.5 : 1,
+                                        pointerEvents: isCardPending ? 'none' : 'auto',
+                                        transition: 'opacity 0.2s ease',
+                                    }}
+                                >
+                                    <Card card={card} onOpen={handleOpenCardDialog} />
+                                </div>
+                            </SortableItem>
+                        );
                     })}
                 </Box>
             </SortableContext>

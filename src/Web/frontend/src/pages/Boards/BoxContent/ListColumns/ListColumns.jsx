@@ -1,16 +1,18 @@
-import CloseIcon from '@mui/icons-material/Close';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Column from './Column/Column';
-import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import {
   SortableContext,
-  horizontalListSortingStrategy
+  horizontalListSortingStrategy,
+  useSortable
 } from '@dnd-kit/sortable';
-import { useState } from 'react';
+import { CSS } from '@dnd-kit/utilities';
+import CloseIcon from '@mui/icons-material/Close';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import { TextField } from '@mui/material';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import { useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
-import { useMemo } from 'react';
+import Column from './Column/Column';
+import { useEffect, useRef } from 'react';
 
 function ListColumns({ columns, createColumn, ...props }) {
   const { updateColumn, createCard, updateCard, deleteColumn, deleteCard, pendingTempIds, assignCardMember, unassignCardMember } = props;
@@ -30,7 +32,6 @@ function ListColumns({ columns, createColumn, ...props }) {
     }
 
     try {
-
       await createColumn({
         title: newColumnTitle,
         description: 'description',
@@ -45,11 +46,6 @@ function ListColumns({ columns, createColumn, ...props }) {
     }
   }
 
-  /**
-   * Thằng Sortable yêu cầu items là một mảng dạng ['id-1', 'id-2'] chứ không phải [{id: 'id-1'}, {id: 'id-2'}]
-   * Nếu không đúng thì vẫn kéo thả được nhưng không có animation
-   * https://github.com/clauderic/dnd-kit/issues/183#issuecomment-812569512
-   */
   return (
     <SortableContext
       items={columnsId}
@@ -78,7 +74,7 @@ function ListColumns({ columns, createColumn, ...props }) {
                 transition: 'opacity 0.2s ease'
               }}
             >
-              <Column
+              <SortableColumn
                 column={column}
                 createCard={createCard}
                 updateCard={updateCard}
@@ -188,6 +184,42 @@ function ListColumns({ columns, createColumn, ...props }) {
         )}
       </Box>
     </SortableContext>
+  )
+}
+
+function SortableColumn({ column, ...props }) {
+  const columnRef = useRef(column);
+
+  useEffect(() => {
+    columnRef.current = column;
+  }, [column]);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({
+    id: columnRef.current.id,
+    data: { ...columnRef.current }
+  })
+
+  const dndKitColumnStyles = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    height: '100%',
+    opacity: isDragging ? 0.5 : 1
+  }
+
+  return (
+    <div ref={setNodeRef} style={dndKitColumnStyles} {...attributes} {...listeners}>
+      <Column
+        column={column}
+        {...props}
+      />
+    </div>
   )
 }
 
