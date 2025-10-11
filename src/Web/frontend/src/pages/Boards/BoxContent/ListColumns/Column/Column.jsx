@@ -4,14 +4,14 @@ import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
 import DragHandleIcon from '@mui/icons-material/DragHandle'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { TextField, Box, Button, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography } from '@mui/material'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { toast } from 'react-toastify'
 import { mapOrder } from '~/utils/sorts'
 import ListCards from './ListCards/ListCards'
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender'
 
-function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pendingTempIds }) {
-  const orderedCards = mapOrder(column?.cards, column?.cardOrderIds, 'id')
+const Column = memo(({ dragHandleProps, ...props }) => {
+  const orderedCards = mapOrder(props.column?.cards, props.column?.cardOrderIds, 'id')
 
   const [anchorEl, setAnchorEl] = useState(null)
   const open = Boolean(anchorEl)
@@ -29,7 +29,7 @@ function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pe
       return
     }
     try {
-      await createCard(column.id, {
+      await props.createCard(props.column.id, {
         title: newCardTitle,
         description: 'Description'
       })
@@ -56,6 +56,7 @@ function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pe
     >
       {/* Header */}
       <Box
+        {...dragHandleProps}
         sx={{
           height: (theme) => theme.custom.columnHeaderHeight,
           p: 2,
@@ -68,10 +69,10 @@ function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pe
           <TextField
             autoFocus
             variant="outlined"
-            defaultValue={column?.title}
+            defaultValue={props.column?.title}
             onKeyDown={async (e) => {
               if (e.key !== 'Enter') return
-              await updateColumn(column.id, { title: e.target.value })
+              await props.updateColumn(props.column.id, { title: e.target.value })
               setEditMode(false)
             }}
             onBlur={() => setEditMode(false)}
@@ -91,7 +92,7 @@ function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pe
             onClick={() => setEditMode(true)}
             sx={{ fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }}
           >
-            {column?.title}
+            {props.column?.title}
           </Typography>
         )}
 
@@ -114,7 +115,7 @@ function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pe
             onClose={handleClose}
           >
             <ConditionalRender permission="boards.delete">
-              <MenuItem onClick={() => deleteColumn(column.id)}>
+              <MenuItem onClick={() => props.deleteColumn(props.column.id)}>
                 <ListItemIcon>
                   <DeleteForeverIcon fontSize="small" />
                 </ListItemIcon>
@@ -130,20 +131,22 @@ function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pe
       {/* Cards */}
       <ListCards
         cards={orderedCards}
-        deleteCard={deleteCard}
-        pendingTempIds={pendingTempIds}
+        {...props}
       />
 
       {/* Footer */}
       <Box sx={{ height: (theme) => theme.custom.columnFooterHeight, p: 2 }}>
         {!openNewCardForm ? (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Button startIcon={<AddCardIcon />} onClick={toggleOpenNewCardForm}>
+            <Button
+              startIcon={<AddCardIcon />}
+              onClick={toggleOpenNewCardForm}
+              sx={{
+                width: '100%',
+                justifyContent: 'flex-start'
+              }}>
               Add new card
             </Button>
-            <Tooltip title="Drag to move">
-              <DragHandleIcon sx={{ cursor: 'grab' }} />
-            </Tooltip>
           </Box>
         ) : (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -179,6 +182,6 @@ function Column({ column, updateColumn, createCard, deleteColumn, deleteCard, pe
       </Box>
     </Box>
   )
-}
+});
 
-export default Column
+export default Column;

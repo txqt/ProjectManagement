@@ -14,16 +14,15 @@ import { toast } from 'react-toastify';
 import { useEffect, useRef } from 'react';
 import Column from './Column/Column';
 
-function ListColumns({ columns, createColumn, ...props }) {
-  const { updateColumn, createCard, updateCard, deleteColumn, deleteCard, pendingTempIds, assignCardMember, unassignCardMember } = props;
+function ListColumns({ ...props }) {
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
   const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm);
 
   const [newColumnTitle, setNewColumnTitle] = useState('');
 
   const columnsId = useMemo(() => {
-    return columns?.map((c) => c.id);
-  }, [columns]);
+    return props.columns?.map((c) => c.id);
+  }, [props.columns]);
 
   const addNewColumn = async () => {
     if (!newColumnTitle) {
@@ -32,7 +31,7 @@ function ListColumns({ columns, createColumn, ...props }) {
     }
 
     try {
-      await createColumn({
+      await props.createColumn({
         title: newColumnTitle,
         description: 'description',
         type: 'public'
@@ -62,8 +61,8 @@ function ListColumns({ columns, createColumn, ...props }) {
           '&::-webkit-scrollbar-track': { m: 2 }
         }}
       >
-        {columns?.map((column) => {
-          const isColumnPending = pendingTempIds?.has?.(column.id) ?? false;
+        {props.columns?.map((column) => {
+          const isColumnPending = props.pendingTempIds?.has?.(column.id) ?? false;
 
           return (
             <div
@@ -76,14 +75,7 @@ function ListColumns({ columns, createColumn, ...props }) {
             >
               <SortableColumn
                 column={column}
-                createCard={createCard}
-                updateCard={updateCard}
-                updateColumn={updateColumn}
-                deleteColumn={deleteColumn}
-                deleteCard={deleteCard}
-                pendingTempIds={pendingTempIds}
-                assignCardMember={assignCardMember}
-                unassignCardMember={unassignCardMember}
+                {...props}
               />
             </div>
           );
@@ -187,12 +179,12 @@ function ListColumns({ columns, createColumn, ...props }) {
   )
 }
 
-function SortableColumn({ column, ...props }) {
-  const columnRef = useRef(column);
+function SortableColumn({ ...props }) {
+  const columnRef = useRef(props.column);
 
   useEffect(() => {
-    columnRef.current = column;
-  }, [column]);
+    columnRef.current = props.column;
+  }, [props.column]);
 
   const {
     attributes,
@@ -202,8 +194,8 @@ function SortableColumn({ column, ...props }) {
     transition,
     isDragging
   } = useSortable({
-    id: columnRef.current.id,
-    data: { ...columnRef.current }
+    id: props.column.id,
+    data: { ...columnRef.current, __type: 'COLUMN' }
   })
 
   const dndKitColumnStyles = {
@@ -213,10 +205,12 @@ function SortableColumn({ column, ...props }) {
     opacity: isDragging ? 0.5 : 1
   }
 
+  const dragHandleProps = { ...attributes, ...listeners, 'data-dnd-handle': true };
+
   return (
-    <div ref={setNodeRef} style={dndKitColumnStyles} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={dndKitColumnStyles}>
       <Column
-        column={column}
+        dragHandleProps={dragHandleProps}
         {...props}
       />
     </div>

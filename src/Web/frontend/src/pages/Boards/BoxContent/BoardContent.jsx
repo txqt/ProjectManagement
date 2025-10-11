@@ -282,16 +282,18 @@ function BoardContent({ board, ...props }) {
     const collisionDetectionStrategy = useCallback(
         (args) => {
             if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) {
-                return closestCorners({ ...args });
+                const columnContainers = args.droppableContainers.filter(
+                    (c) => c.data?.current?.__type === 'COLUMN' || orderedColumns.some(col => col.id === c.id)
+                );
+                return closestCorners({ ...args, droppableContainers: columnContainers });
             }
+
             const pointerIntersections = pointerWithin(args);
-            if (!pointerIntersections?.length) return;
+            if (!pointerIntersections?.length) return [];
             let overId = getFirstCollision(pointerIntersections, 'id');
             if (overId) {
-                // If collision is with column, find nearest card inside
-                const checkColumn = orderedColumns.find(
-                    (column) => column.id === overId
-                );
+                // existing inner-card check...
+                const checkColumn = orderedColumns.find((column) => column.id === overId);
                 if (checkColumn) {
                     if (checkColumn?.cardOrderIds?.length) {
                         const innerOver = closestCorners({
@@ -310,8 +312,7 @@ function BoardContent({ board, ...props }) {
                 lastOverId.current = overId;
                 return [{ id: overId }];
             }
-            // Fallback to last collision id
-            return lastOverId.current ? [{ id: lastOverId.current }] : [];
+            return [];
         },
         [activeDragItemType, orderedColumns]
     );

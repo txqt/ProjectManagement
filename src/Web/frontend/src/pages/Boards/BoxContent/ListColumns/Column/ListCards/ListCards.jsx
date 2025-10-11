@@ -17,7 +17,7 @@ function SortableItem({ card, children, onContextMenu }) {
         cardRef.current = card;
     }, [card]);
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-        useSortable({ id: card.id, data: cardRef.current });
+        useSortable({ id: card.id, data: { ...cardRef.current } });
 
     const style = {
         transform: CSS.Translate.toString(transform),
@@ -46,7 +46,7 @@ function SortableItem({ card, children, onContextMenu }) {
     );
 }
 
-const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
+const ListCards = memo(({ ...props }) => {
     // menu state: position-based (use anchorReference="anchorPosition")
     const [menuPos, setMenuPos] = React.useState(null); // { mouseX, mouseY }
     const [selectedCard, setSelectedCard] = React.useState(null);
@@ -54,6 +54,8 @@ const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
     // dialog state
     const [dialogOpen, setDialogOpen] = React.useState(false);
     const [dialogCard, setDialogCard] = React.useState(null);
+
+    const deleteCard = props.deleteCard;
 
     const openMenu = useCallback((event, card) => {
         event.preventDefault();
@@ -96,12 +98,12 @@ const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
         setDialogCard(null);
     }, []);
 
-    if (!cards) return <ListCardsSkeleton count={5} />;
+    if (!props.cards) return <ListCardsSkeleton count={5} />;
 
     return (
         <>
             <SortableContext
-                items={cards?.map((c) => c.id)}
+                items={props.cards?.map((c) => c.id)}
                 strategy={verticalListSortingStrategy}
             >
                 <Box
@@ -123,23 +125,15 @@ const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
                         '&::-webkit-scrollbar-thumb:hover': { backgroundColor: '#dfc2cf' },
                     }}
                 >
-                    {cards?.map((card) => {
-                        const isCardPending = pendingTempIds?.has?.(card.id) ?? false;
+                    {props.cards?.map((card) => {
+                        const isCardPending = props.pendingTempIds?.has?.(card.id) ?? false;
                         return (
                             <SortableItem
                                 key={card.id}
                                 card={card}
                                 onContextMenu={(e) => openMenu(e, card)}
                             >
-                                <div
-                                    style={{
-                                        opacity: isCardPending ? 0.5 : 1,
-                                        pointerEvents: isCardPending ? 'none' : 'auto',
-                                        transition: 'opacity 0.2s ease',
-                                    }}
-                                >
-                                    <Card card={card} onOpen={handleOpenCardDialog} />
-                                </div>
+                                <Card card={card} onOpen={handleOpenCardDialog} isPending={isCardPending} />
                             </SortableItem>
                         );
                     })}

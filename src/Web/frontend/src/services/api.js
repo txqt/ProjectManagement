@@ -170,7 +170,7 @@ class ApiService {
   async reorderColumns(boardId, columnOrderIds) {
     return this.request(`/boards/${boardId}/columns/reorder`, {
       method: 'PUT',
-      body: JSON.stringify({ columnOrderIds }),
+      body: JSON.stringify(columnOrderIds),
     });
   }
 

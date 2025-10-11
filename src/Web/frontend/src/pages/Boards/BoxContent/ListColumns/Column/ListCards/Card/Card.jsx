@@ -10,7 +10,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 
 // NOTE: Card has been simplified to be UI-only. useSortable is moved to a wrapper (SortableItem).
-const Card = memo(({ card, onOpen, isDragging }) => {
+const Card = memo(({ card, onOpen, isDragging, isPending }) => {
   const shouldShowCardAction = () => {
     return (
       !!card?.memberIds?.length ||
@@ -34,7 +34,10 @@ const Card = memo(({ card, onOpen, isDragging }) => {
         boxShadow: '0 1px 1px rgba(0,0,0,0.2)',
         overflow: 'unset',
         border: '1px solid transparent',
-        '&:hover': { borderColor: (theme) => theme.palette.primary.main }
+        '&:hover': { borderColor: (theme) => theme.palette.primary.main },
+        opacity: isPending ? 0.5 : 1,
+        pointerEvents: isPending ? 'none' : 'auto',
+        transition: 'opacity 0.2s ease',
       }}
       onClick={handleClick}
     >
