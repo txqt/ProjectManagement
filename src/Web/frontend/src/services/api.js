@@ -34,8 +34,6 @@ class ApiService {
       ...options,
     };
 
-    console.log('config', config)
-
     try {
       const response = await fetch(url, config);
       const contentType = response.headers.get('content-type');

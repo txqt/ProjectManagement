@@ -12,7 +12,7 @@ import {
     pointerWithin,
     getFirstCollision
 } from '@dnd-kit/core';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import Column from './ListColumns/Column/Column';
 import Card from './ListColumns/Column/ListCards/Card/Card';
@@ -293,7 +293,7 @@ function BoardContent({ board, ...props }) {
                 // existing inner-card check...
                 const checkColumn = orderedColumns.find((column) => column.id === overId);
                 if (checkColumn) {
-                    if (checkColumn?.cardOrderIds?.length) {
+                    if (checkColumn?.cardOrderIds?.length > 0) {
                         const innerOver = closestCorners({
                             ...args,
                             droppableContainers: args.droppableContainers.filter(
