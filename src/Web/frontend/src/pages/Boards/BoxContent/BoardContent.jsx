@@ -12,12 +12,13 @@ import {
     pointerWithin,
     getFirstCollision
 } from '@dnd-kit/core';
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import Column from './ListColumns/Column/Column';
 import Card from './ListColumns/Column/ListCards/Card/Card';
-import { cloneDeep, throttle } from 'lodash';
+import { cloneDeep } from 'lodash';
 import { ACTIVE_DRAG_ITEM_TYPE } from '~/utils/constants';
+import { createPortal } from 'react-dom';
 
 function BoardContent({ board, ...props }) {
     const { createColumn, updateColumn, createCard, updateCard,
@@ -54,12 +55,12 @@ function BoardContent({ board, ...props }) {
     }, [board]);
 
     // Find column by card or column id
-    const findColumnByCardId = (cardOrColumnId) => {
+    const findColumnByCardId = useCallback((cardOrColumnId) => {
         return orderedColumns.find((column) =>
             column.id === cardOrColumnId ||
             column?.cards?.map((card) => card.id)?.includes(cardOrColumnId)
         );
-    };
+    }, [orderedColumns]);
 
     // Move card between different columns
     const moveCardBetweenDifferentColumns = (
@@ -144,34 +145,31 @@ function BoardContent({ board, ...props }) {
     };
 
     // Handle drag over (throttled)
-    const handleDragOver = useMemo(() =>
-        throttle((event) => {
-            if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) return;
-            const { active, over } = event;
-            if (!active || !over) return;
-            const {
-                id: activeDraggingCardId,
-                data: { current: activeDraggingCardData }
-            } = active;
-            const { id: overCardId } = over;
-            const activeColumn = findColumnByCardId(activeDraggingCardId);
-            const overColumn = findColumnByCardId(overCardId);
-            if (!activeColumn || !overColumn) return;
-            // Only handle if moving card between columns
-            if (activeColumn.id !== overColumn.id) {
-                moveCardBetweenDifferentColumns(
-                    overColumn,
-                    overCardId,
-                    active,
-                    over,
-                    activeColumn,
-                    activeDraggingCardId,
-                    activeDraggingCardData
-                );
-            }
-        }, 16),
-        [activeDragItemType, orderedColumns]
-    );
+    const handleDragOver = useCallback((event) => {
+        if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) return;
+        const { active, over } = event;
+        if (!active || !over) return;
+        const {
+            id: activeDraggingCardId,
+            data: { current: activeDraggingCardData }
+        } = active;
+        const { id: overCardId } = over;
+        const activeColumn = findColumnByCardId(activeDraggingCardId);
+        const overColumn = findColumnByCardId(overCardId);
+        if (!activeColumn || !overColumn) return;
+        // Only handle if moving card between columns
+        if (activeColumn.id !== overColumn.id) {
+            moveCardBetweenDifferentColumns(
+                overColumn,
+                overCardId,
+                active,
+                over,
+                activeColumn,
+                activeDraggingCardId,
+                activeDraggingCardData
+            );
+        }
+    }, [activeDragItemType, orderedColumns, findColumnByCardId]);
 
     // Handle drag end
     const handleDragEnd = async (event) => {
@@ -345,15 +343,17 @@ function BoardContent({ board, ...props }) {
                     pendingTempIds={pendingTempIds}
                     assignCardMember={assignCardMember}
                     unassignCardMember={unassignCardMember} />
-                <DragOverlay dropAnimation={customDropAnimation}>
-                    {!activeDragItemType && null}
-                    {activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN && (
-                        <Column column={activeDragItemData} />
-                    )}
-                    {activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.CARD && (
-                        <Card card={activeDragItemData} />
-                    )}
-                </DragOverlay>
+                {createPortal(
+                    <DragOverlay dropAnimation={customDropAnimation}>
+                        {activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN && (
+                            <Column column={activeDragItemData} />
+                        )}
+                        {activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.CARD && (
+                            <Card card={activeDragItemData} />
+                        )}
+                    </DragOverlay>,
+                    document.body
+                )}
             </Box>
         </DndContext>
     );
