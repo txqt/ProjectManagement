@@ -6,12 +6,13 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { TextField, Box, Button, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography } from '@mui/material'
 import { memo, useState } from 'react'
 import { toast } from 'react-toastify'
-import { mapOrder } from '~/utils/sorts'
+import { sortCardsByRank } from '~/utils/sorts'
 import ListCards from './ListCards/ListCards'
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender'
 
 const Column = memo(({ dragHandleProps, ...props }) => {
-  const orderedCards = mapOrder(props.column?.cards, props.column?.cardOrderIds, 'id')
+  const orderedCards = sortCardsByRank(props.column?.cards)
+  console.log('column render')
 
   const [anchorEl, setAnchorEl] = useState(null)
   const open = Boolean(anchorEl)
@@ -92,7 +93,7 @@ const Column = memo(({ dragHandleProps, ...props }) => {
             onClick={() => setEditMode(true)}
             sx={{ fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }}
           >
-            {props.column?.title}
+            {props.column?.title} {props.column?.id}
           </Typography>
         )}
 

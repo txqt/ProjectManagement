@@ -68,12 +68,34 @@ namespace ProjectManagement.Services
         public Task BroadcastCardDeleted(string boardId, string columnId, string cardId, string userId) =>
             _hub.Clients.Group(GroupName(boardId)).SendAsync("CardDeleted", new { cardId, columnId, userId });
 
-        public Task BroadcastCardsReordered(string boardId, string columnId, IEnumerable<string> cardOrderIds,
-            string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("CardsReordered", new { columnId, cardOrderIds, userId });
+        public async Task BroadcastCardsReordered(string boardId, string columnId, List<string> cardIds, List<CardDto> orderedCards, string userId)
+        {
+            // CHANGED: Pass card ranks instead of IDs
+            // Frontend will use these ranks to sort cards
+            await _hub.Clients
+                .Group(GroupName(boardId))
+                .SendAsync("CardsReordered", new
+                {
+                    boardId,
+                    columnId,
+                    cardIds,
+                    orderedCards,
+                    userId
+                });
+        }
 
-        public Task BroadcastColumnsReordered(string boardId, IEnumerable<string> columnOrderIds, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("ColumnsReordered", new { columnOrderIds, userId });
+        public async Task BroadcastColumnsReordered(string boardId, List<string> columnIds, List<ColumnDto> orderedColumns, string userId)
+        {
+            await _hub.Clients
+                .Group(GroupName(boardId))
+                .SendAsync("ColumnsReordered", new
+                {
+                    boardId,
+                    columnIds,
+                    orderedColumns,
+                    userId
+                });
+        }
 
         public Task BroadcastCardMoved(string boardId, string fromColumnId, string toColumnId, string cardId,
             int newIndex, string userId) =>

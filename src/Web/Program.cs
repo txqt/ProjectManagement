@@ -110,6 +110,7 @@ builder.Services.AddSingleton<BoardPresenceTracker>();
 builder.Services.AddScoped<IBoardNotificationService, BoardNotificationService>();
 builder.Services.AddScoped<IBoardInviteService, BoardInviteService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<LexoRankMigrationService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {

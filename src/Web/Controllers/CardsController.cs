@@ -102,15 +102,15 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("reorder")]
-        [RequireBoardPermission(Permissions.Cards.Edit)]
-        public async Task<ActionResult> ReorderCards(string columnId, [FromBody] List<string> cardOrderIds)
+        [RequireBoardPermission(Permissions.Cards.Move)]
+        public async Task<ActionResult> ReorderCards(string boardId, string columnId, [FromBody] List<string> cardIds)
         {
             var userId = _userManager.GetUserId(User);
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            var result = await _cardService.ReorderCardsAsync(columnId, cardOrderIds, userId);
-            if (result == null)
+            var success = await _cardService.ReorderCardsAsync(boardId, columnId, cardIds, userId);
+            if (!success)
                 return BadRequest();
 
             return NoContent();

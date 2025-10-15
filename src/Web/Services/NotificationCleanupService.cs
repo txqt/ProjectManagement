@@ -27,7 +27,7 @@ namespace ProjectManagement.Services
 
                     await inviteService.CleanupExpiredInvitesAsync();
 
-                    _logger.LogInformation("Notification cleanup completed at {Time}", DateTimeOffset.UtcNow);
+                    _logger.LogInformation("Notification cleanup completed at {Time}", DateTime.UtcNow);
                 }
                 catch (Exception ex)
                 {

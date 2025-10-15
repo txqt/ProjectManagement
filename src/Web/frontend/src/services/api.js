@@ -173,12 +173,13 @@ class ApiService {
   }
 
 
-  async reorderCards(boardId, columnId, cardOrderIds) {
+  async reorderCards(boardId, columnId, cards) {
     return this.request(`/boards/${boardId}/columns/${columnId}/cards/reorder`, {
       method: 'PUT',
-      body: JSON.stringify(cardOrderIds),
+      body: JSON.stringify(cards),
     });
   }
+
 
   async getCard(boardId, columnId, cardId) {
     return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}`);

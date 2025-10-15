@@ -1,6 +1,7 @@
+// ============ UPDATED: BoardContent.jsx ============
 import Box from '@mui/material/Box';
 import ListColumns from './ListColumns/ListColumns';
-import { mapOrder } from '~/utils/sorts';
+import { mapOrder, sortColumnsByRank, sortCardsByRank } from '~/utils/sorts';
 import { MouseSensor, TouchSensor } from '~/customLibraries/DndKitSensors';
 import {
     DndContext,
@@ -12,7 +13,7 @@ import {
     pointerWithin,
     getFirstCollision
 } from '@dnd-kit/core';
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import Column from './ListColumns/Column/Column';
 import Card from './ListColumns/Column/ListCards/Card/Card';
@@ -25,33 +26,27 @@ function BoardContent({ board, ...props }) {
         deleteColumn, reorderColumns, reorderCards, moveCard, deleteCard,
         pendingTempIds, assignCardMember, unassignCardMember } = props;
 
-    // Mouse sensor: require mouse to move 5px before drag starts
     const mouseSensor = useSensor(MouseSensor, {
-        activationConstraint: {
-            distance: 5
-        }
+        activationConstraint: { distance: 5 }
     });
-    // Touch sensor: require 250ms hold and 500px tolerance before drag starts
     const touchSensor = useSensor(TouchSensor, {
         activationConstraint: {
             delay: 250,
             tolerance: 500
         }
     });
-    // Use both sensors for best desktop/mobile experience
     const sensors = useSensors(mouseSensor, touchSensor);
 
     const [orderedColumns, setOrderedColumns] = useState([]);
-    // Only one item can be dragged at a time
     const [activeDragItemId, setActiveDragItemId] = useState(null);
     const [activeDragItemType, setActiveDragItemType] = useState(null);
     const [activeDragItemData, setActiveDragItemData] = useState(null);
     const [oldColumnWhenDraggingCard, setOldColumnWhenDraggingCard] = useState(null);
-    // Last collision id for custom collision detection
     const lastOverId = useRef(null);
+    const [oldCardIndexWhenDragging, setOldCardIndexWhenDragging] = useState(null);
 
     useEffect(() => {
-        setOrderedColumns(mapOrder(board?.columns, board?.columnOrderIds, 'id'));
+        setOrderedColumns(sortColumnsByRank(board?.columns));
     }, [board]);
 
     // Find column by card or column id
@@ -76,7 +71,6 @@ function BoardContent({ board, ...props }) {
             const overCardIndex = overColumn?.cards?.findIndex(
                 (card) => card.id === overCardId
             );
-            // Calculate new index for dropped card
             let newCardIndex;
             const isBelowOverItem =
                 active.rect.current.translated &&
@@ -86,7 +80,7 @@ function BoardContent({ board, ...props }) {
                 overCardIndex >= 0
                     ? overCardIndex + modifier
                     : overColumn?.cards?.length;
-            // Clone columns state
+
             const nextColumns = cloneDeep(prevColumns);
             const nextActiveColumn = nextColumns.find(
                 (column) => column.id === activeColumn.id
@@ -94,16 +88,13 @@ function BoardContent({ board, ...props }) {
             const nextOverColumn = nextColumns.find(
                 (column) => column.id === overColumn.id
             );
-            // Remove card from old column
+
             if (nextActiveColumn) {
                 nextActiveColumn.cards = nextActiveColumn.cards.filter(
                     (card) => card.id !== activeDraggingCardId
                 );
-                nextActiveColumn.cardOrderIds = nextActiveColumn.cards.map(
-                    (card) => card.id
-                );
+                // CHANGED: Don't update cardOrderIds anymore
             }
-            // Add card to new column
             if (nextOverColumn) {
                 nextOverColumn.cards = nextOverColumn.cards.filter(
                     (card) => card.id !== activeDraggingCardId
@@ -117,19 +108,15 @@ function BoardContent({ board, ...props }) {
                     0,
                     rebuild_activeDraggingCardData
                 );
-                // Remove placeholder card if exists
                 nextOverColumn.cards = nextOverColumn.cards.filter(
                     (card) => !card.FE_PlaceholderCard
                 );
-                nextOverColumn.cardOrderIds = nextOverColumn.cards.map(
-                    (card) => card.id
-                );
+                // CHANGED: Don't update cardOrderIds anymore
             }
             return nextColumns;
         });
     };
 
-    // Handle drag start
     const handleDragStart = (event) => {
         setActiveDragItemId(event?.active?.id);
         setActiveDragItemType(
@@ -138,13 +125,15 @@ function BoardContent({ board, ...props }) {
                 : ACTIVE_DRAG_ITEM_TYPE.COLUMN
         );
         setActiveDragItemData(event?.active?.data?.current);
-        // Save old column for card drag
+
         if (event?.active?.data?.current?.columnId) {
-            setOldColumnWhenDraggingCard(findColumnByCardId(event?.active?.id));
+            const col = findColumnByCardId(event?.active?.id);
+            setOldColumnWhenDraggingCard(col);
+            const idx = col?.cards?.findIndex(c => c.id === event?.active?.id) ?? null;
+            setOldCardIndexWhenDragging(idx);
         }
     };
 
-    // Handle drag over (throttled)
     const handleDragOver = useCallback((event) => {
         if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) return;
         const { active, over } = event;
@@ -157,7 +146,7 @@ function BoardContent({ board, ...props }) {
         const activeColumn = findColumnByCardId(activeDraggingCardId);
         const overColumn = findColumnByCardId(overCardId);
         if (!activeColumn || !overColumn) return;
-        // Only handle if moving card between columns
+
         if (activeColumn.id !== overColumn.id) {
             moveCardBetweenDifferentColumns(
                 overColumn,
@@ -171,11 +160,11 @@ function BoardContent({ board, ...props }) {
         }
     }, [activeDragItemType, orderedColumns, findColumnByCardId]);
 
-    // Handle drag end
     const handleDragEnd = async (event) => {
         const { active, over } = event;
         if (!active || !over) return;
         const prevOrdered = cloneDeep(orderedColumns);
+
         // Card drag end
         if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.CARD) {
             const {
@@ -186,7 +175,7 @@ function BoardContent({ board, ...props }) {
             const activeColumn = findColumnByCardId(activeDraggingCardId);
             const overColumn = findColumnByCardId(overCardId);
             if (!activeColumn || !overColumn) return;
-            // Card moved between columns
+
             if (oldColumnWhenDraggingCard.id !== overColumn.id) {
                 moveCardBetweenDifferentColumns(
                     overColumn,
@@ -197,27 +186,54 @@ function BoardContent({ board, ...props }) {
                     activeDraggingCardId,
                     activeDraggingCardData
                 );
-                // Calculate new index for API
+
                 const overCardIndex = overColumn?.cards?.findIndex(c => c.id === overCardId);
                 const isBelowOverItem =
                     active.rect.current.translated &&
                     active.rect.current.translated.top > over.rect.top + over.rect.height;
                 const modifier = isBelowOverItem ? 1 : 0;
                 const newIndex = overCardIndex >= 0 ? overCardIndex + modifier : (overColumn?.cards?.length ?? 0);
+
                 try {
+                    // CHANGED: Pass card ranks instead of cardOrderIds
+                    const cardRanks = overColumn.cards
+                        .filter(c => c.id !== activeDraggingCardId)
+                        .map(c => c.rank);
+
+                    console.log('cardRanks:', cardRanks);
+
+                    console.log({
+                        oldColumnId: oldColumnWhenDraggingCard?.id,
+                        overColumnId: overColumn?.id,
+                        activeDraggingCardId,
+                        newIndex
+                    });
+
+
                     await moveCard(oldColumnWhenDraggingCard.id, overColumn.id, activeDraggingCardId, newIndex);
                 } catch (err) {
                     console.error("moveCard API error", err);
                     setOrderedColumns(prevOrdered);
                 }
             } else {
-                // Card moved within same column
-                const oldCardIndex = oldColumnWhenDraggingCard?.cards?.findIndex(
+                const oldCardIndex = oldCardIndexWhenDragging ?? oldColumnWhenDraggingCard?.cards?.findIndex(
                     (c) => c.id === activeDragItemId
                 );
                 const newCardIndex = overColumn?.cards?.findIndex(
                     (c) => c.id === overCardId
                 );
+
+                // If user dropped on the same spot -> do nothing (no API call)
+                if (oldCardIndex === newCardIndex) {
+                    // reset states (we already updated optimistic UI earlier)
+                    setActiveDragItemId(null);
+                    setActiveDragItemType(null);
+                    setActiveDragItemData(null);
+                    setOldColumnWhenDraggingCard(null);
+                    setOldCardIndexWhenDragging(null);
+                    return;
+                }
+
                 const dndOrderedCards = arrayMove(
                     oldColumnWhenDraggingCard?.cards,
                     oldCardIndex,
@@ -229,20 +245,26 @@ function BoardContent({ board, ...props }) {
                         (column) => column.id === overColumn.id
                     );
                     targetColumn.cards = dndOrderedCards;
-                    targetColumn.cardOrderIds = dndOrderedCards.map((card) => card.id);
                     return nextColumns;
                 });
+
                 try {
-                    await reorderCards(
-                        overColumn.id,
-                        dndOrderedCards.map((card) => card.id)
-                    );
+                    // Gửi chỉ list cardId theo thứ tự mới
+                    const cardIds = dndOrderedCards.map(c => c.id);
+                    await reorderCards(overColumn.id, cardIds);
                 } catch (err) {
-                    console.error("moveCard API error", err);
+                    console.error("reorderCards API error", err);
                     setOrderedColumns(prevOrdered);
+                } finally {
+                    setActiveDragItemId(null);
+                    setActiveDragItemType(null);
+                    setActiveDragItemData(null);
+                    setOldColumnWhenDraggingCard(null);
+                    setOldCardIndexWhenDragging(null);
                 }
             }
         }
+
         // Column drag end
         if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) {
             if (active.id !== over.id) {
@@ -250,22 +272,24 @@ function BoardContent({ board, ...props }) {
                 const newColumnIndex = orderedColumns.findIndex((c) => c.id === over.id);
                 const dndOrderedColumns = arrayMove(orderedColumns, oldColumnIndex, newColumnIndex);
                 setOrderedColumns(dndOrderedColumns);
+
                 try {
-                    await reorderColumns(dndOrderedColumns.map((column) => column.id));
+                    // CHANGED: Pass column IDs in new order (API will recalculate ranks)
+                    const columnIds = dndOrderedColumns.map((column) => column.id);
+                    await reorderColumns(columnIds);
                 } catch (error) {
                     console.error("reorderColumns API error", error);
                     setOrderedColumns(prevOrdered);
                 }
             }
         }
-        // Reset drag state
+
         setActiveDragItemId(null);
         setActiveDragItemType(null);
         setActiveDragItemData(null);
         setOldColumnWhenDraggingCard(null);
     };
 
-    // Custom drop animation for DragOverlay
     const customDropAnimation = {
         sideEffects: defaultDropAnimationSideEffects({
             styles: {
@@ -276,7 +300,6 @@ function BoardContent({ board, ...props }) {
         })
     };
 
-    // Custom collision detection for dnd-kit
     const collisionDetectionStrategy = useCallback(
         (args) => {
             if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) {
@@ -290,16 +313,15 @@ function BoardContent({ board, ...props }) {
             if (!pointerIntersections?.length) return [];
             let overId = getFirstCollision(pointerIntersections, 'id');
             if (overId) {
-                // existing inner-card check...
                 const checkColumn = orderedColumns.find((column) => column.id === overId);
                 if (checkColumn) {
-                    if (checkColumn?.cardOrderIds?.length > 0) {
+                    if (checkColumn?.cards?.length > 0) {
                         const innerOver = closestCorners({
                             ...args,
                             droppableContainers: args.droppableContainers.filter(
                                 (container) =>
                                     container.id !== overId &&
-                                    checkColumn.cardOrderIds.includes(container.id)
+                                    checkColumn.cards.map(c => c.id).includes(container.id)
                             )
                         })[0]?.id;
                         if (innerOver) {

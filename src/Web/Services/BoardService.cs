@@ -2,6 +2,7 @@
 using Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using ProjectManagement.Helpers;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Board;
 using ProjectManagement.Services.Interfaces;
@@ -71,7 +72,7 @@ namespace ProjectManagement.Services
             if (board == null || !HasBoardAccess(board, userId))
                 return null;
 
-            return _mapper.Map<BoardDto>(board);
+            return BoardResponseHelper.FormatBoardResponse(board, _mapper);;
         }
 
         public async Task<BoardDto> CreateBoardAsync(CreateBoardDto createBoardDto, string userId)

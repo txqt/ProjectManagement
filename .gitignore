@@ -498,3 +498,4 @@ Migrations/
 /dataSources.local.xml
 
 appsettings.Development.json
+.idea

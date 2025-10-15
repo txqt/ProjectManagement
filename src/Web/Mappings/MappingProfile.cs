@@ -16,13 +16,21 @@ namespace ProjectManagement.Mappings
     {
         public MappingProfile()
         {
+            // ==========================
             // User mappings
-            CreateMap<ApplicationUser, UserDto>();
+            // ==========================
+            CreateMap<ApplicationUser, UserDto>()
+                .ForMember(dest => dest.CreatedAt,
+                    opt => opt.MapFrom(src => src.CreatedAt));
 
+            CreateMap<UserDto, ApplicationUser>()
+                .ForMember(dest => dest.CreatedAt,
+                    opt => opt.MapFrom(src => src.CreatedAt));
+
+            // ==========================
             // Board mappings
-            CreateMap<Board, BoardDto>()
-                .ForMember(dest => dest.Columns, opt => opt.MapFrom(src =>
-                    src.Columns.OrderBy(c => src.ColumnOrderIds.IndexOf(c.Id)).ToList()));
+            // ==========================
+            CreateMap<Board, BoardDto>();
 
             CreateMap<CreateBoardDto, Board>();
             CreateMap<UpdateBoardDto, Board>()
@@ -30,53 +38,67 @@ namespace ProjectManagement.Mappings
 
             CreateMap<BoardMember, BoardMemberDto>();
 
+            // ==========================
             // Column mappings
+            // ==========================
             CreateMap<Column, ColumnDto>()
-                .ForMember(dest => dest.Cards, opt => opt.MapFrom(src =>
-                    src.Cards.OrderBy(c => src.CardOrderIds.IndexOf(c.Id)).ToList()));
+                .AfterMap((src, dest) =>
+                {
+                    if (dest.Cards != null)
+                    {
+                        // Sort cards by rank if available, else fallback to order in DB
+                        dest.Cards = dest.Cards
+                            .OrderBy(c => c.Rank ?? string.Empty)
+                            .ToList();
+                    }
+                });
 
             CreateMap<CreateColumnDto, Column>();
             CreateMap<UpdateColumnDto, Column>()
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
+            // ==========================
             // Card mappings
+            // ==========================
             CreateMap<Card, CardDto>()
                 .ForMember(dest => dest.Members, opt => opt.MapFrom(src => src.Members))
                 .ForMember(dest => dest.Comments, opt => opt.MapFrom(src => src.Comments.OrderBy(c => c.Created)))
                 .ForMember(dest => dest.Attachments,
-                    opt => opt.MapFrom(src => src.Attachments.OrderBy(a => a.Created)));
-            CreateMap<CardMember, CardMemberDto>();
+                    opt => opt.MapFrom(src => src.Attachments.OrderBy(a => a.Created)))
+                .AfterMap((src, dest) =>
+                {
+                    // Optional: ensure cards remain sorted correctly (no additional sorting needed)
+                });
+
             CreateMap<CreateCardDto, Card>();
+            CreateMap<UpdateCardDto, Card>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
-            #region Card Mapper
+            CreateMap<CardMember, CardMemberDto>();
 
-            CreateMap<UpdateCardDto, Card>();
-            #endregion
-
-
+            // ==========================
             // Comment mappings
+            // ==========================
             CreateMap<Comment, CommentDto>();
             CreateMap<CreateCommentDto, Comment>();
             CreateMap<UpdateCommentDto, Comment>()
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
+            // ==========================
             // Attachment mappings
+            // ==========================
             CreateMap<Attachment, AttachmentDto>();
             CreateMap<CreateAttachmentDto, Attachment>();
 
-            CreateMap<ApplicationUser, UserDto>()
-                .ForMember(dest => dest.CreatedAt,
-                    opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
-
-            CreateMap<UserDto, ApplicationUser>()
-                .ForMember(dest => dest.CreatedAt,
-                    opt => opt.MapFrom(src => new DateTimeOffset(src.CreatedAt)));
-
+            // ==========================
             // BoardInvite mappings
+            // ==========================
             CreateMap<BoardInvite, BoardInviteDto>();
             CreateMap<CreateBoardInviteDto, BoardInvite>();
 
+            // ==========================
             // Notification mappings
+            // ==========================
             CreateMap<Notification, NotificationDto>()
                 .ForMember(d => d.Data, opt => opt.MapFrom<NotificationToDtoResolver>());
 

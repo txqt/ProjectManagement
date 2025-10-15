@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Core Framework -->
+    <PackageVersion Include="LexoRank" Version="1.0.10" />
     <PackageVersion Include="MadEyeMatt.AspNetCore.Authorization.Permissions" Version="9.0.3" />
     <PackageVersion Include="MadEyeMatt.AspNetCore.Identity.Permissions.EntityFrameworkCore" Version="9.0.3" />
     <PackageVersion Include="Microsoft.AspNet.Identity.EntityFramework" Version="2.2.4" />

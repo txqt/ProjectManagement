@@ -44,7 +44,7 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
       {card?.cover && <CardMedia sx={{ height: 140 }} image={card?.cover} />}
 
       <CardContent sx={{ p: 1.5, '&:last-child': { p: 1.5 } }}>
-        <Typography noWrap>{card?.title}</Typography>
+        <Typography noWrap>{card?.title} {card?.rank}</Typography>
       </CardContent>
 
       {shouldShowCardAction() && (

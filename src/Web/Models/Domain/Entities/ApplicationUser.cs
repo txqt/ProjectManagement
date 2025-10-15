@@ -5,8 +5,8 @@ namespace ProjectManagement.Models.Domain.Entities
     public class ApplicationUser : IdentityUser
     {
         public string? Avatar { get; set; }
-        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-        public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
         public virtual ICollection<Board> OwnedBoards { get; set; } = new List<Board>();

@@ -17,8 +17,6 @@ namespace ProjectManagement.Models.Domain.Entities
         [Required]
         public string OwnerId { get; set; } = string.Empty;
 
-        public List<string> ColumnOrderIds { get; set; } = new List<string>();
-
         // Navigation properties
         public virtual ApplicationUser Owner { get; set; } = null!;
         public virtual ICollection<Column> Columns { get; set; } = new List<Column>();

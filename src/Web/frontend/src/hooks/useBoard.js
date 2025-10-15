@@ -110,7 +110,7 @@ export const useBoard = (boardId) => {
 
     // User presence events
     signalRService.onUserJoined?.((data) => {
-      console.log(data)
+      
     });
 
     signalRService.onUserLeft?.((data) => {

@@ -33,13 +33,6 @@ namespace Infrastructure
                 entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.Type).IsRequired().HasDefaultValue("public");
 
-                // Convert List<string> to JSON
-                entity.Property(e => e.ColumnOrderIds)
-                    .HasConversion(
-                        v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                        v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>()
-                    );
-
                 entity.HasOne(e => e.Owner)
                     .WithMany(u => u.OwnedBoards)
                     .HasForeignKey(e => e.OwnerId)
@@ -51,13 +44,6 @@ namespace Infrastructure
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
-
-                // Convert List<string> to JSON
-                entity.Property(e => e.CardOrderIds)
-                    .HasConversion(
-                        v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                        v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>()
-                    );
 
                 entity.HasOne(e => e.Board)
                     .WithMany(b => b.Columns)

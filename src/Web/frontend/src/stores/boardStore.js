@@ -1,853 +1,622 @@
 import { create } from 'zustand';
 import { apiService } from '~/services/api';
-import { toast } from 'react-toastify';
+import { sortCardsByRank, sortColumnsByRank } from '~/utils/sorts';
 
-// Helper functions
-const makeTempId = () => {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID)
-        return `temp-${crypto.randomUUID()}`;
-    return `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-};
-
-const dedupeById = (arr = []) => {
-    const seen = new Set();
-    return arr.filter(item => {
-        if (!item) return false;
-        if (seen.has(item.id)) return false;
-        seen.add(item.id);
-        return true;
-    });
-};
-
-const ensureUniqueOrder = (arr = []) => Array.from(new Set(arr));
-
-const findColumn = (columns = [], columnId) =>
-    columns.find(c => c.id === columnId);
-
-const updateCardInColumns = (columns = [], columnId, cardId, updatedCard) =>
-    columns.map(c =>
-        c.id === columnId
-            ? { ...c, cards: (c.cards || []).map(card => card.id === cardId ? updatedCard : card) }
-            : c
-    );
-
-const addCardToColumn = (columns = [], columnId, card, atIndex = null) =>
-    columns.map(c => {
-        if (c.id !== columnId) return c;
-        const cards = [...(c.cards || [])];
-        if (atIndex == null) cards.push(card);
-        else cards.splice(Math.max(0, Math.min(atIndex, cards.length)), 0, card);
-        return {
-            ...c,
-            cards: dedupeById(cards),
-            cardOrderIds: ensureUniqueOrder((c.cardOrderIds || []).concat(card.id))
-        };
-    });
-
-const removeCardFromColumns = (columns = [], columnId, cardId) =>
-    columns.map(c =>
-        c.id === columnId
-            ? {
-                ...c,
-                cards: (c.cards || []).filter(card => card.id !== cardId),
-                cardOrderIds: (c.cardOrderIds || []).filter(id => id !== cardId)
-            }
-            : c
-    );
-
-const replaceColumn = (columns = [], newColumn) =>
-    columns.map(c => (c.id === newColumn.id ? newColumn : c));
-
-const removeColumnById = (columns = [], columnId) =>
-    columns.filter(c => c.id !== columnId);
-
-const moveCardInState = (columns = [], fromColumnId, toColumnId, cardId, newIndex) => {
-    const from = findColumn(columns, fromColumnId);
-    const to = findColumn(columns, toColumnId);
-    if (!from || !to) return columns;
-
-    const card = (from.cards || []).find(c => c.id === cardId);
-    if (!card) return columns;
-
-    return columns.map(c => {
-        if (c.id === fromColumnId) {
-            return {
-                ...c,
-                cards: (c.cards || []).filter(x => x.id !== cardId),
-                cardOrderIds: (c.cardOrderIds || []).filter(id => id !== cardId)
-            };
-        }
-        if (c.id === toColumnId) {
-            const newCards = [...(c.cards || [])];
-            const insertAt = Math.max(0, Math.min(newIndex, newCards.length));
-            newCards.splice(insertAt, 0, { ...card, columnId: toColumnId });
-            return {
-                ...c,
-                cards: dedupeById(newCards),
-                cardOrderIds: newCards.map(x => x.id)
-            };
-        }
-        return c;
-    });
-};
-
-// Zustand Store
 export const useBoardStore = create((set, get) => ({
-    // State
     board: null,
     loading: false,
     error: null,
-    pendingTempIds: new Set(),
     currentUser: null,
+    pendingTempIds: new Set(),
     boardId: null,
 
-    // Actions
+    // Set board ID
     setBoardId: (boardId) => set({ boardId }),
 
+    // Set current user
     setCurrentUser: (user) => set({ currentUser: user }),
-
-    setLoading: (loading) => set({ loading }),
-
-    setError: (error) => set({ error }),
 
     // Load board
     loadBoard: async (boardId) => {
         set({ loading: true, error: null });
         try {
-            const result = await apiService.getBoard(boardId);
-            if (result) {
-                set({
-                    board: result || { columns: [], columnOrderIds: [] },
-                    currentUser: result?.currentUser ?? get().currentUser,
-                    loading: false
-                });
-            } else {
-                set({
-                    board: { columns: [], columnOrderIds: [] },
-                    loading: false
-                });
+            const board = await apiService.getBoard(boardId);
+            // Sort columns and cards by rank
+            if (board.columns) {
+                board.columns = board.columns
+                    .sort((a, b) => (a.rank || '').localeCompare(b.rank || ''))
+                    .map(col => ({
+                        ...col,
+                        cards: (col.cards || []).sort((a, b) => (a.rank || '').localeCompare(b.rank || ''))
+                    }));
             }
-        } catch (error) {
-            set({
-                error: error.message,
-                loading: false,
-                board: { columns: [], columnOrderIds: [] }
-            });
+            set({ board, loading: false });
+        } catch (err) {
+            set({ error: err.message, loading: false });
         }
     },
 
-    // Create Column
-    createColumn: async (columnData) => {
-        const { board, boardId, pendingTempIds } = get();
-        const tempId = makeTempId();
-        const tempColumn = { ...columnData, id: tempId, cards: [], cardOrderIds: [] };
+    // Create column
+    createColumn: async (createColumnDto) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
 
-        // Optimistic update
-        set({
-            board: {
-                ...board,
-                columns: [...(board?.columns || []), tempColumn],
-                columnOrderIds: [...(board?.columnOrderIds || []), tempId]
-            },
-            pendingTempIds: new Set([...pendingTempIds, tempId])
-        });
+        const tempId = `temp-col-${Date.now()}`;
+        const tempColumn = {
+            id: tempId,
+            title: createColumnDto.title,
+            boardId,
+            rank: '',
+            cards: []
+        };
 
-        try {
-            const payload = { ...columnData, clientTempId: tempId };
-            const result = await apiService.createColumn(boardId, payload);
-
-            // Remove from pending
-            const newPending = new Set(get().pendingTempIds);
-            newPending.delete(tempId);
-
-            if (result) {
-                const real = result;
-                set((state) => {
-                    const cols = state.board?.columns || [];
-                    const filtered = cols.filter(c => c.id !== tempId && c.id !== real.id);
-                    const tempIndex = cols.findIndex(c => c.id === tempId);
-                    if (tempIndex !== -1) filtered.splice(tempIndex, 0, real);
-                    else filtered.push(real);
-
-                    const newOrder = (state.board?.columnOrderIds || [])
-                        .map(id => id === tempId ? real.id : id)
-                        .filter((id, idx, arr) => arr.indexOf(id) === idx);
-
-                    return {
-                        board: { ...state.board, columns: filtered, columnOrderIds: newOrder },
-                        pendingTempIds: newPending
-                    };
-                });
-                return result;
-            }
-        } catch {
-            // Rollback
-            const newPending = new Set(get().pendingTempIds);
-            newPending.delete(tempId);
-
-            set((state) => ({
-                board: {
-                    ...state.board,
-                    columns: (state.board?.columns || []).filter(c => c.id !== tempId),
-                    columnOrderIds: (state.board?.columnOrderIds || []).filter(id => id !== tempId)
-                },
-                pendingTempIds: newPending
-            }));
-            toast.error('Tạo column thất bại');
-        }
-        return null;
-    },
-
-    // Update Column
-    updateColumn: async (columnId, updateData) => {
-        const { board, boardId } = get();
-        const snapshot = board;
-        const originalColumn = snapshot?.columns?.find(c => c.id === columnId) || {};
-        const optimisticColumn = { ...originalColumn, ...updateData };
-
-        // Optimistic update
-        set({
-            board: {
-                ...board,
-                columns: replaceColumn(board?.columns || [], optimisticColumn)
-            }
-        });
-
-        try {
-            await apiService.updateColumn(boardId, columnId, updateData);
-            return true;
-        } catch {
-            // Rollback
-            set({ board: snapshot });
-            toast.error('Cập nhật column thất bại — đã khôi phục trạng thái.');
-            return false;
-        }
-    },
-
-    // Delete Column
-    deleteColumn: async (columnId) => {
-        const { boardId } = get();
-        try {
-            await apiService.deleteColumn(boardId, columnId);
-            set((state) => ({
-                board: {
-                    ...state.board,
-                    columns: removeColumnById(state.board?.columns || [], columnId),
-                    columnOrderIds: (state.board?.columnOrderIds || []).filter(id => id !== columnId)
-                }
-            }));
-            return true;
-        } catch {
-            return false;
-        }
-    },
-
-    // Create Card
-    createCard: async (columnId, cardData) => {
-        const { board, boardId, pendingTempIds } = get();
-        const tempId = makeTempId();
-        const tempCard = { ...cardData, id: tempId };
-
-        // Optimistic update
-        set({
-            board: {
-                ...board,
-                columns: addCardToColumn(board?.columns || [], columnId, tempCard)
-            },
-            pendingTempIds: new Set([...pendingTempIds, tempId])
-        });
-
-        try {
-            const payload = { ...cardData, clientTempId: tempId };
-            const result = await apiService.createCard(boardId, columnId, payload);
-
-            const newPending = new Set(get().pendingTempIds);
-            newPending.delete(tempId);
-
-            if (result) {
-                const real = result;
-                set((state) => {
-                    const cols = state.board?.columns || [];
-                    return {
-                        board: {
-                            ...state.board,
-                            columns: cols.map(col => {
-                                if (col.id !== columnId) return col;
-                                const cards = col.cards || [];
-                                const tempIndex = cards.findIndex(c => c.id === tempId);
-                                const filtered = cards.filter(c => c.id !== tempId && c.id !== real.id);
-                                if (tempIndex !== -1) filtered.splice(tempIndex, 0, real);
-                                else filtered.push(real);
-
-                                let newOrder = (col.cardOrderIds || []).map(id => id === tempId ? real.id : id);
-                                if (!newOrder.includes(real.id)) newOrder.push(real.id);
-                                newOrder = ensureUniqueOrder(newOrder);
-
-                                return {
-                                    ...col,
-                                    cards: dedupeById(filtered),
-                                    cardOrderIds: newOrder
-                                };
-                            })
-                        },
-                        pendingTempIds: newPending
-                    };
-                });
-                return result;
-            }
-        } catch {
-            // Rollback
-            const newPending = new Set(get().pendingTempIds);
-            newPending.delete(tempId);
-
-            set((state) => ({
-                board: {
-                    ...state.board,
-                    columns: removeCardFromColumns(state.board?.columns || [], columnId, tempId)
-                },
-                pendingTempIds: newPending
-            }));
-            toast.error('Tạo card thất bại');
-        }
-        return null;
-    },
-
-    // Update Card
-    updateCard: async (columnId, cardId, updateData) => {
-        const { board, boardId } = get();
-        const snapshot = board;
-        const originalCard = snapshot?.columns
-            ?.find(c => c.id === columnId)?.cards
-            ?.find(x => x.id === cardId) || {};
-        const optimisticCard = { ...originalCard, ...updateData };
-
-        // Optimistic update
-        set({
-            board: {
-                ...board,
-                columns: updateCardInColumns(board?.columns || [], columnId, cardId, optimisticCard)
-            }
-        });
-
-        try {
-            await apiService.updateCard(boardId, columnId, cardId, updateData);
-            return true;
-        } catch {
-            // Rollback
-            set({ board: snapshot });
-            toast.error('Cập nhật card thất bại — đã khôi phục trạng thái.');
-            return false;
-        }
-    },
-
-    // Delete Card
-    deleteCard: async (columnId, cardId) => {
-        const { board, boardId } = get();
-        const snapshot = board;
-        const removedCard = snapshot?.columns
-            ?.find(c => c.id === columnId)?.cards
-            ?.find(card => card.id === cardId) || null;
-
-        // Optimistic remove
-        set((state) => ({
+        set(state => ({
             board: {
                 ...state.board,
-                columns: (state.board?.columns || []).map(c =>
-                    c.id === columnId
-                        ? {
-                            ...c,
-                            cards: (c.cards || []).filter(card => card.id !== cardId),
-                            cardOrderIds: (c.cardOrderIds || []).filter(id => id !== cardId)
-                        }
-                        : c
+                columns: [...(state.board?.columns || []), tempColumn]
+            },
+            pendingTempIds: new Set([...state.pendingTempIds, tempId])
+        }));
+
+        try {
+            const newColumn = await apiService.createColumn(boardId, createColumnDto);
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === tempId ? newColumn : col
+                    ).sort((a, b) => (a.rank || '').localeCompare(b.rank || ''))
+                },
+                pendingTempIds: new Set([...state.pendingTempIds].filter(id => id !== tempId))
+            }));
+        } catch (err) {
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.filter(col => col.id !== tempId)
+                },
+                pendingTempIds: new Set([...state.pendingTempIds].filter(id => id !== tempId))
+            }));
+            throw err;
+        }
+    },
+
+    // Update column
+    updateColumn: async (columnId, updateColumnDto) => {
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === columnId ? { ...col, ...updateColumnDto } : col
                 )
             }
         }));
 
         try {
-            await apiService.deleteCard(boardId, columnId, cardId);
-            return true;
-        } catch {
-            // Rollback
-            if (removedCard) {
-                set((state) => ({
-                    board: {
-                        ...state.board,
-                        columns: (state.board?.columns || []).map(c => {
-                            if (c.id !== columnId) return c;
-                            const exists = (c.cards || []).some(x => x.id === removedCard.id);
-                            if (exists) return c;
-                            return {
-                                ...c,
-                                cards: dedupeById([...(c.cards || []), removedCard]),
-                                cardOrderIds: ensureUniqueOrder([...(c.cardOrderIds || []), removedCard.id])
-                            };
-                        })
-                    }
-                }));
-            } else {
-                await get().loadBoard(boardId);
-            }
-            toast.error('Xóa card thất bại — đã khôi phục trạng thái.');
-            return false;
+            const updated = await apiService.updateColumn(columnId, updateColumnDto);
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === columnId ? updated : col
+                    )
+                }
+            }));
+        } catch (err) {
+            get().loadBoard(get().boardId);
+            throw err;
         }
     },
 
-    // Move Card
-    moveCard: async (fromColumnId, toColumnId, cardId, positionIndex) => {
-        const { board, boardId } = get();
-        const snapshot = board;
-
-        // Optimistic move
-        set({
+    // Delete column
+    deleteColumn: async (columnId) => {
+        const originalBoard = get().board;
+        set(state => ({
             board: {
-                ...board,
-                columns: moveCardInState(board?.columns || [], fromColumnId, toColumnId, cardId, positionIndex)
+                ...state.board,
+                columns: state.board.columns.filter(col => col.id !== columnId)
             }
-        });
+        }));
 
         try {
-            await apiService.moveCard(boardId, fromColumnId, cardId, {
-                fromColumnId,
-                toColumnId,
-                newIndex: positionIndex
-            });
-            return true;
-        } catch {
-            // Rollback
-            set({ board: snapshot });
-            toast.error('Di chuyển card thất bại — đã khôi phục trạng thái.');
-            return false;
+            await apiService.deleteColumn(get().boardId, columnId);
+        } catch (err) {
+            set({ board: originalBoard });
+            throw err;
         }
     },
 
-    // Reorder Columns
-    reorderColumns: async (columnOrderIds) => {
-        const { boardId } = get();
-        try {
-            await apiService.reorderColumns(boardId, columnOrderIds);
-            return true;
-        } catch {
-            return false;
-        }
-    },
-
-    // Reorder Cards
-    reorderCards: async (columnId, cardOrderIds) => {
-        const { boardId } = get();
-        try {
-            await apiService.reorderCards(boardId, columnId, cardOrderIds);
-            return true;
-        } catch {
-            return false;
-        }
-    },
-
-    // Assign Card Member
-    assignCardMember: async (columnId, cardId, memberEmail) => {
-        const { board, boardId } = get();
-        const snapshot = board;
-
-        const card = snapshot?.columns
-            ?.find(c => c.id === columnId)?.cards
-            ?.find(x => x.id === cardId);
-
-        if (!card) {
-            toast.error('Không tìm thấy card để gán thành viên.');
-            return false;
-        }
-
-        const tempMember = { email: memberEmail, isTemp: true };
-        const optimisticCard = {
-            ...card,
-            members: [...(card.members || []), tempMember]
+    // Create card
+    createCard: async (columnId, createCardDto) => {
+        const tempId = `temp-card-${Date.now()}`;
+        const tempCard = {
+            id: tempId,
+            columnId,
+            title: createCardDto.title,
+            description: createCardDto.description || '',
+            rank: '',
+            members: [],
+            comments: [],
+            attachments: []
         };
 
-        // Optimistic update
-        set({
+        set(state => ({
             board: {
-                ...board,
-                columns: updateCardInColumns(board?.columns || [], columnId, cardId, optimisticCard)
-            }
-        });
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === columnId
+                        ? {
+                            ...col,
+                            cards: [...col.cards, tempCard]
+                        }
+                        : col
+                )
+            },
+            pendingTempIds: new Set([...state.pendingTempIds, tempId])
+        }));
 
         try {
-            const result = await apiService.assignCardMember(boardId, columnId, cardId, memberEmail);
-            if (result) {
-                const updatedCard = result;
-                set((state) => ({
-                    board: {
-                        ...state.board,
-                        columns: updateCardInColumns(state.board?.columns || [], columnId, cardId, updatedCard)
-                    }
-                }));
-                toast.success('Đã gán thành viên vào card.');
-                return true;
-            }
-        } catch {
-            // Rollback
-            set({ board: snapshot });
-            toast.error('Gán thành viên thất bại — đã khôi phục trạng thái.');
-            return false;
+            const newCard = await apiService.createCard(get().boardId, columnId, createCardDto);
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === columnId
+                            ? {
+                                ...col,
+                                cards: col.cards
+                                    .map(card => (card.id === tempId ? newCard : card))
+                                    .sort((a, b) => (a.rank || '').localeCompare(b.rank || ''))
+                            }
+                            : col
+                    )
+                },
+                pendingTempIds: new Set([...state.pendingTempIds].filter(id => id !== tempId))
+            }));
+        } catch (err) {
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === columnId
+                            ? { ...col, cards: col.cards.filter(card => card.id !== tempId) }
+                            : col
+                    )
+                },
+                pendingTempIds: new Set([...state.pendingTempIds].filter(id => id !== tempId))
+            }));
+            throw err;
         }
     },
 
-    // Unassign Card Member
-    unassignCardMember: async (columnId, cardId, memberId) => {
-        const { board, boardId } = get();
-        const snapshot = board;
-
-        const card = snapshot?.columns
-            ?.find(c => c.id === columnId)?.cards
-            ?.find(x => x.id === cardId);
-
-        console.log('card ', card)
-
-        if (!card) {
-            toast.error('Không tìm thấy card để gỡ thành viên.');
-            return false;
-        }
-
-        const optimisticCard = {
-            ...card,
-            members: (card.members || []).filter(m => m.id !== memberId)
-        };
-
-        console.log('optimisticCard ', optimisticCard)
-
-        // Optimistic update
-        set({
+    // Update card
+    updateCard: async (columnId, cardId, updateCardDto) => {
+        set(state => ({
             board: {
-                ...board,
-                columns: updateCardInColumns(board?.columns || [], columnId, cardId, optimisticCard)
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === columnId
+                        ? {
+                            ...col,
+                            cards: col.cards.map(card =>
+                                card.id === cardId ? { ...card, ...updateCardDto } : card
+                            )
+                        }
+                        : col
+                )
             }
-        });
+        }));
 
         try {
-            await apiService.unassignCardMember(boardId, columnId, cardId, memberId);
-            toast.info('Đã gỡ thành viên khỏi card.');
+            const updated = await apiService.updateCard(get().boardId, columnId, cardId, updateCardDto);
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === columnId
+                            ? {
+                                ...col,
+                                cards: col.cards.map(card => (card.id === cardId ? updated : card))
+                            }
+                            : col
+                    )
+                }
+            }));
             return true;
-        } catch {
-            // Rollback
-            set({ board: snapshot });
-            toast.error('Gỡ thành viên thất bại — đã khôi phục trạng thái.');
-            return false;
+        } catch (err) {
+            get().loadBoard(get().boardId);
+            throw err;
         }
     },
 
-    // SignalR handlers
-    handleColumnCreated: (data) => {
-        const { column, userId, clientTempId } = data;
-        const { currentUser } = get();
-
-        if (userId === currentUser?.id) return;
-
-        set((state) => {
-            const cols = state.board?.columns || [];
-            if (cols.some(c => c.id === column.id)) return state;
-
-            if (clientTempId && cols.some(c => c.id === clientTempId)) {
-                const replaced = cols.map(c => c.id === clientTempId ? column : c);
-                const newOrder = (state.board?.columnOrderIds || [])
-                    .map(id => id === clientTempId ? column.id : id);
-                return {
-                    board: {
-                        ...state.board,
-                        columns: replaced,
-                        columnOrderIds: ensureUniqueOrder(newOrder)
-                    }
-                };
+    // Delete card
+    deleteCard: async (columnId, cardId) => {
+        const originalBoard = get().board;
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === columnId
+                        ? { ...col, cards: col.cards.filter(card => card.id !== cardId) }
+                        : col
+                )
             }
+        }));
 
-            const newCols = dedupeById([...cols, column]);
-            const newOrder = ensureUniqueOrder([...(state.board?.columnOrderIds || []), column.id]);
+        try {
+            await apiService.deleteCard(get().boardId, columnId, cardId);
+        } catch (err) {
+            set({ board: originalBoard });
+            throw err;
+        }
+    },
+
+    // Move card between columns or reorder within same column
+    moveCard: async (fromColumnId, toColumnId, cardId, newIndex) => {
+        const originalBoard = get().board;
+
+        // Optimistic update
+        set(state => {
+            const card = state.board.columns
+                .find(c => c.id === fromColumnId)
+                ?.cards.find(c => c.id === cardId);
+
+            if (!card) return state;
+
+            const sourceCol = state.board.columns.find(c => c.id === fromColumnId);
+            const destCol = state.board.columns.find(c => c.id === toColumnId);
+
+            if (!sourceCol || !destCol) return state;
+
+            const updatedSourceCards = sourceCol.cards.filter(c => c.id !== cardId);
+            const updatedDestCards = [...destCol.cards];
+            updatedDestCards.splice(newIndex, 0, { ...card, columnId: toColumnId });
+
             return {
                 board: {
                     ...state.board,
-                    columns: newCols,
-                    columnOrderIds: newOrder
+                    columns: state.board.columns.map(col => {
+                        if (col.id === fromColumnId) return { ...col, cards: updatedSourceCards };
+                        if (col.id === toColumnId) return { ...col, cards: updatedDestCards };
+                        return col;
+                    })
                 }
             };
         });
 
-        toast.success(`New column "${column.title}" created`);
+        try {
+            await apiService.moveCard(
+                get().boardId,
+                toColumnId,
+                cardId,
+                { fromColumnId, toColumnId, newIndex }
+            );
+        } catch (err) {
+            set({ board: originalBoard });
+            throw err;
+        }
+    },
+
+    // Thay thế hàm reorderCards bằng đoạn sau
+    reorderCards: async (columnId, cardIds) => {
+        const originalBoard = get().board;
+
+        // Optimistic update: reorder card objects and assign temp ranks so any rank-based sorting
+        // on render will preserve the optimistic order.
+        set(state => {
+            const columns = state.board.columns.map(col => {
+                if (col.id !== columnId) return col;
+
+                const idToCard = col.cards.reduce((m, c) => {
+                    m[c.id] = c;
+                    return m;
+                }, {});
+
+                const newCards = cardIds
+                    .map((id, idx) => {
+                        const card = idToCard[id];
+                        if (!card) return null;
+                        // Gán rank tạm: zero-padded index (hoặc LexoRank nếu bạn muốn)
+                        return { ...card, rank: String(idx).padStart(6, '0') };
+                    })
+                    .filter(Boolean);
+
+                const rest = col.cards.filter(c => !cardIds.includes(c.id));
+                return { ...col, cards: [...newCards, ...rest] };
+            });
+
+            return { board: { ...state.board, columns } };
+        });
+
+        try {
+            await apiService.reorderCards(get().boardId, columnId, cardIds);
+        } catch (err) {
+            // rollback
+            set({ board: originalBoard });
+            throw err;
+        }
+    },
+
+
+
+    // Reorder columns
+    reorderColumns: async (columnIds) => {
+        const originalBoard = get().board;
+
+        // Optimistic update: gán rank tạm thời cho các column
+        set(state => {
+            const idToColumn = state.board.columns.reduce((map, col) => {
+                map[col.id] = col;
+                return map;
+            }, {});
+
+            const newColumns = columnIds
+                .map((id, idx) => {
+                    const column = idToColumn[id];
+                    if (!column) return null;
+
+                    // Gán rank tạm — để render ổn định, zero-padded
+                    return { ...column, rank: String(idx).padStart(6, '0') };
+                })
+                .filter(Boolean);
+
+            // Giữ lại các column không nằm trong danh sách reorder (nếu có)
+            const rest = state.board.columns.filter(c => !columnIds.includes(c.id));
+
+            return {
+                board: {
+                    ...state.board,
+                    columns: [...newColumns, ...rest]
+                }
+            };
+        });
+
+        try {
+            await apiService.reorderColumns(get().boardId, columnIds);
+        } catch (err) {
+            // Rollback nếu lỗi
+            set({ board: originalBoard });
+            throw err;
+        }
+    },
+
+
+    // Assign member to card
+    assignCardMember: async (columnId, cardId, memberEmail) => {
+        const success = await apiService.assignCardMember(cardId, memberEmail);
+        if (success) {
+            // Reload card to get updated members
+            const card = await apiService.getCard(cardId);
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === columnId
+                            ? {
+                                ...col,
+                                cards: col.cards.map(c => (c.id === cardId ? card : c))
+                            }
+                            : col
+                    )
+                }
+            }));
+        }
+        return success;
+    },
+
+    // Unassign member from card
+    unassignCardMember: async (columnId, cardId, memberId) => {
+        const success = await apiService.unassignCardMember(cardId, memberId);
+        if (success) {
+            // Reload card to get updated members
+            const card = await apiService.getCard(cardId);
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === columnId
+                            ? {
+                                ...col,
+                                cards: col.cards.map(c => (c.id === cardId ? card : c))
+                            }
+                            : col
+                    )
+                }
+            }));
+        }
+        return success;
+    },
+
+    // SignalR handlers
+    handleColumnCreated: (data) => {
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: [...state.board.columns, data.column]
+                    .sort((a, b) => (a.rank || '').localeCompare(b.rank || ''))
+            }
+        }));
     },
 
     handleColumnUpdated: (data) => {
-        const { column, userId } = data;
-        const { currentUser } = get();
-
-        if (userId === currentUser?.id) return;
-
-        set((state) => ({
+        set(state => ({
             board: {
                 ...state.board,
-                columns: replaceColumn(state.board?.columns || [], column)
+                columns: state.board.columns.map(col =>
+                    col.id === data.column.id ? data.column : col
+                )
             }
         }));
     },
 
     handleColumnDeleted: (data) => {
-        const { columnId, userId } = data;
-        const { currentUser } = get();
-
-        if (userId === currentUser?.id) return;
-
-        set((state) => ({
+        set(state => ({
             board: {
                 ...state.board,
-                columns: removeColumnById(state.board?.columns || [], columnId),
-                columnOrderIds: (state.board?.columnOrderIds || []).filter(id => id !== columnId)
+                columns: state.board.columns.filter(col => col.id !== data.columnId)
             }
         }));
-        toast.info('A column was deleted');
     },
 
     handleColumnsReordered: (data) => {
-        const { columnOrderIds, userId } = data;
-        const { currentUser } = get();
-
-        if (userId === currentUser?.id) return;
-
-        set((state) => {
-            const reorderedColumns = columnOrderIds
-                .map(id => state.board?.columns?.find(col => col.id === id))
-                .filter(Boolean);
-            return {
+        console.log('🟢 ColumnsReordered received:', data);
+        if (Array.isArray(data.orderedColumns)) {
+            set(state => ({
                 board: {
                     ...state.board,
-                    columns: reorderedColumns,
-                    columnOrderIds
+                    columns: data.orderedColumns
                 }
-            };
-        });
+            }));
+            console.log('Columns updated from server event.');
+        }
     },
 
     handleCardCreated: (data) => {
-        const { card, columnId, userId, clientTempId } = data;
-        const { currentUser } = get();
-
-        if (userId === currentUser?.id) return;
-
-        set((state) => {
-            const cols = state.board?.columns || [];
-            const col = findColumn(cols, columnId);
-            if (!col) return state;
-
-            if ((col.cards || []).some(c => c.id === card.id)) return state;
-
-            if (clientTempId && (col.cards || []).some(c => c.id === clientTempId)) {
-                return {
-                    board: {
-                        ...state.board,
-                        columns: cols.map(c => {
-                            if (c.id !== columnId) return c;
-                            const newCards = (c.cards || []).map(x => x.id === clientTempId ? card : x);
-                            const newOrder = (c.cardOrderIds || []).map(id => id === clientTempId ? card.id : id);
-                            return {
-                                ...c,
-                                cards: dedupeById(newCards),
-                                cardOrderIds: ensureUniqueOrder(newOrder)
-                            };
-                        })
-                    }
-                };
-            }
-
-            return {
-                board: {
-                    ...state.board,
-                    columns: cols.map(c =>
-                        c.id === columnId
-                            ? {
-                                ...c,
-                                cards: dedupeById([...(c.cards || []), card]),
-                                cardOrderIds: ensureUniqueOrder([...(c.cardOrderIds || []), card.id])
-                            }
-                            : c
-                    )
-                }
-            };
-        });
-
-        toast.success(`New card "${card.title}" created`);
-    },
-
-    handleCardUpdated: (data) => {
-        const { card, columnId, userId } = data;
-        const { currentUser } = get();
-
-        if (userId === currentUser?.id) return;
-
-        set((state) => ({
+        set(state => ({
             board: {
                 ...state.board,
-                columns: updateCardInColumns(state.board?.columns || [], columnId, card.id, card)
-            }
-        }));
-    },
-
-    handleCardDeleted: (data) => {
-        const { cardId, columnId, userId } = data;
-        const { currentUser } = get();
-
-        if (userId === currentUser?.id) return;
-
-        set((state) => ({
-            board: {
-                ...state.board,
-                columns: removeCardFromColumns(state.board?.columns || [], columnId, cardId)
-            }
-        }));
-    },
-
-    handleCardsReordered: (data) => {
-        const { columnId, cardOrderIds, userId } = data;
-        const { currentUser } = get();
-
-        if (userId === currentUser?.id) return;
-
-        set((state) => ({
-            board: {
-                ...state.board,
-                columns: (state.board?.columns || []).map(col => {
-                    if (col.id === columnId) {
-                        const reorderedCards = cardOrderIds
-                            .map(id => col.cards?.find(card => card.id === id))
-                            .filter(Boolean);
-                        return { ...col, cards: reorderedCards, cardOrderIds };
-                    }
-                    return col;
-                })
-            }
-        }));
-    },
-
-    handleCardMoved: (data) => {
-        const { cardId, fromColumnId, toColumnId, newIndex, userId } = data;
-        const { currentUser } = get();
-
-        if (userId === currentUser?.id) return;
-
-        set((state) => ({
-            board: {
-                ...state.board,
-                columns: moveCardInState(
-                    state.board?.columns || [],
-                    fromColumnId,
-                    toColumnId,
-                    cardId,
-                    newIndex
+                columns: state.board.columns.map(col =>
+                    col.id === data.columnId
+                        ? {
+                            ...col,
+                            cards: [...col.cards, data.card]
+                                .sort((a, b) => (a.rank || '').localeCompare(b.rank || ''))
+                        }
+                        : col
                 )
             }
         }));
     },
 
-    handleCardAssigned: (data) => {
-        const { columnId, card, userId } = data;
-        const { currentUser } = get();
-        console.log(currentUser)
-
-        if (userId === currentUser?.id) return;
-
-        set((state) => {
-            const columns = state.board?.columns || [];
-            const updatedColumns = columns.map(col => {
-                if (col.id !== columnId) return col;
-
-                const updatedCards = (col.cards || []).map(c => {
-                    if (c.id !== card.id) return c;
-
-                    // merge members
-                    const existingMembers = c.members || [];
-                    const newMembers = card.members || [];
-                    // Gộp mà không trùng (theo member.id hoặc member.userId)
-                    const mergedMembers = [...existingMembers];
-                    newMembers.forEach(m => {
-                        const exists = mergedMembers.some(em =>
-                            em.id === m.id ||
-                            em.userId === m.userId ||
-                            em.user?.id === m.user?.id
-                        );
-                        if (!exists) mergedMembers.push(m);
-                    });
-
-                    return {
-                        ...c,
-                        ...card,
-                        members: mergedMembers
-                    };
-                });
-
-                return { ...col, cards: updatedCards };
-            });
-
-            return {
-                board: { ...state.board, columns: updatedColumns }
-            };
-        });
-
-
-        const assignedMember = card.members?.[card.members.length - 1]?.user;
-        const name = assignedMember?.userName || 'Ai đó';
-
-        toast.info(`${name} vừa được gán vào thẻ "${card.title}"`);
+    handleCardUpdated: (data) => {
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === data.columnId
+                        ? {
+                            ...col,
+                            cards: col.cards.map(c => (c.id === data.card.id ? data.card : c))
+                        }
+                        : col
+                )
+            }
+        }));
     },
 
-    handleCardUnassigned: (data) => {
-        const { columnId, card, unassignedUserId, userId } = data;
-        const { currentUser } = get();
+    handleCardDeleted: (data) => {
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === data.columnId
+                        ? { ...col, cards: col.cards.filter(c => c.id !== data.cardId) }
+                        : col
+                )
+            }
+        }));
+    },
 
-        if (userId === currentUser?.id) return;
+    handleCardsReordered: (data) => {
+        console.log('🔵 CardsReordered received:', data);
+        if (data.columnId && Array.isArray(data.orderedCards)) {
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === data.columnId ? { ...col, cards: data.orderedCards } : col
+                    )
+                }
+            }));
+            console.log('Cards updated from server event.');
+        }
 
-        set((state) => {
-            // nếu server trả về card đã được cập nhật (không chứa member bị gỡ), dùng trực tiếp
-            // nhưng phòng trường hợp server chưa loại member (edge case), chúng ta đảm bảo loại member theo unassignedUserId
-            const columns = (state.board?.columns || []).map(col => {
-                if (col.id !== columnId) return col;
+        // if (data.columnId && Array.isArray(data.cardIds)) {
+        //     set(state => {
+        //         const idToColumn = {};
+        //         state.board.columns.forEach(c => { idToColumn[c.id] = c; });
 
-                const cards = (col.cards || []).map(c => {
-                    if (c.id !== card.id) return c;
+        //         return {
+        //             board: {
+        //                 ...state.board,
+        //                 columns: state.board.columns.map(col => {
+        //                     if (col.id !== data.columnId) return col;
+        //                     const idToCard = col.cards.reduce((m, c) => { m[c.id] = c; return m; }, {});
+        //                     const newCards = data.cardIds.map(id => idToCard[id]).filter(Boolean);
+        //                     const rest = col.cards.filter(c => !data.cardIds.includes(c.id));
+        //                     return { ...col, cards: [...newCards, ...rest] };
+        //                 })
+        //             }
+        //         };
+        //     });
+        // }
+    },
 
-                    // Build a safeCard: start from server card, but force-filter members by userId (unassignedUserId)
-                    const filteredMembers = (card.members || []).filter(m => {
-                        const memberUserId = m?.userId ?? m?.user?.id ?? m?.user?.userId ?? null;
-                        // keep member if not equal to unassignedUserId
-                        if (!memberUserId) return true;
-                        return String(memberUserId) !== String(unassignedUserId);
-                    });
+    handleCardMoved: (data) => {
+        set(state => {
+            const card = state.board.columns
+                .find(c => c.id === data.fromColumnId)
+                ?.cards.find(c => c.id === data.cardId);
 
-                    return {
-                        ...card,
-                        // use filtered members to be safe
-                        members: filteredMembers
-                    };
-                });
+            if (!card) return state;
 
-                return {
-                    ...col,
-                    cards
-                };
-            });
+            const sourceCol = state.board.columns.find(c => c.id === data.fromColumnId);
+            const destCol = state.board.columns.find(c => c.id === data.toColumnId);
+
+            if (!sourceCol || !destCol) return state;
 
             return {
                 board: {
                     ...state.board,
-                    columns
+                    columns: state.board.columns.map(col => {
+                        if (col.id === data.fromColumnId) {
+                            return { ...col, cards: col.cards.filter(c => c.id !== data.cardId) };
+                        }
+                        if (col.id === data.toColumnId) {
+                            const updatedCards = [...col.cards];
+                            updatedCards.splice(data.newIndex, 0, { ...card, columnId: data.toColumnId });
+                            return { ...col, cards: updatedCards };
+                        }
+                        return col;
+                    })
                 }
             };
         });
-
-        // Toast: tìm tên người bị gỡ từ board.members (nếu có) — fallback "Ai đó"
-        const board = get().board;
-        let name = 'Ai đó';
-        const bm = board?.members?.find(bm => {
-            const bUserId = bm?.user?.id ?? bm?.userId ?? null;
-            return bUserId && String(bUserId) === String(unassignedUserId);
-        });
-        if (bm) name = bm.user?.userName ?? bm.userName ?? name;
-
-        toast.info(`${name} vừa bị gỡ khỏi "${card.title}"`);
     },
 
+    handleCardAssigned: (data) => {
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === data.columnId
+                        ? {
+                            ...col,
+                            cards: col.cards.map(c =>
+                                c.id === data.card.id ? data.card : c
+                            )
+                        }
+                        : col
+                )
+            }
+        }));
+    },
+
+    handleCardUnassigned: (data) => {
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === data.columnId
+                        ? {
+                            ...col,
+                            cards: col.cards.map(c =>
+                                c.id === data.card.id ? data.card : c
+                            )
+                        }
+                        : col
+                )
+            }
+        }));
+    }
 }));

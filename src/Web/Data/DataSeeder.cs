@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using ProjectManagement.Authorization;
 using ProjectManagement.Models.Domain.Entities;
+using ProjectManagement.Services;
 
 namespace ProjectManagement.Data
 {
@@ -25,7 +26,7 @@ namespace ProjectManagement.Data
                 await CreateRoles(roleManager);
 
                 // Create admin user
-                await SeedSampleData(context, userManager);
+                await SeedSampleData(context, userManager, services);
             }
             catch (Exception ex)
             {
@@ -38,45 +39,26 @@ namespace ProjectManagement.Data
         {
             var roles = new Dictionary<string, string[]>
             {
+                { "SuperAdmin", Permissions.GetAllPermissions().ToArray() },
                 {
-                    "SuperAdmin",
-                    Permissions.GetAllPermissions().ToArray()
-                },
-                {
-                    "Admin",
-                    new[]
-                    {
-                        Permissions.System.ViewAllUsers,
-                        Permissions.System.ViewSystemStats,
-                        Permissions.Boards.Create,
-                        Permissions.Boards.View,
-                        Permissions.Boards.Edit,
-                    }
-                    .Concat(Permissions.GetBoardLevelPermissions().Where(p => p != Permissions.Boards.Delete))
-                    .ToArray()
+                    "Admin", new[]
+                        {
+                            Permissions.System.ViewAllUsers, Permissions.System.ViewSystemStats,
+                            Permissions.Boards.Create, Permissions.Boards.View, Permissions.Boards.Edit,
+                        }
+                        .Concat(Permissions.GetBoardLevelPermissions().Where(p => p != Permissions.Boards.Delete))
+                        .ToArray()
                 },
                 {
                     "User",
                     new[]
                     {
-                        Permissions.Boards.Create,
-                        Permissions.Boards.View,
-                        Permissions.Columns.View,
-                        Permissions.Cards.View,
-                        Permissions.Cards.Create,
-                        Permissions.Cards.Edit,
+                        Permissions.Boards.Create, Permissions.Boards.View, Permissions.Columns.View,
+                        Permissions.Cards.View, Permissions.Cards.Create, Permissions.Cards.Edit,
                         Permissions.Cards.Comment,
                     }
                 },
-                {
-                    "Viewer",
-                    new[]
-                    {
-                        Permissions.Boards.View,
-                        Permissions.Columns.View,
-                        Permissions.Cards.View,
-                    }
-                }
+                { "Viewer", new[] { Permissions.Boards.View, Permissions.Columns.View, Permissions.Cards.View, } }
             };
 
             foreach (var (roleName, permissions) in roles)
@@ -88,17 +70,24 @@ namespace ProjectManagement.Data
 
                     foreach (var permission in permissions)
                     {
-                        await roleManager.AddClaimAsync(role, new System.Security.Claims.Claim("permission", permission));
+                        await roleManager.AddClaimAsync(role,
+                            new System.Security.Claims.Claim("permission", permission));
                     }
                 }
             }
         }
 
-        static async Task SeedSampleData(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        static async Task SeedSampleData(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IServiceProvider serviceProvider)
         {
             var sampleUsers = new[]
             {
-                new { Email = "superadmin@test.com", UserName = "superadmin", Password = "Test123!", Role = "SuperAdmin" },
+                new
+                {
+                    Email = "superadmin@test.com",
+                    UserName = "superadmin",
+                    Password = "Test123!",
+                    Role = "SuperAdmin"
+                },
                 new { Email = "admin@test.com", UserName = "admin", Password = "Test123!", Role = "Admin" },
                 new { Email = "alice@test.com", UserName = "alice", Password = "Test123!", Role = "User" },
                 new { Email = "bob@test.com", UserName = "bob", Password = "Test123!", Role = "User" },
@@ -224,8 +213,6 @@ namespace ProjectManagement.Data
                         context.Columns.Add(column);
                     }
 
-                    publicBoard.ColumnOrderIds = columns.Select(c => c.Id).ToList();
-
                     var cards = new[]
                     {
                         new Card
@@ -265,13 +252,12 @@ namespace ProjectManagement.Data
                         context.Cards.Add(card);
                     }
 
-                    columns[0].CardOrderIds = new List<string> { cards[0].Id };
-                    columns[1].CardOrderIds = new List<string> { cards[1].Id };
-                    columns[2].CardOrderIds = new List<string> { cards[2].Id };
-
                     await context.SaveChangesAsync();
                 }
             }
+
+            var migrationService = serviceProvider.GetRequiredService<LexoRankMigrationService>();
+            await migrationService.MigrateToLexoRankAsync();
         }
     }
 }

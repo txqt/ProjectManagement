@@ -12,7 +12,9 @@ namespace ProjectManagement.Models.Domain.Entities
         [MaxLength(200)]
         public string Title { get; set; } = string.Empty;
 
-        public List<string> CardOrderIds { get; set; } = new List<string>();
+        [Required]
+        [MaxLength(255)]
+        public string Rank { get; set; } = string.Empty;
 
         // Navigation properties
         public virtual Board Board { get; set; } = null!;

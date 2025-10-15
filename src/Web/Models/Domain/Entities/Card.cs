@@ -17,6 +17,10 @@ namespace ProjectManagement.Models.Domain.Entities
 
         public string? Description { get; set; }
         public string? Cover { get; set; }
+        
+        [Required]
+        [MaxLength(255)]
+        public string Rank { get; set; } = string.Empty;
 
         // Navigation properties
         public virtual Board Board { get; set; } = null!;

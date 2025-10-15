@@ -6,6 +6,7 @@ using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Board;
 using ProjectManagement.Models.DTOs.Card;
 using ProjectManagement.Services.Interfaces;
+using LexoAlgorithm;
 
 namespace ProjectManagement.Services
 {
@@ -20,7 +21,7 @@ namespace ProjectManagement.Services
         public CardService(
             ApplicationDbContext context,
             IMapper mapper,
-            UserManager<ApplicationUser> userManager, 
+            UserManager<ApplicationUser> userManager,
             IBoardNotificationService boardNotificationService,
             INotificationService notificationService)
         {
@@ -52,6 +53,7 @@ namespace ProjectManagement.Services
             var column = await _context.Columns
                 .Include(c => c.Board)
                 .ThenInclude(b => b.Members)
+                .Include(c => c.Cards)
                 .FirstOrDefaultAsync(c => c.Id == columnId);
 
             if (column == null)
@@ -64,14 +66,24 @@ namespace ProjectManagement.Services
             card.Created = DateTime.UtcNow;
             card.LastModified = DateTime.UtcNow;
 
+            // Generate LexoRank for new card
+            // Get the last card's rank in this column
+            var lastCard = column.Cards.OrderByDescending(c => c.Rank).FirstOrDefault();
+            if (lastCard != null)
+            {
+                // Insert after the last card
+                var lastRank = LexoRank.Parse(lastCard.Rank);
+                var newRank = lastRank.GenNext();
+                card.Rank = newRank.ToString();
+            }
+            else
+            {
+                // First card in column
+                card.Rank = LexoRank.Middle().ToString();
+            }
+
             _context.Cards.Add(card);
-
-            // Update column's card order
-            column.CardOrderIds.Add(card.Id);
-            column.LastModified = DateTime.UtcNow;
-
             await _context.SaveChangesAsync();
-
 
             var createdCard = await GetCardAsync(card.Id);
             await _boardNotificationService.BroadcastCardCreated(card.BoardId, card.ColumnId, createdCard, userId);
@@ -92,18 +104,24 @@ namespace ProjectManagement.Services
             // Handle column change
             if (!string.IsNullOrEmpty(updateCardDto.ColumnId) && updateCardDto.ColumnId != card.ColumnId)
             {
-                var newColumn = await _context.Columns.FirstOrDefaultAsync(c => c.Id == updateCardDto.ColumnId);
+                var newColumn = await _context.Columns
+                    .Include(c => c.Cards)
+                    .FirstOrDefaultAsync(c => c.Id == updateCardDto.ColumnId);
+
                 if (newColumn == null || newColumn.BoardId != card.BoardId)
                     return null;
 
-                // Remove from old column
-                var oldColumn = card.Column;
-                oldColumn.CardOrderIds.Remove(cardId);
-                oldColumn.LastModified = DateTime.UtcNow;
-
-                // Add to new column
-                newColumn.CardOrderIds.Add(cardId);
-                newColumn.LastModified = DateTime.UtcNow;
+                // Generate rank for card in new column (append to end)
+                var lastCardInNewColumn = newColumn.Cards.OrderByDescending(c => c.Rank).FirstOrDefault();
+                if (lastCardInNewColumn != null)
+                {
+                    var lastRank = LexoRank.Parse(lastCardInNewColumn.Rank);
+                    card.Rank = lastRank.GenNext().ToString();
+                }
+                else
+                {
+                    card.Rank = LexoRank.Middle().ToString();
+                }
 
                 card.ColumnId = updateCardDto.ColumnId;
             }
@@ -114,7 +132,6 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
             var updatedCard = await GetCardAsync(cardId);
-
             await _boardNotificationService.BroadcastCardUpdated(card.BoardId, card.ColumnId, updatedCard, userId);
 
             return updatedCard;
@@ -131,16 +148,10 @@ namespace ProjectManagement.Services
             if (card == null)
                 return null;
 
-            // Remove card from column's order
-            var column = card.Column;
-            column.CardOrderIds.Remove(cardId);
-            column.LastModified = DateTime.UtcNow;
-
             _context.Cards.Remove(card);
             await _context.SaveChangesAsync();
 
             var dto = _mapper.Map<CardDto>(card);
-
             await _boardNotificationService.BroadcastCardDeleted(dto.BoardId, dto.ColumnId, cardId, userId);
 
             return dto;
@@ -158,58 +169,111 @@ namespace ProjectManagement.Services
                 return null;
 
             var destinationColumn = await _context.Columns
+                .Include(c => c.Cards)
                 .FirstOrDefaultAsync(c => c.Id == moveCardDto.ToColumnId);
 
             if (destinationColumn == null || destinationColumn.BoardId != card.BoardId)
                 return null;
 
-            var sourceColumn = card.Column;
+            string oldColumnId = card.ColumnId;
 
-            // Remove from source column
-            sourceColumn.CardOrderIds.Remove(cardId);
-            sourceColumn.LastModified = DateTime.UtcNow;
+            // Calculate new rank based on position
+            var cardsInDestColumn = destinationColumn.Cards.OrderBy(c => c.Rank).ToList();
+            string newRank;
 
-            // Add to destination column at specified position
-            var position = Math.Max(0, Math.Min(moveCardDto.NewIndex, destinationColumn.CardOrderIds.Count));
-            destinationColumn.CardOrderIds.Insert(position, cardId);
-            destinationColumn.LastModified = DateTime.UtcNow;
+            if (moveCardDto.NewIndex >= cardsInDestColumn.Count)
+            {
+                // Insert at end
+                var lastCard = cardsInDestColumn.LastOrDefault();
+                newRank = lastCard != null
+                    ? LexoRank.Parse(lastCard.Rank).GenNext().ToString()
+                    : LexoRank.Middle().ToString();
+            }
+            else if (moveCardDto.NewIndex == 0)
+            {
+                // Insert at beginning
+                var firstCard = cardsInDestColumn.FirstOrDefault();
+                newRank = firstCard != null
+                    ? LexoRank.Parse(firstCard.Rank).GenPrev().ToString()
+                    : LexoRank.Middle().ToString();
+            }
+            else
+            {
+                // Insert between two cards
+                var prevCard = cardsInDestColumn[moveCardDto.NewIndex - 1];
+                var nextCard = cardsInDestColumn[moveCardDto.NewIndex];
+                var prevRank = LexoRank.Parse(prevCard.Rank);
+                var nextRank = LexoRank.Parse(nextCard.Rank);
+                var betweenRank = prevRank.Between(nextRank);
+                newRank = betweenRank.ToString();
+            }
 
-            // Update card's column
+            card.Rank = newRank;
             card.ColumnId = moveCardDto.ToColumnId;
             card.LastModified = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
             var dto = _mapper.Map<CardDto>(card);
-
-            await _boardNotificationService.BroadcastCardMoved(dto.BoardId, moveCardDto.FromColumnId,
+            await _boardNotificationService.BroadcastCardMoved(dto.BoardId, oldColumnId,
                 moveCardDto.ToColumnId, cardId, moveCardDto.NewIndex, userId);
+
             return dto;
         }
-
-        public async Task<CardsReorderedResponse> ReorderCardsAsync(string columnId, List<string> cardOrderIds, string userId)
+        
+        public async Task<bool> ReorderCardsAsync(string boardId, string columnId, List<string> cardIds, string userId)
         {
+            var board = await _context.Boards
+                .Include(b => b.Members)
+                .FirstOrDefaultAsync(b => b.Id == boardId);
+
+            if (board == null) return false;
+
             var column = await _context.Columns
-                .Include(x => x.Board)
-                .FirstOrDefaultAsync(b => b.Id == columnId);
+                .Include(c => c.Cards)
+                .FirstOrDefaultAsync(c => c.Id == columnId && c.BoardId == boardId);
 
-            if (column == null)
-                throw new Exception("Column not found");
+            if (column == null) return false;
 
-            column.CardOrderIds = cardOrderIds;
-            column.LastModified = DateTime.UtcNow;
+            var existingCards = column.Cards.ToDictionary(c => c.Id, c => c);
+            var newRanks = new List<string>();
+
+            LexoRank? prevRank = null;
+            foreach (var cardId in cardIds)
+            {
+                if (!existingCards.TryGetValue(cardId, out var card)) continue;
+
+                LexoRank newRank;
+                if (prevRank == null)
+                {
+                    // thẻ đầu tiên
+                    newRank = LexoRank.Middle();
+                }
+                else
+                {
+                    // tạo rank tiếp theo
+                    newRank = prevRank.GenNext();
+                }
+
+                card.Rank = newRank.ToString();
+                card.LastModified = DateTime.UtcNow;
+                prevRank = newRank;
+                newRanks.Add(card.Rank);
+            }
 
             await _context.SaveChangesAsync();
-            var dto = new CardsReorderedResponse()
-            {
-                BoardId = column.BoardId,
-                ColumnId = columnId,
-                CardOrderIds = cardOrderIds,
-                Timestamp = DateTime.UtcNow
-            };
-            await _boardNotificationService.BroadcastCardsReordered(dto.BoardId, dto.ColumnId,
-                dto.CardOrderIds, userId);
-            return dto;
+
+            var orderedCards = cardIds
+                .Where(id => existingCards.ContainsKey(id))
+                .Select(id => existingCards[id])
+                .ToList();
+
+            await _boardNotificationService.BroadcastCardsReordered(
+                boardId, columnId, cardIds,
+                _mapper.Map<List<CardDto>>(orderedCards), userId
+            );
+
+            return true;
         }
 
         public async Task<bool> AssignMemberAsync(string cardId, string memberEmail, string userId)
@@ -222,6 +286,7 @@ namespace ProjectManagement.Services
                 .Include(c => c.Board)
                 .Include(c => c.Column)
                 .FirstOrDefaultAsync(c => c.Id == cardId);
+
             if (card == null)
                 return false;
 
@@ -232,10 +297,9 @@ namespace ProjectManagement.Services
 
             _context.CardMembers.Add(cardMember);
             await _context.SaveChangesAsync();
-            
+
             var dto = _mapper.Map<CardDto>(card);
 
-            // 🔄 Real-time cập nhật assignee
             await _boardNotificationService.BroadcastCardAssigned(
                 card.BoardId,
                 card.ColumnId,
@@ -243,7 +307,6 @@ namespace ProjectManagement.Services
                 user.Id,
                 userId);
 
-            // 🔔 Gửi thông báo cho người được assign
             var assigner = await _userManager.FindByIdAsync(userId);
             await _notificationService.CreateCardAssignedNotificationAsync(
                 user.Id,
@@ -262,9 +325,10 @@ namespace ProjectManagement.Services
                 .Include(c => c.Column)
                 .Include(c => c.Members)
                 .FirstOrDefaultAsync(c => c.Id == cardId);
+
             if (card == null)
                 return false;
-            
+
             var cardMember = await _context.CardMembers
                 .Include(cm => cm.User)
                 .Include(cm => cm.Card)
@@ -276,20 +340,15 @@ namespace ProjectManagement.Services
 
             _context.CardMembers.Remove(cardMember);
             await _context.SaveChangesAsync();
-            
+
             var dto = _mapper.Map<CardDto>(card);
 
-            // 🔄 Real-time cập nhật UI
             await _boardNotificationService.BroadcastCardUnassigned(
                 cardMember.Card.BoardId,
                 cardMember.Card.ColumnId,
                 dto,
                 cardMember.UserId,
                 userId);
-
-            // 🔔 Có thể gửi notification nếu muốn (tùy bạn)
-            // VD: “Bạn vừa bị gỡ khỏi thẻ XYZ”
-            // await _notificationService.CreateNotificationAsync(...);
 
             return true;
         }

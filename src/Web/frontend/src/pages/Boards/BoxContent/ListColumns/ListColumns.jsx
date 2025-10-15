@@ -11,13 +11,12 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import { useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import Column from './Column/Column';
 
 function ListColumns({ ...props }) {
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
   const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm);
-
   const [newColumnTitle, setNewColumnTitle] = useState('');
 
   const columnsId = useMemo(() => {
@@ -179,7 +178,7 @@ function ListColumns({ ...props }) {
   )
 }
 
-function SortableColumn({ ...props }) {
+const SortableColumn = memo(function SortableColumn({ ...props }) {
   const columnRef = useRef(props.column);
 
   useEffect(() => {
@@ -215,6 +214,6 @@ function SortableColumn({ ...props }) {
       />
     </div>
   )
-}
+});
 
 export default ListColumns

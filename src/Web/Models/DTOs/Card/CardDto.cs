@@ -14,8 +14,9 @@ namespace ProjectManagement.Models.DTOs.Card
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string? Cover { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdateAt { get; set; }
+        public string Rank { get; set; } = string.Empty;
+        public DateTime Created { get; set; }
+        public DateTime LastModified { get; set; }
 
         public virtual ICollection<CardMemberDto> Members { get; set; } = new List<CardMemberDto>();
         public virtual ICollection<CommentDto> Comments { get; set; } = new List<CommentDto>();

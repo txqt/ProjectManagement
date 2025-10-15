@@ -10,7 +10,7 @@ namespace ProjectManagement.Services.Interfaces
         Task<CardDto?> UpdateCardAsync(string cardId, UpdateCardDto updateCardDto, string userId);
         Task<CardDto?> DeleteCardAsync(string cardId, string userId);
         Task<CardDto?> MoveCardAsync(string cardId, MoveCardDto moveCardDto, string userId);
-        Task<CardsReorderedResponse> ReorderCardsAsync(string columnId, List<string> cardOrderIds, string userId);
+        Task<bool> ReorderCardsAsync(string boardId, string columnId, List<string> cardIds, string userId);
         Task<bool> AssignMemberAsync(string cardId, string memberEmail, string userId);
         Task<bool> UnassignMemberAsync(string cardId, string memberId, string userId);
     }
