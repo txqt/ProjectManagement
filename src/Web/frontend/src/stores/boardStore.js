@@ -383,10 +383,10 @@ export const useBoardStore = create((set, get) => ({
 
     // Assign member to card
     assignCardMember: async (columnId, cardId, memberEmail) => {
-        const success = await apiService.assignCardMember(cardId, memberEmail);
+        const success = await apiService.assignCardMember(get().boardId, columnId, cardId, memberEmail);
         if (success) {
             // Reload card to get updated members
-            const card = await apiService.getCard(cardId);
+            const card = await apiService.getCard(get().boardId, columnId, cardId);
             set(state => ({
                 board: {
                     ...state.board,
@@ -406,10 +406,10 @@ export const useBoardStore = create((set, get) => ({
 
     // Unassign member from card
     unassignCardMember: async (columnId, cardId, memberId) => {
-        const success = await apiService.unassignCardMember(cardId, memberId);
+        const success = await apiService.unassignCardMember(get().boardId, columnId, cardId, memberId);
         if (success) {
             // Reload card to get updated members
-            const card = await apiService.getCard(cardId);
+            const card = await apiService.getCard(get().boardId, columnId, cardId);
             set(state => ({
                 board: {
                     ...state.board,
