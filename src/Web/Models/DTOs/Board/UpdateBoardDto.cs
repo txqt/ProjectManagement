@@ -8,6 +8,8 @@ namespace ProjectManagement.Models.DTOs.Board
         public string? Title { get; set; }
 
         public string? Description { get; set; }
+        
+        public string? Cover { get; set; }
 
         public string? Type { get; set; }
 

@@ -58,6 +58,7 @@ function BoardContent({ board, ...props }) {
     }, [orderedColumns]);
 
     // Move card between different columns
+    // thay vì cloneDeep toàn bộ, chỉ tạo bản sao cho 2 column liên quan
     const moveCardBetweenDifferentColumns = (
         overColumn,
         overCardId,
@@ -67,55 +68,47 @@ function BoardContent({ board, ...props }) {
         activeDraggingCardId,
         activeDraggingCardData
     ) => {
-        setOrderedColumns((prevColumns) => {
-            const overCardIndex = overColumn?.cards?.findIndex(
-                (card) => card.id === overCardId
-            );
-            let newCardIndex;
+        setOrderedColumns(prevColumns => {
+            // tìm indexes & refs của 2 column
+            const activeIdx = prevColumns.findIndex(c => c.id === activeColumn.id);
+            const overIdx = prevColumns.findIndex(c => c.id === overColumn.id);
+            if (activeIdx === -1 || overIdx === -1) return prevColumns;
+
+            const overCardIndex = overColumn?.cards?.findIndex(card => card.id === overCardId);
             const isBelowOverItem =
                 active.rect.current.translated &&
                 active.rect.current.translated.top > over.rect.top + over.rect.height;
             const modifier = isBelowOverItem ? 1 : 0;
-            newCardIndex =
-                overCardIndex >= 0
-                    ? overCardIndex + modifier
-                    : overColumn?.cards?.length;
+            const newCardIndex = overCardIndex >= 0 ? overCardIndex + modifier : (overColumn?.cards?.length ?? 0);
 
-            const nextColumns = cloneDeep(prevColumns);
-            const nextActiveColumn = nextColumns.find(
-                (column) => column.id === activeColumn.id
-            );
-            const nextOverColumn = nextColumns.find(
-                (column) => column.id === overColumn.id
-            );
+            // card object to insert (copy with updated columnId)
+            const newCard = { ...activeDraggingCardData, columnId: overColumn.id };
 
-            if (nextActiveColumn) {
-                nextActiveColumn.cards = nextActiveColumn.cards.filter(
-                    (card) => card.id !== activeDraggingCardId
-                );
-                // CHANGED: Don't update cardOrderIds anymore
-            }
-            if (nextOverColumn) {
-                nextOverColumn.cards = nextOverColumn.cards.filter(
-                    (card) => card.id !== activeDraggingCardId
-                );
-                const rebuild_activeDraggingCardData = {
-                    ...activeDraggingCardData,
-                    columnId: nextOverColumn.id
-                };
-                nextOverColumn.cards = nextOverColumn.cards.toSpliced(
-                    newCardIndex,
-                    0,
-                    rebuild_activeDraggingCardData
-                );
-                nextOverColumn.cards = nextOverColumn.cards.filter(
-                    (card) => !card.FE_PlaceholderCard
-                );
-                // CHANGED: Don't update cardOrderIds anymore
-            }
-            return nextColumns;
+            return prevColumns.map((col, idx) => {
+                if (idx === activeIdx) {
+                    // remove card from active column (create new cards array)
+                    return {
+                        ...col,
+                        cards: col.cards.filter(card => card.id !== activeDraggingCardId)
+                    };
+                }
+                if (idx === overIdx) {
+                    // insert into over column at position newCardIndex
+                    const before = col.cards.slice(0, newCardIndex);
+                    const after = col.cards.slice(newCardIndex);
+                    // remove any placeholder if you had them
+                    const merged = [...before, newCard, ...after].filter(c => !c.FE_PlaceholderCard);
+                    return {
+                        ...col,
+                        cards: merged
+                    };
+                }
+                // other columns unchanged, keep same reference
+                return col;
+            });
         });
     };
+
 
     const handleDragStart = (event) => {
         setActiveDragItemId(event?.active?.id);
@@ -136,8 +129,10 @@ function BoardContent({ board, ...props }) {
 
     const handleDragOver = useCallback((event) => {
         if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) return;
+
         const { active, over } = event;
         if (!active || !over) return;
+
         const {
             id: activeDraggingCardId,
             data: { current: activeDraggingCardData }
@@ -145,6 +140,7 @@ function BoardContent({ board, ...props }) {
         const { id: overCardId } = over;
         const activeColumn = findColumnByCardId(activeDraggingCardId);
         const overColumn = findColumnByCardId(overCardId);
+
         if (!activeColumn || !overColumn) return;
 
         if (activeColumn.id !== overColumn.id) {
@@ -195,13 +191,6 @@ function BoardContent({ board, ...props }) {
                 const newIndex = overCardIndex >= 0 ? overCardIndex + modifier : (overColumn?.cards?.length ?? 0);
 
                 try {
-                    // CHANGED: Pass card ranks instead of cardOrderIds
-                    const cardRanks = overColumn.cards
-                        .filter(c => c.id !== activeDraggingCardId)
-                        .map(c => c.rank);
-
-                    console.log('cardRanks:', cardRanks);
-
                     console.log({
                         oldColumnId: oldColumnWhenDraggingCard?.id,
                         overColumnId: overColumn?.id,

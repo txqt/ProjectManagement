@@ -11,7 +11,7 @@ namespace ProjectManagement.Models.DTOs.Board
         public string? Description { get; set; }
         public string Type { get; set; } = string.Empty;
         public string OwnerId { get; set; } = string.Empty;
-        public List<string> ColumnOrderIds { get; set; } = new List<string>();
+        public string? Cover { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 

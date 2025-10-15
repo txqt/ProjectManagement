@@ -1,12 +1,13 @@
+import React, { useEffect, useState } from "react";
 import LockIcon from "@mui/icons-material/Lock";
 import PublicIcon from "@mui/icons-material/Public";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import {
   Box,
   Button,
   Card,
   CardActionArea,
-  CardContent,
   CardMedia,
   Dialog,
   DialogActions,
@@ -21,27 +22,28 @@ import {
   MenuItem,
   Select,
   TextField,
-  Typography
+  Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
-
 import { useNavigate } from "react-router-dom";
 import { useApi } from "~/hooks/useApi";
 import { apiService } from "~/services/api";
 import { toast } from "react-toastify";
+
+// UnsplashMenu should be located next to this file (./UnsplashMenu)
+import UnsplashMenu from "~/components/UnsplashMenu/UnsplashMenu";
 
 export default function BoardListView() {
   const { error, executeRequest } = useApi();
   const [boards, setBoards] = useState([]);
   const [open, setOpen] = useState(false);
 
-  const initialBoardState = { title: "", description: "", type: "private" };
+  const initialBoardState = { title: "", description: "", type: "private", cover: "" };
   const [newBoard, setNewBoard] = useState(initialBoardState);
   const navigate = useNavigate();
 
   const typeOptions = [
     { value: "private", label: "Private", desc: "Only invited members", icon: <LockIcon fontSize="small" /> },
-    { value: "public", label: "Public", desc: "Anyone with link can view", icon: <PublicIcon fontSize="small" /> }
+    { value: "public", label: "Public", desc: "Anyone with link can view", icon: <PublicIcon fontSize="small" /> },
   ];
 
   // Context menu state (right-click)
@@ -51,13 +53,18 @@ export default function BoardListView() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedBoardId, setSelectedBoardId] = useState(null);
 
+  // Unsplash menu anchor
+  const [unsplashAnchor, setUnsplashAnchor] = useState(null);
+
+  // Editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingBoardId, setEditingBoardId] = useState(null);
+
   // load boards
   useEffect(() => {
     const fetchBoards = async () => {
       try {
-        const { success, data } = await executeRequest(() =>
-          apiService.getBoards()
-        );
+        const { success, data } = await executeRequest(() => apiService.getBoards());
         if (success) {
           setBoards(data);
         } else {
@@ -69,20 +76,45 @@ export default function BoardListView() {
     };
 
     fetchBoards();
-  }, [error, executeRequest]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [executeRequest]);
 
-  // create board
-  const handleCreateBoard = async () => {
-    const { success, data, error: apiErr } = await executeRequest(() =>
-      apiService.createBoard(newBoard)
-    );
-    if (success) {
-      setBoards((prev) => [...prev, data]);
-      setOpen(false);
-      // reset form to initial state
-      setNewBoard(initialBoardState);
+  // save (create or update) board
+  const handleSaveBoard = async () => {
+    // minimal validation
+    if (!newBoard.title || newBoard.title.trim().length === 0) {
+      toast.error("Title is required");
+      return;
+    }
+
+    if (isEditing) {
+      // update
+      try {
+        const { success, data, error: apiErr } = await executeRequest(() => apiService.updateBoard(editingBoardId, newBoard));
+        if (success) {
+          setBoards((prev) => prev.map((b) => (b.id === editingBoardId ? data : b)));
+          toast.success("Cập nhật board thành công");
+          setOpen(false);
+          setIsEditing(false);
+          setEditingBoardId(null);
+          setNewBoard(initialBoardState);
+        } else {
+          toast.error(`Error updating board: \n ${apiErr}`);
+        }
+      } catch (err) {
+        toast.error(`Unexpected error: \n ${err}`);
+      }
     } else {
-      toast.error(`Error creating board: \n ${apiErr}`);
+      // create
+      const { success, data, error: apiErr } = await executeRequest(() => apiService.createBoard(newBoard));
+      if (success) {
+        setBoards((prev) => [...prev, data]);
+        setOpen(false);
+        // reset form to initial state
+        setNewBoard(initialBoardState);
+      } else {
+        toast.error(`Error creating board: \n ${apiErr}`);
+      }
     }
   };
 
@@ -119,11 +151,9 @@ export default function BoardListView() {
     if (!boardId) return;
 
     try {
-      const { success, error: apiError } = await executeRequest(() =>
-        apiService.deleteBoard(boardId)
-      );
+      const { success, error: apiError } = await executeRequest(() => apiService.deleteBoard(boardId));
       if (success) {
-        setBoards(prev => prev.filter(b => b.id !== boardId));
+        setBoards((prev) => prev.filter((b) => b.id !== boardId));
         toast.success("Xóa board thành công");
       } else {
         toast.error(`Xóa thất bại: ${apiError}`);
@@ -133,13 +163,33 @@ export default function BoardListView() {
     }
   };
 
+  // Unsplash handlers
+  const handleOpenUnsplash = (e) => setUnsplashAnchor(e.currentTarget);
+  const handleCloseUnsplash = () => setUnsplashAnchor(null);
+  const handleSelectUnsplash = (img) => {
+    // img is { id, thumb, full, raw }
+    setNewBoard((prev) => ({ ...prev, cover: img?.full || img?.thumb || prev.cover }));
+    handleCloseUnsplash();
+  };
+
+  // Open edit dialog (from context menu or other places)
+  const openEditDialog = (boardId) => {
+    const board = boards.find((b) => b.id === boardId);
+    if (!board) return;
+    setNewBoard({ title: board.title || "", description: board.description || "", type: board.type || "private", cover: board.cover || "" });
+    setIsEditing(true);
+    setEditingBoardId(boardId);
+    setOpen(true);
+    handleCloseContextMenu();
+  };
+
   return (
     <Box p={3}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5" fontWeight="bold">
           Your Boards
         </Typography>
-        <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
+        <Button variant="contained" color="primary" onClick={() => { setOpen(true); setIsEditing(false); setEditingBoardId(null); setNewBoard(initialBoardState); }}>
           Create New Board
         </Button>
       </Box>
@@ -156,15 +206,12 @@ export default function BoardListView() {
                 overflow: "hidden",
                 boxShadow: 3,
                 ":hover": { boxShadow: 6, transform: "scale(1.02)" },
-                transition: "0.3s"
+                transition: "0.3s",
               }}
               onContextMenu={(e) => handleContextMenu(e, board.id)}
             >
-              <CardActionArea
-                onClick={() => navigate(`/boards/${board.id}`)}
-                sx={{ height: "100%", position: "relative" }}
-              >
-                {/* Hình nền full card */}
+              <CardActionArea onClick={() => navigate(`/boards/${board.id}`)} sx={{ height: "100%", position: "relative" }}>
+                {/* Background image */}
                 <CardMedia
                   component="img"
                   image={
@@ -179,11 +226,11 @@ export default function BoardListView() {
                     position: "absolute",
                     top: 0,
                     left: 0,
-                    zIndex: 1
+                    zIndex: 1,
                   }}
                 />
 
-                {/* Overlay gradient + chữ */}
+                {/* Overlay gradient + text */}
                 <Box
                   sx={{
                     position: "absolute",
@@ -192,8 +239,7 @@ export default function BoardListView() {
                     right: 0,
                     p: 2,
                     zIndex: 2,
-                    background:
-                      "linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0))"
+                    background: "linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0))",
                   }}
                 >
                   <Typography
@@ -203,7 +249,7 @@ export default function BoardListView() {
                       fontWeight: "bold",
                       overflow: "hidden",
                       whiteSpace: "nowrap",
-                      textOverflow: "ellipsis"
+                      textOverflow: "ellipsis",
                     }}
                   >
                     {board.title}
@@ -215,7 +261,7 @@ export default function BoardListView() {
                       color: "white",
                       overflow: "hidden",
                       whiteSpace: "nowrap",
-                      textOverflow: "ellipsis"
+                      textOverflow: "ellipsis",
                     }}
                   >
                     {board.description}
@@ -223,7 +269,6 @@ export default function BoardListView() {
                 </Box>
               </CardActionArea>
             </Card>
-
           </Grid>
         ))}
       </Grid>
@@ -239,18 +284,24 @@ export default function BoardListView() {
             : undefined
         }
       >
+        <MenuItem onClick={() => openEditDialog(contextMenu ? contextMenu.boardId : null)}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          Edit
+        </MenuItem>
+
         <MenuItem onClick={() => openConfirmDialog(contextMenu ? contextMenu.boardId : null)}>
           <ListItemIcon>
             <DeleteIcon fontSize="small" />
           </ListItemIcon>
           Xóa board
         </MenuItem>
-        {/* thêm menu item khác nếu cần */}
       </Menu>
 
-      {/* Dialog Create Board */}
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Create New Board</DialogTitle>
+      {/* Dialog Create / Edit Board */}
+      <Dialog open={open} onClose={() => { setOpen(false); setIsEditing(false); setEditingBoardId(null); setNewBoard(initialBoardState); }} fullWidth maxWidth="sm">
+        <DialogTitle>{isEditing ? "Edit Board" : "Create New Board"}</DialogTitle>
         <DialogContent>
           <TextField
             margin="dense"
@@ -266,9 +317,7 @@ export default function BoardListView() {
             multiline
             rows={3}
             value={newBoard.description}
-            onChange={(e) =>
-              setNewBoard({ ...newBoard, description: e.target.value })
-            }
+            onChange={(e) => setNewBoard({ ...newBoard, description: e.target.value })}
           />
 
           <FormControl fullWidth margin="dense">
@@ -279,7 +328,7 @@ export default function BoardListView() {
               value={newBoard.type}
               onChange={(e) => setNewBoard({ ...newBoard, type: e.target.value })}
               renderValue={(selected) => {
-                const opt = typeOptions.find(o => o.value === selected);
+                const opt = typeOptions.find((o) => o.value === selected);
                 return (
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     {opt?.icon}
@@ -291,20 +340,53 @@ export default function BoardListView() {
               {typeOptions.map((opt) => (
                 <MenuItem key={opt.value} value={opt.value}>
                   <ListItemIcon>{opt.icon}</ListItemIcon>
-                  <ListItemText
-                    primary={opt.label}
-                    secondary={opt.desc}
-                  />
+                  <ListItemText primary={opt.label} secondary={opt.desc} />
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
+
+          {/* Cover controls */}
+          <Box display="flex" alignItems="center" gap={1} mt={2}>
+            <Box sx={{ width: 96, height: 64, borderRadius: 1, overflow: "hidden", border: "1px solid #e0e0e0" }}>
+              <img
+                src={
+                  newBoard.cover ||
+                  "https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
+                }
+                alt="cover"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </Box>
+
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button size="small" onClick={handleOpenUnsplash}>
+                Chọn cover
+              </Button>
+              <Button
+                size="small"
+                onClick={() => {
+                  // placeholder: parent can implement an upload
+                  toast.info("Upload chưa được triển khai trong ví dụ này.");
+                }}
+              >
+                Upload
+              </Button>
+              <Button
+                size="small"
+                onClick={() => {
+                  // quick remove
+                  setNewBoard((prev) => ({ ...prev, cover: "" }));
+                }}
+              >
+                Xóa cover
+              </Button>
+            </Box>
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreateBoard}>
-            Create
-          </Button>
+          <Button onClick={() => { setOpen(false); setIsEditing(false); setEditingBoardId(null); setNewBoard(initialBoardState); }}>Hủy</Button>
+          <Button variant="contained" onClick={handleSaveBoard}>{isEditing ? "Lưu" : "Create"}</Button>
         </DialogActions>
       </Dialog>
 
@@ -319,6 +401,16 @@ export default function BoardListView() {
           <Button variant="contained" onClick={handleConfirmDelete}>Xóa</Button>
         </DialogActions>
       </Dialog>
+
+      {/* UnsplashMenu - reused component */}
+      <UnsplashMenu
+        anchorEl={unsplashAnchor}
+        onClose={handleCloseUnsplash}
+        onSelect={handleSelectUnsplash}
+        apiService={apiService}
+        width={560}
+        maxHeight={520}
+      />
     </Box>
   );
 }

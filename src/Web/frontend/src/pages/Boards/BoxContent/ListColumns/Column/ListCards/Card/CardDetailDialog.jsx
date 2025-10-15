@@ -1,17 +1,31 @@
+import React, { useEffect, useMemo, useState } from 'react';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AttachmentIcon from '@mui/icons-material/Attachment';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
-import { Box, Button, Dialog, DialogContent, IconButton, Paper, Stack, Typography, Avatar, CardMedia, Menu, MenuItem } from "@mui/material";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogContent,
+  IconButton,
+  Paper,
+  Stack,
+  Typography,
+  Avatar,
+  CardMedia,
+  Menu,
+  MenuItem
+} from "@mui/material";
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { apiService } from '~/services/api';
 import { useBoardStore } from '~/stores/boardStore';
 import { shallow } from 'zustand/shallow';
 import { toast } from 'react-toastify';
+import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu'; // <-- tích hợp UnsplashMenu
 
 const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
   // store functions
@@ -39,8 +53,10 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
   const [loadingMembers, setLoadingMembers] = useState(false);
 
   // cover menu + upload refs
-  const [anchorEl, setAnchorEl] = useState(null);
-  const fileInputRef = useRef(null);
+  // const fileInputRef = useRef(null);
+
+  // UnsplashMenu anchor (tách component)
+  const [unsplashAnchor, setUnsplashAnchor] = useState(null);
 
   useEffect(() => {
     setDescription(currentCard?.description ?? '');
@@ -70,111 +86,93 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
     setEditing(false);
   };
 
-  // --- Unsplash gallery/search (version mới) ---
-  const [unsplashView, setUnsplashView] = useState('gallery'); // 'gallery' | 'search'
-  const [unsplashImages, setUnsplashImages] = useState([]); // {id, thumb, full}
-  const [unsplashQuery, setUnsplashQuery] = useState('');
-  const [unsplashLoading, setUnsplashLoading] = useState(false);
-
-  const fetchUnsplashImages = async (query = 'wallpaper') => {
-    setUnsplashLoading(true);
-    try {
-      const items = await apiService.searchUnsplash(query, 12);
-      const mapped = (items || []).map(i => ({
-        id: i.id ?? i.Id ?? Math.random().toString(36).slice(2),
-        thumb: i.thumb ?? i.Thumb ?? i.urls?.small ?? i.urls?.thumb ?? null,
-        full: i.full ?? i.Full ?? i.urls?.regular ?? i.urls?.full ?? null
-      }));
-      setUnsplashImages(mapped);
-    } catch (err) {
-      console.error('fetchUnsplashImages error (backend):', err);
-      setUnsplashImages([]);
-    } finally {
-      setUnsplashLoading(false);
-    }
-  };
-
-  // open cover menu: default show Unsplash gallery (you can also upload or URL from header controls)
+  // --- Unsplash (tích hợp UnsplashMenu) ---
   const openAddCoverMenu = (e) => {
-    setAnchorEl(e.currentTarget);
-    setUnsplashView('gallery');
-    fetchUnsplashImages('wallpaper');
+    // open the UnsplashMenu anchored to target
+    setUnsplashAnchor(e.currentTarget);
   };
-  const closeAddCoverMenu = () => {
-    setAnchorEl(null);
-    setUnsplashQuery('');
-    setUnsplashImages([]);
-    setUnsplashView('gallery');
+  const closeUnsplashMenu = () => {
+    setUnsplashAnchor(null);
   };
 
-  // select unsplash image
   const handleSelectUnsplashImage = async (image) => {
     const url = image?.full ?? image?.thumb;
-    if (!currentCard) return;
+    if (!currentCard || !url) return;
 
-    const success = await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, cover: url });
-    if (success) {
-      toast.success('Đã cập nhật cover từ Unsplash');
-    } else {
+    try {
+      const success = await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, cover: url });
+      if (success) toast.success('Đã cập nhật cover từ Unsplash');
+      else toast.error('Không thể cập nhật cover');
+    } catch (err) {
+      console.error('handleSelectUnsplashImage error', err);
       toast.error('Không thể cập nhật cover');
+    } finally {
+      closeUnsplashMenu();
     }
-    closeAddCoverMenu();
-  };
-
-
-  const openUnsplashSearch = async () => {
-    setUnsplashView('search');
-    setUnsplashQuery('');
-    setUnsplashImages([]);
-  };
-  const performUnsplashSearch = async (q) => {
-    const query = (q || unsplashQuery || '').trim();
-    if (!query) return;
-    await fetchUnsplashImages(query);
   };
 
   // --- File upload (version cũ) ---
-  const handleUploadClick = () => {
-    // close menu and open file picker
-    closeAddCoverMenu();
-    fileInputRef.current?.click();
-  };
+  // const handleUploadClick = () => {
+  //   // if any menu open, close it (we only use UnsplashMenu now)
+  //   closeUnsplashMenu();
+  //   fileInputRef.current?.click();
+  // };
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !currentCard) return;
+  // const handleFileChange = async (e) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file || !currentCard) return;
 
-    // const reader = new FileReader();
-    // reader.onload = async () => {
-    //   const dataUrl = reader.result;
-    //   const success = await updateCard(currentCard.columnId, currentCard.id, { cover: dataUrl });
-    //   if (success) toast.success('Đã cập nhật cover');
-    //   else toast.error('Không thể cập nhật cover');
-    // };
-    // reader.readAsDataURL(file);
-    // e.target.value = '';
-    toast.warning('Tính năng đang được phát triển');
-  };
+  //   // Placeholder behavior — adapt to your actual upload endpoint
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append('file', file);
 
+  //     // apiService.uploadFile should return { url: '...' } or similar
+  //     const response = await apiService.uploadFile?.(formData);
+  //     const url = response?.url;
+  //     if (!url) {
+  //       toast.error('Server không trả về URL ảnh');
+  //       return;
+  //     }
 
-  // choose URL (kept from cả hai version)
-  const handleChooseUrl = async () => {
-    closeAddCoverMenu();
-    const url = window.prompt('Dán URL ảnh làm cover:');
-    if (!url || !currentCard) return;
+  //     const success = await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, cover: url });
+  //     if (success) toast.success('Đã cập nhật cover từ file upload');
+  //     else toast.error('Không thể cập nhật cover');
+  //   } catch (err) {
+  //     console.error('handleFileChange error', err);
+  //     toast.error('Lỗi khi tải ảnh lên');
+  //   } finally {
+  //     e.target.value = '';
+  //   }
+  // };
 
-    const success = await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, cover: url });
-    if (success) toast.success('Đã cập nhật cover');
-    else toast.error('Không thể cập nhật cover');
-  };
+  // choose URL (kept)
+  // const handleChooseUrl = async () => {
+  //   closeUnsplashMenu();
+  //   const url = window.prompt('Dán URL ảnh làm cover:');
+  //   if (!url || !currentCard) return;
 
+  //   try {
+  //     const success = await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, cover: url });
+  //     if (success) toast.success('Đã cập nhật cover');
+  //     else toast.error('Không thể cập nhật cover');
+  //   } catch (err) {
+  //     console.error('handleChooseUrl error', err);
+  //     toast.error('Không thể cập nhật cover');
+  //   }
+  // };
 
   const handleDeleteCover = async () => {
     if (!currentCard) return;
 
-    const success = await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, cover: null });
-    if (success) toast.success('Đã xoá cover');
-    else toast.error('Không thể xoá cover');
+    try {
+      const success = await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, cover: null });
+      if (success) toast.success('Đã xoá cover');
+      else toast.error('Không thể xoá cover');
+    } catch (err) {
+      console.error('handleDeleteCover error', err);
+      toast.error('Không thể xoá cover');
+    }
   };
 
   // --- member helpers & assign/unassign (giữ nguyên logic cũ) ---
@@ -214,21 +212,12 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
       return;
     }
 
-    if (typeof storeAssign === 'function') {
-      try {
-        await storeAssign(currentCard.columnId, currentCard.id, email);
-      } catch (err) {
-        console.error('prop assign error:', err);
-      }
-    } else {
-      console.warn('No assignCardMember available (store or props)');
-    }
+    console.warn('No assignCardMember available (store or props)');
   };
 
   const unassignHandler = async (member) => {
     if (!currentCard) return;
     const memberId = member?.id ?? getUserIdFrom(member);
-    console.log('memberid ', memberId)
     if (!memberId) return;
 
     if (typeof storeUnassign === 'function') {
@@ -241,15 +230,7 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
       return;
     }
 
-    if (typeof storeUnassign === 'function') {
-      try {
-        await storeUnassign(currentCard.columnId, currentCard.id, memberId);
-      } catch (err) {
-        console.error('prop unassign error:', err);
-      }
-    } else {
-      console.warn('No unassignCardMember available (store or props)');
-    }
+    console.warn('No unassignCardMember available (store or props)');
   };
 
   // open member menu
@@ -332,147 +313,17 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
         </Box>
 
         {/* hidden file input */}
-        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} />
+        {/* <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} /> */}
 
-        {/* menu add cover — combined: Upload / URL / Unsplash */}
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={closeAddCoverMenu}
-          PaperProps={{ sx: { width: 520, maxHeight: 520, p: 1, overflow: 'hidden' } }}
-        >
-          {/* Header controls: Upload, URL, Unsplash */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1, pb: 1 }}>
-            <Typography variant="subtitle1">Chọn cover</Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button size="small" startIcon={<UploadFileIcon />} onClick={handleUploadClick}>Upload</Button>
-              <Button size="small" startIcon={<AddPhotoAlternateIcon />} onClick={handleChooseUrl}>URL</Button>
-              {unsplashView === 'gallery' ? (
-                <Button size="small" onClick={openUnsplashSearch}>Tìm ảnh</Button>
-              ) : (
-                <Button size="small" onClick={() => { setUnsplashView('gallery'); fetchUnsplashImages(); }}>Gallery</Button>
-              )}
-            </Box>
-          </Box>
-
-          {/* Unsplash search or gallery */}
-          {unsplashView === 'search' ? (
-            <Box sx={{ px: 1 }}>
-              <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                <input
-                  value={unsplashQuery}
-                  onChange={(e) => setUnsplashQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') performUnsplashSearch(); }}
-                  placeholder="Nhập từ khoá tìm kiếm (ví dụ: beach, nature)"
-                  style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: '1px solid #ccc' }}
-                />
-                <Button size="small" onClick={() => performUnsplashSearch()}>Tìm</Button>
-              </Box>
-
-              <Box sx={{ maxHeight: 360, overflowY: 'auto' }}>
-                {unsplashLoading ? (
-                  <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>Đang tìm...</Typography>
-                ) : (unsplashImages?.length ?? 0) === 0 ? (
-                  <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>Chưa có kết quả</Typography>
-                ) : (
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1 }}>
-                    {unsplashImages.map(img => (
-                      <Box key={img.id} sx={{ cursor: 'pointer', position: 'relative' }}>
-                        <img src={img.thumb} alt="" style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 6 }} />
-                        <Button
-                          size="small"
-                          onClick={() => handleSelectUnsplashImage(img)}
-                          sx={{ position: 'absolute', bottom: 6, left: 6, bgcolor: 'rgba(255,255,255,0.9)' }}
-                        >
-                          Chọn
-                        </Button>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </Box>
-            </Box>
-          ) : (
-            <Box sx={{ px: 1 }}>
-              <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                <Button size="small" onClick={() => fetchUnsplashImages('wallpaper')}>Wallpaper</Button>
-                <Button size="small" onClick={() => fetchUnsplashImages('nature')}>Nature</Button>
-                <Button size="small" onClick={() => fetchUnsplashImages('city')}>City</Button>
-              </Box>
-
-              <Box sx={{ maxHeight: 390, overflowY: 'auto' }}>
-                {unsplashLoading ? (
-                  <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>Đang tải...</Typography>
-                ) : (unsplashImages?.length ?? 0) === 0 ? (
-                  <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>Không có ảnh</Typography>
-                ) : (
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1 }}>
-                    {unsplashImages.map(img => (
-                      <Box key={img.id} sx={{ cursor: 'pointer', position: 'relative' }}>
-                        <img src={img.thumb} alt="" style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 6 }} />
-                        <Button
-                          size="small"
-                          onClick={() => handleSelectUnsplashImage(img)}
-                          sx={{ position: 'absolute', bottom: 6, left: 6, bgcolor: 'rgba(255,255,255,0.9)' }}
-                        >
-                          Chọn
-                        </Button>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </Box>
-            </Box>
-          )}
-        </Menu>
-        {/* member menu*/}
-        <Menu
-          anchorEl={memberMenuAnchor}
-          open={Boolean(memberMenuAnchor)}
-          onClose={handleCloseMemberMenu}
-          PaperProps={{ sx: { width: 320, maxHeight: 300, p: 1, overflow: 'hidden' } }}
-        >
-          <Box sx={{ p: 1 }}>
-            <input
-              type="text"
-              placeholder="Tìm kiếm các thành viên"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid #ccc', outline: 'none' }}
-            />
-          </Box>
-
-          <Box sx={{ maxHeight: 220, overflowY: 'auto' }}>
-            {loadingMembers ? (
-              <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-                Đang tải...
-              </Typography>
-            ) : (searchResults?.length ?? 0) === 0 ? (
-              <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-                Không có kết quả
-              </Typography>
-            ) : (
-              searchResults.slice(0, 5).map((item) => {
-                const uid = getUserIdFrom(item);
-                const displayName = getDisplayNameFrom(item);
-                const avatar = getAvatarFrom(item);
-                return (
-                  <MenuItem
-                    key={uid ?? Math.random().toString(36).slice(2)}
-                    onClick={async () => { await assignHandler(item); handleCloseMemberMenu(); }}
-                    sx={{ gap: 1 }}
-                  >
-                    <Avatar src={avatar} sx={{ width: 28, height: 28, mr: 1 }}>
-                      {displayName?.[0]?.toUpperCase() ?? '?'}
-                    </Avatar>
-                    <Typography noWrap>{displayName}</Typography>
-                  </MenuItem>
-                );
-              })
-            )}
-          </Box>
-        </Menu>
-
+        {/* UnsplashMenu component (tách riêng) */}
+        <UnsplashMenu
+          anchorEl={unsplashAnchor}
+          onClose={closeUnsplashMenu}
+          onSelect={handleSelectUnsplashImage}
+          apiService={apiService}
+          width={520}
+          maxHeight={520}
+        />
       </Box>
 
       <DialogContent sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -559,6 +410,54 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
               }) : <Typography color="text.secondary">Chưa có thành viên</Typography>}
             </Box>
           </Paper>
+
+          {/* Member menu*/}
+          <Menu
+            anchorEl={memberMenuAnchor}
+            open={Boolean(memberMenuAnchor)}
+            onClose={handleCloseMemberMenu}
+            PaperProps={{ sx: { width: 320, maxHeight: 300, p: 1, overflow: 'hidden' } }}
+          >
+            <Box sx={{ p: 1 }}>
+              <input
+                type="text"
+                placeholder="Tìm kiếm các thành viên"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid #ccc', outline: 'none' }}
+              />
+            </Box>
+
+            <Box sx={{ maxHeight: 220, overflowY: 'auto' }}>
+              {loadingMembers ? (
+                <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
+                  Đang tải...
+                </Typography>
+              ) : (searchResults?.length ?? 0) === 0 ? (
+                <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
+                  Không có kết quả
+                </Typography>
+              ) : (
+                searchResults.slice(0, 5).map((item) => {
+                  const uid = getUserIdFrom(item);
+                  const displayName = getDisplayNameFrom(item);
+                  const avatar = getAvatarFrom(item);
+                  return (
+                    <MenuItem
+                      key={uid ?? Math.random().toString(36).slice(2)}
+                      onClick={async () => { await assignHandler(item); handleCloseMemberMenu(); }}
+                      sx={{ gap: 1 }}
+                    >
+                      <Avatar src={avatar} sx={{ width: 28, height: 28, mr: 1 }}>
+                        {displayName?.[0]?.toUpperCase() ?? '?'}
+                      </Avatar>
+                      <Typography noWrap>{displayName}</Typography>
+                    </MenuItem>
+                  );
+                })
+              )}
+            </Box>
+          </Menu>
 
           {/* Box 3: description using ReactQuill */}
           <Paper sx={{ p: 1, flex: '1 1 auto', display: 'flex', flexDirection: 'column' }}>

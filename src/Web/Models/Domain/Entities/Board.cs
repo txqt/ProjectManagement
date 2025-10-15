@@ -16,6 +16,8 @@ namespace ProjectManagement.Models.Domain.Entities
 
         [Required]
         public string OwnerId { get; set; } = string.Empty;
+        
+        public string? Cover { get; set; }
 
         // Navigation properties
         public virtual ApplicationUser Owner { get; set; } = null!;
