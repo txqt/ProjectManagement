@@ -1,3 +1,4 @@
+import { toast } from 'react-toastify';
 import { API_ROOT } from '~/utils/constants';
 
 class ApiService {
@@ -56,8 +57,11 @@ class ApiService {
 
         if (response.status === 401 && !options.skipAuthHandling) {
           // this.setAuthToken(null);
-          alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
           // window.location.href = '/login';
+        }
+        else if (response.status === 429) { 
+          toast.error('Quá nhiều yêu cầu. Vui lòng thử lại sau.');
         }
 
         throw error;

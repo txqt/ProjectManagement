@@ -37,38 +37,48 @@ namespace ProjectManagement.Data
 
         static async Task CreateRoles(RoleManager<IdentityRole> roleManager)
         {
-            var roles = new Dictionary<string, string[]>
+            var rolesHierarchy = new Dictionary<string, string[]>
             {
-                { "SuperAdmin", Permissions.GetAllPermissions().ToArray() },
-                {
-                    "Admin", new[]
-                        {
-                            Permissions.System.ViewAllUsers, Permissions.System.ViewSystemStats,
-                            Permissions.Boards.Create, Permissions.Boards.View, Permissions.Boards.Edit,
-                        }
-                        .Concat(Permissions.GetBoardLevelPermissions().Where(p => p != Permissions.Boards.Delete))
-                        .ToArray()
-                },
-                {
-                    "User",
-                    new[]
-                    {
-                        Permissions.Boards.Create, Permissions.Boards.View, Permissions.Columns.View,
-                        Permissions.Cards.View, Permissions.Cards.Create, Permissions.Cards.Edit,
-                        Permissions.Cards.Comment,
-                    }
-                },
-                { "Viewer", new[] { Permissions.Boards.View, Permissions.Columns.View, Permissions.Cards.View, } }
+                { "SuperAdmin", new[] { "Admin", "User" } },
+                { "Admin", new[] { "User" } },
+                { "User", Array.Empty<string>() }
             };
 
-            foreach (var (roleName, permissions) in roles)
+            var basePermissions = new Dictionary<string, string[]>
             {
+                { "SuperAdmin", Permissions.GetAllPermissions().ToArray() },
+                { "Admin", new[] { Permissions.System.ViewAllUsers, Permissions.System.ViewSystemStats } },
+                { "User", Permissions.GetBoardLevelPermissions().ToArray() }
+            };
+
+            // Lưu lại quyền hợp nhất (đã kế thừa) của mỗi role
+            var mergedPermissions = new Dictionary<string, HashSet<string>>();
+
+            // Xử lý tuần tự (role cấp thấp trước, cao sau)
+            foreach (var roleName in rolesHierarchy.Keys)
+            {
+                // Bắt đầu với quyền gốc
+                var perms = new HashSet<string>(basePermissions[roleName]);
+
+                // Kế thừa quyền từ role khác
+                foreach (var parent in rolesHierarchy[roleName])
+                {
+                    if (mergedPermissions.TryGetValue(parent, out var inheritedPerms))
+                    {
+                        perms.UnionWith(inheritedPerms);
+                    }
+                }
+
+                mergedPermissions[roleName] = perms;
+
+                // Tạo role nếu chưa có
                 if (!await roleManager.RoleExistsAsync(roleName))
                 {
                     var role = new IdentityRole(roleName);
                     await roleManager.CreateAsync(role);
 
-                    foreach (var permission in permissions)
+                    // Gán toàn bộ quyền
+                    foreach (var permission in perms)
                     {
                         await roleManager.AddClaimAsync(role,
                             new System.Security.Claims.Claim("permission", permission));
@@ -77,7 +87,8 @@ namespace ProjectManagement.Data
             }
         }
 
-        static async Task SeedSampleData(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IServiceProvider serviceProvider)
+        static async Task SeedSampleData(ApplicationDbContext context, UserManager<ApplicationUser> userManager,
+            IServiceProvider serviceProvider)
         {
             var sampleUsers = new[]
             {

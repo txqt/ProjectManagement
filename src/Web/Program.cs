@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using ProjectManagement.Authorization;
+using ProjectManagement.Configuration;
 using ProjectManagement.Data;
+using ProjectManagement.Extensions;
 using ProjectManagement.Hubs;
 using ProjectManagement.Mappings;
 using ProjectManagement.Models.Domain.Entities;
@@ -127,6 +129,11 @@ builder.Services.AddScoped<IUnsplashCacheService, UnsplashRedisCacheService>();
 // Add Background Services
 builder.Services.AddHostedService<NotificationCleanupService>();
 
+builder.Services.Configure<RateLimitConfig>(
+    builder.Configuration.GetSection("RateLimit"));
+
+builder.Services.AddSingleton<IRateLimiterService, RedisRateLimiterService>();
+
 // Add CORS
 builder.Services.AddCors(options =>
 {
@@ -182,10 +189,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseRouting();
+
 app.UseCors("AllowReactApp");
+
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseGlobalRateLimit();
 
 app.MapControllers();
 

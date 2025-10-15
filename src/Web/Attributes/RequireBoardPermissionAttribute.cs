@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 
-namespace ProjectManagement.Authorization
+namespace ProjectManagement.Attributes
 {
     public class RequireBoardPermissionAttribute : AuthorizeAttribute
     {

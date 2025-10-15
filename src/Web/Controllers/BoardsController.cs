@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using ProjectManagement.Attributes;
 using ProjectManagement.Authorization;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Board;
@@ -12,6 +13,7 @@ namespace ProjectManagement.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [RateLimit(RequestsPerMinute = 30, RequestsPerHour = 100)] 
     public class BoardsController : ControllerBase
     {
         private readonly IBoardService _boardService;
