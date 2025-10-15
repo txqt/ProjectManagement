@@ -1,36 +1,37 @@
+// ===== FILE: Column.jsx (OPTIMIZED) =====
 import AddCardIcon from '@mui/icons-material/AddCard'
 import CloseIcon from '@mui/icons-material/Close'
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
 import DragHandleIcon from '@mui/icons-material/DragHandle'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { TextField, Box, Button, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography } from '@mui/material'
-import { memo, useState } from 'react'
+import { memo, useState, useCallback } from 'react'
 import { toast } from 'react-toastify'
 import { sortCardsByRank } from '~/utils/sorts'
 import ListCards from './ListCards/ListCards'
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender'
 
-const Column = memo(({ dragHandleProps, ...props }) => {
-  const orderedCards = sortCardsByRank(props.column?.cards)
-  console.log('column render')
+// OPTIMIZATION: Memoize với custom comparison
+const Column = memo(({ dragHandleProps, column, ...props }) => {
+  const orderedCards = sortCardsByRank(column?.cards)
 
   const [anchorEl, setAnchorEl] = useState(null)
   const open = Boolean(anchorEl)
-  const handleClick = (event) => setAnchorEl(event.currentTarget)
-  const handleClose = () => setAnchorEl(null)
+  const handleClick = useCallback((event) => setAnchorEl(event.currentTarget), [])
+  const handleClose = useCallback(() => setAnchorEl(null), [])
 
   const [openNewCardForm, setOpenNewCardForm] = useState(false)
-  const toggleOpenNewCardForm = () => setOpenNewCardForm(!openNewCardForm)
+  const toggleOpenNewCardForm = useCallback(() => setOpenNewCardForm(prev => !prev), [])
   const [newCardTitle, setNewCardTitle] = useState('')
   const [editMode, setEditMode] = useState(false)
 
-  const addNewCard = async () => {
+  const addNewCard = useCallback(async () => {
     if (!newCardTitle) {
       toast.error('Please enter Card Title', { position: 'bottom-right' })
       return
     }
     try {
-      await props.createCard(props.column.id, {
+      await props.createCard(column.id, {
         title: newCardTitle,
         description: 'Description'
       })
@@ -39,7 +40,16 @@ const Column = memo(({ dragHandleProps, ...props }) => {
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [newCardTitle, props.createCard, column.id, toggleOpenNewCardForm])
+
+  const handleUpdateColumn = useCallback(async (newTitle) => {
+    await props.updateColumn(column.id, { title: newTitle })
+    setEditMode(false)
+  }, [props.updateColumn, column.id])
+
+  const handleDeleteColumn = useCallback(() => {
+    props.deleteColumn(column.id)
+  }, [props.deleteColumn, column.id])
 
   return (
     <Box
@@ -70,11 +80,10 @@ const Column = memo(({ dragHandleProps, ...props }) => {
           <TextField
             autoFocus
             variant="outlined"
-            defaultValue={props.column?.title}
+            defaultValue={column?.title}
             onKeyDown={async (e) => {
               if (e.key !== 'Enter') return
-              await props.updateColumn(props.column.id, { title: e.target.value })
-              setEditMode(false)
+              await handleUpdateColumn(e.target.value)
             }}
             onBlur={() => setEditMode(false)}
             slotProps={{
@@ -93,7 +102,7 @@ const Column = memo(({ dragHandleProps, ...props }) => {
             onClick={() => setEditMode(true)}
             sx={{ fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }}
           >
-            {props.column?.title} {props.column?.id}
+            {column?.title}
           </Typography>
         )}
 
@@ -116,7 +125,7 @@ const Column = memo(({ dragHandleProps, ...props }) => {
             onClose={handleClose}
           >
             <ConditionalRender permission="boards.delete">
-              <MenuItem onClick={() => props.deleteColumn(props.column.id)}>
+              <MenuItem onClick={handleDeleteColumn}>
                 <ListItemIcon>
                   <DeleteForeverIcon fontSize="small" />
                 </ListItemIcon>
@@ -129,10 +138,16 @@ const Column = memo(({ dragHandleProps, ...props }) => {
         </Box>
       </Box>
 
-      {/* Cards */}
+      {/* Cards - OPTIMIZATION: Pass stable props */}
       <ListCards
         cards={orderedCards}
-        {...props}
+        columnId={column.id}
+        createCard={props.createCard}
+        updateCard={props.updateCard}
+        deleteCard={props.deleteCard}
+        pendingTempIds={props.pendingTempIds}
+        assignCardMember={props.assignCardMember}
+        unassignCardMember={props.unassignCardMember}
       />
 
       {/* Footer */}
@@ -183,6 +198,35 @@ const Column = memo(({ dragHandleProps, ...props }) => {
       </Box>
     </Box>
   )
-});
+}, (prevProps, nextProps) => {
+  // OPTIMIZATION: Custom comparison để tránh re-render không cần thiết
+  // IMPORTANT: Phải cho phép re-render khi cards thay đổi order hoặc content
+  
+  // So sánh column basic info
+  if (prevProps.column?.id !== nextProps.column?.id) return false
+  if (prevProps.column?.title !== nextProps.column?.title) return false
+  if (prevProps.column?.rank !== nextProps.column?.rank) return false
+  
+  // So sánh cards - CRITICAL: phải check cả order và content
+  const prevCards = prevProps.column?.cards || []
+  const nextCards = nextProps.column?.cards || []
+  
+  if (prevCards.length !== nextCards.length) return false
+  
+  // Check order và content của cards
+  for (let i = 0; i < prevCards.length; i++) {
+    // Check nếu ID thay đổi (order khác) hoặc rank thay đổi
+    if (prevCards[i]?.id !== nextCards[i]?.id) return false
+    if (prevCards[i]?.rank !== nextCards[i]?.rank) return false
+  }
+  
+  // So sánh pendingTempIds
+  if (prevProps.pendingTempIds !== nextProps.pendingTempIds) return false
+  
+  // Nếu tất cả đều giống nhau -> không cần re-render
+  return true
+})
 
-export default Column;
+Column.displayName = 'Column'
+
+export default Column

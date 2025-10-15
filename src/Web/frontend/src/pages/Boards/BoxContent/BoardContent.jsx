@@ -1,7 +1,7 @@
 // ============ UPDATED: BoardContent.jsx ============
 import Box from '@mui/material/Box';
 import ListColumns from './ListColumns/ListColumns';
-import { mapOrder, sortColumnsByRank, sortCardsByRank } from '~/utils/sorts';
+import { sortColumnsByRank } from '~/utils/sorts';
 import { MouseSensor, TouchSensor } from '~/customLibraries/DndKitSensors';
 import {
     DndContext,

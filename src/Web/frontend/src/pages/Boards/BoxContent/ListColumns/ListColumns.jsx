@@ -1,3 +1,4 @@
+// ===== FILE: ListColumns.jsx (OPTIMIZED) =====
 import {
   SortableContext,
   horizontalListSortingStrategy,
@@ -9,21 +10,20 @@ import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import { TextField } from '@mui/material';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback, memo } from 'react';
 import { toast } from 'react-toastify';
-import { memo, useEffect, useRef } from 'react';
 import Column from './Column/Column';
 
 function ListColumns({ ...props }) {
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
-  const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm);
+  const toggleOpenNewColumnForm = useCallback(() => setOpenNewColumnForm(prev => !prev), []);
   const [newColumnTitle, setNewColumnTitle] = useState('');
 
   const columnsId = useMemo(() => {
     return props.columns?.map((c) => c.id);
   }, [props.columns]);
 
-  const addNewColumn = async () => {
+  const addNewColumn = useCallback(async () => {
     if (!newColumnTitle) {
       toast.error('Please enter Column Title');
       return;
@@ -42,7 +42,7 @@ function ListColumns({ ...props }) {
       console.error(err);
       toast.error(err?.message || 'Có lỗi xảy ra');
     }
-  }
+  }, [newColumnTitle, props.createColumn, toggleOpenNewColumnForm])
 
   return (
     <SortableContext
@@ -64,19 +64,20 @@ function ListColumns({ ...props }) {
           const isColumnPending = props.pendingTempIds?.has?.(column.id) ?? false;
 
           return (
-            <div
+            <SortableColumnWrapper
               key={column.id}
-              style={{
-                opacity: isColumnPending ? 0.5 : 1,
-                pointerEvents: isColumnPending ? 'none' : 'auto',
-                transition: 'opacity 0.2s ease'
-              }}
-            >
-              <SortableColumn
-                column={column}
-                {...props}
-              />
-            </div>
+              column={column}
+              isColumnPending={isColumnPending}
+              createColumn={props.createColumn}
+              updateCard={props.updateCard}
+              updateColumn={props.updateColumn}
+              createCard={props.createCard}
+              deleteColumn={props.deleteColumn}
+              deleteCard={props.deleteCard}
+              pendingTempIds={props.pendingTempIds}
+              assignCardMember={props.assignCardMember}
+              unassignCardMember={props.unassignCardMember}
+            />
           );
         })}
 
@@ -178,13 +179,9 @@ function ListColumns({ ...props }) {
   )
 }
 
-const SortableColumn = memo(function SortableColumn({ ...props }) {
-  const columnRef = useRef(props.column);
-
-  useEffect(() => {
-    columnRef.current = props.column;
-  }, [props.column]);
-
+// OPTIMIZATION KEY: Tách sortable logic ra component riêng
+// Chỉ wrapper này re-render khi drag, Column bên trong KHÔNG re-render
+const SortableColumnWrapper = memo(function SortableColumnWrapper(props) {
   const {
     attributes,
     listeners,
@@ -194,14 +191,17 @@ const SortableColumn = memo(function SortableColumn({ ...props }) {
     isDragging
   } = useSortable({
     id: props.column.id,
-    data: { ...columnRef.current, __type: 'COLUMN' }
+    data: { ...props.column, __type: 'COLUMN' }
   })
 
+  // OPTIMIZATION: Chỉ apply transform lên wrapper div
+  // Column component bên trong KHÔNG nhận transform props
   const dndKitColumnStyles = {
     transform: CSS.Translate.toString(transform),
     transition,
     height: '100%',
-    opacity: isDragging ? 0.5 : 1
+    opacity: props.isColumnPending ? 0.5 : (isDragging ? 0.5 : 1),
+    pointerEvents: props.isColumnPending ? 'none' : 'auto'
   }
 
   const dragHandleProps = { ...attributes, ...listeners, 'data-dnd-handle': true };
@@ -210,10 +210,30 @@ const SortableColumn = memo(function SortableColumn({ ...props }) {
     <div ref={setNodeRef} style={dndKitColumnStyles}>
       <Column
         dragHandleProps={dragHandleProps}
-        {...props}
+        column={props.column}
+        createCard={props.createCard}
+        updateCard={props.updateCard}
+        updateColumn={props.updateColumn}
+        deleteColumn={props.deleteColumn}
+        deleteCard={props.deleteCard}
+        pendingTempIds={props.pendingTempIds}
+        assignCardMember={props.assignCardMember}
+        unassignCardMember={props.unassignCardMember}
       />
     </div>
   )
-});
+}, (prevProps, nextProps) => {
+  // OPTIMIZATION: Wrapper chỉ re-render khi drag state hoặc pending thay đổi
+  // Column content comparison được handle bởi Column component
+  
+  if (prevProps.column?.id !== nextProps.column?.id) return false
+  if (prevProps.isColumnPending !== nextProps.isColumnPending) return false
+  
+  // IMPORTANT: PHẢI pass through column changes để Column component nhận được update
+  // Chỉ block re-render nếu column object hoàn toàn giống nhau (reference equality)
+  if (prevProps.column !== nextProps.column) return false
+  
+  return true
+})
 
 export default ListColumns

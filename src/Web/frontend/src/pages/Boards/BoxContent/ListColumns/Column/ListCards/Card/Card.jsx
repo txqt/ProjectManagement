@@ -1,3 +1,4 @@
+// ===== FILE: Card.jsx (OPTIMIZED) =====
 import React, { memo } from 'react';
 import CommentIcon from '@mui/icons-material/Comment';
 import AttachmentIcon from '@mui/icons-material/Attachment';
@@ -9,7 +10,7 @@ import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 
-// NOTE: Card has been simplified to be UI-only. useSortable is moved to a wrapper (SortableItem).
+// OPTIMIZATION: Card chỉ render khi data thực sự thay đổi
 const Card = memo(({ card, onOpen, isDragging, isPending }) => {
   const shouldShowCardAction = () => {
     return (
@@ -44,7 +45,7 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
       {card?.cover && <CardMedia sx={{ height: 140 }} image={card?.cover} />}
 
       <CardContent sx={{ p: 1.5, '&:last-child': { p: 1.5 } }}>
-        <Typography noWrap>{card?.title} {card?.rank}</Typography>
+        <Typography noWrap>{card?.title}</Typography>
       </CardContent>
 
       {shouldShowCardAction() && (
@@ -70,6 +71,29 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
       )}
     </MuiCard>
   );
+}, (prevProps, nextProps) => {
+  // OPTIMIZATION: Custom comparison - chỉ re-render khi cần thiết
+  
+  // So sánh card data
+  if (prevProps.card?.id !== nextProps.card?.id) return false
+  if (prevProps.card?.title !== nextProps.card?.title) return false
+  if (prevProps.card?.cover !== nextProps.card?.cover) return false
+  if (prevProps.card?.rank !== nextProps.card?.rank) return false
+  
+  // So sánh counts (không cần deep compare arrays)
+  if (prevProps.card?.memberIds?.length !== nextProps.card?.memberIds?.length) return false
+  if (prevProps.card?.comments?.length !== nextProps.card?.comments?.length) return false
+  if (prevProps.card?.attachments?.length !== nextProps.card?.attachments?.length) return false
+  
+  // So sánh states
+  if (prevProps.isDragging !== nextProps.isDragging) return false
+  if (prevProps.isPending !== nextProps.isPending) return false
+  
+  // Không so sánh onOpen vì nó stable (useCallback trong parent)
+  
+  return true // Không cần re-render
 });
+
+Card.displayName = 'Card'
 
 export default Card;
