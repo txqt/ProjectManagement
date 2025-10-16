@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { apiService } from '~/services/api';
-import { sortCardsByRank, sortColumnsByRank } from '~/utils/sorts';
 
 export const useBoardStore = create((set, get) => ({
     board: null,

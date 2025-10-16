@@ -16,11 +16,11 @@ function Profiles({ user }) {
     const [anchorEl, setAnchorEl] = React.useState(null);
     const open = Boolean(anchorEl);
     const { logout } = useAuth();
-    
+
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     };
-    
+
     const handleClose = () => {
         setAnchorEl(null);
     };
@@ -29,7 +29,7 @@ function Profiles({ user }) {
         logout();
         handleClose();
     };
-    
+
     return (
         <Box>
             <Tooltip title="Account settings">
@@ -43,6 +43,11 @@ function Profiles({ user }) {
                 >
                     <Avatar sx={{ width: 36, height: 36 }}
                         alt={user?.userName || 'User'}
+                        slotProps={{
+                            img: {
+                                loading: "lazy",
+                            },
+                        }}
                         src={user?.avatar || "https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/avatar_vo_tri_a49436c5de.jpg"}
                     />
                 </IconButton>
@@ -62,7 +67,7 @@ function Profiles({ user }) {
                     <Avatar sx={{width: '28px', height: '28px', mr: 2}}/> Profile
                 </MenuItem> */}
                 <MenuItem onClick={handleClose}>
-                    <Avatar sx={{width: '28px', height: '28px', mr: 2}}/> {user.userName}
+                    <Avatar sx={{ width: '28px', height: '28px', mr: 2 }} /> {user.userName}
                 </MenuItem>
                 <Divider />
                 {/* <MenuItem onClick={handleClose}>

@@ -9,14 +9,23 @@ import { Card as MuiCard } from '@mui/material';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
+import { useBoardStore } from '~/stores/boardStore';
 
 // OPTIMIZATION: Card chỉ render khi data thực sự thay đổi
 const Card = memo(({ card, onOpen, isDragging, isPending }) => {
+  const storeCard = useBoardStore(s => {
+    const cols = s.board?.columns ?? [];
+    if (!card?.id || !card?.columnId) return null;
+    const col = cols.find(c => c.id === card.columnId);
+    return col?.cards?.find(c => c.id === card.id) ?? null;
+  });
+  const currentCard = storeCard ?? card;
+  
   const shouldShowCardAction = () => {
     return (
-      !!card?.memberIds?.length ||
-      !!card?.comments?.length ||
-      !!card?.attachments?.length
+      !!currentCard?.memberIds?.length ||
+      !!currentCard?.comments?.length ||
+      !!currentCard?.attachments?.length
     );
   };
 
@@ -25,7 +34,7 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
     if (isDragging) return;
     // ngăn bubble vì parent có draggable
     e.stopPropagation();
-    if (typeof onOpen === 'function') onOpen(card);
+    if (typeof onOpen === 'function') onOpen(currentCard);
   };
 
   return (
@@ -42,29 +51,33 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
       }}
       onClick={handleClick}
     >
-      {card?.cover && <CardMedia sx={{ height: 140 }} image={card?.cover} />}
+      {currentCard?.cover &&
+        <CardMedia sx={{ height: 140 }}
+          fetchPriority="high"
+          decoding="async"
+          image={currentCard?.cover} />}
 
       <CardContent sx={{ p: 1.5, '&:last-child': { p: 1.5 } }}>
-        <Typography noWrap>{card?.title}</Typography>
+        <Typography noWrap>{currentCard?.title}</Typography>
       </CardContent>
 
       {shouldShowCardAction() && (
         <CardActions sx={{ p: '0 4px 8px 4px' }}>
-          {!!card?.memberIds?.length && (
+          {!!currentCard?.memberIds?.length && (
             <Button size='small' startIcon={<GroupIcon />}>
-              {card?.memberIds?.length}
+              {currentCard?.memberIds?.length}
             </Button>
           )}
 
-          {!!card?.comments?.length && (
+          {!!currentCard?.comments?.length && (
             <Button size='small' startIcon={<CommentIcon />}>
-              {card?.comments?.length}
+              {currentCard?.comments?.length}
             </Button>
           )}
 
-          {!!card?.attachments?.length && (
+          {!!currentCard?.attachments?.length && (
             <Button size='small' startIcon={<AttachmentIcon />}>
-              {card?.attachments?.length}
+              {currentCard?.attachments?.length}
             </Button>
           )}
         </CardActions>
@@ -73,24 +86,24 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
   );
 }, (prevProps, nextProps) => {
   // OPTIMIZATION: Custom comparison - chỉ re-render khi cần thiết
-  
+
   // So sánh card data
   if (prevProps.card?.id !== nextProps.card?.id) return false
   if (prevProps.card?.title !== nextProps.card?.title) return false
   if (prevProps.card?.cover !== nextProps.card?.cover) return false
   if (prevProps.card?.rank !== nextProps.card?.rank) return false
-  
+
   // So sánh counts (không cần deep compare arrays)
   if (prevProps.card?.memberIds?.length !== nextProps.card?.memberIds?.length) return false
   if (prevProps.card?.comments?.length !== nextProps.card?.comments?.length) return false
   if (prevProps.card?.attachments?.length !== nextProps.card?.attachments?.length) return false
-  
+
   // So sánh states
   if (prevProps.isDragging !== nextProps.isDragging) return false
   if (prevProps.isPending !== nextProps.isPending) return false
-  
+
   // Không so sánh onOpen vì nó stable (useCallback trong parent)
-  
+
   return true // Không cần re-render
 });
 

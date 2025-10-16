@@ -52,7 +52,7 @@ const SortableCardWrapper = memo(function SortableCardWrapper({ card, onContextM
   return true
 })
 
-const ListCards = memo(({ cards, columnId, deleteCard, pendingTempIds, ...props }) => {
+const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
   // menu state: position-based (use anchorReference="anchorPosition")
   const [menuPos, setMenuPos] = React.useState(null);
   const [selectedCard, setSelectedCard] = React.useState(null);

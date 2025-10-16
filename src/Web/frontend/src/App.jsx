@@ -5,9 +5,11 @@ import Board from './pages/Boards/_id';
 import LoginForm from '~/components/Auth/LoginForm';
 import RegisterForm from '~/components/Auth/RegisterForm';
 import { Box, CircularProgress } from '@mui/material';
-import BoardListView from './pages/Boards';
-import AppBar from './components/AppBar/AppBar';
 import MyBoardInvite from './pages/Boards/MyBoardInvite/MyBoardInvite';
+import AppBar from './components/AppBar/AppBar';
+
+// Import component HomePage mới
+import HomePage from './pages/HomePage.jsx';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -79,8 +81,7 @@ function AppRoutes() {
         path="/"
         element={
           <ProtectedRoute>
-            <AppBar />
-            <BoardListView />
+            <HomePage />
           </ProtectedRoute>
         }
       />

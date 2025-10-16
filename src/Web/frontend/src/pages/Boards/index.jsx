@@ -218,6 +218,8 @@ export default function BoardListView() {
                     board.cover ||
                     "https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
                   }
+                  fetchPriority="high"
+                  decoding="async"
                   alt={board.title}
                   sx={{
                     height: "100%",
@@ -356,6 +358,8 @@ export default function BoardListView() {
                 }
                 alt="cover"
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                fetchpriority="high"
+                decoding="async"
               />
             </Box>
 

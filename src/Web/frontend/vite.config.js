@@ -12,5 +12,9 @@ export default defineConfig({
     alias: [
       { find: '~', replacement: '/src' }
     ]
+  },
+  preview: {
+    port: 5173,
+    strictPort: true
   }
 })
