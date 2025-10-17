@@ -18,6 +18,9 @@ import InviteDialog from '../../../components/BoardInvites/InviteDialog';
 import BoardBarSkeleton from './BoardBarSkeleton';
 import GroupIcon from '@mui/icons-material/Group';
 import { useAuth } from '~/hooks/useAuth';
+import SettingsIcon from '@mui/icons-material/Settings';
+import BoardSettingsDialog from '~/pages/Boards/BoardSettings/BoardSettingsDialog';
+import { useBoardStore } from '~/stores/boardStore';
 
 const MENU_STYPES = {
   color: 'white',
@@ -33,11 +36,13 @@ function formatMember(count) {
   return count === 1 ? '1 member' : `${count} members`;
 }
 
-export default function BoardBar({ board }) {
+export default function BoardBar() {
+  const board = useBoardStore(state => state.board);
   const { isConnected, users } = useSignalR(board?.id);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [boardMember, setBoardMember] = useState('');
   const { user } = useAuth();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (board?.members?.length > 0) {
@@ -92,6 +97,14 @@ export default function BoardBar({ board }) {
         >
           Invite
         </Button>
+        <Button
+          variant="outlined"
+          startIcon={<SettingsIcon />}
+          sx={{ color: 'white', borderColor: 'white', '&:hover': { borderColor: 'white' } }}
+          onClick={() => setSettingsOpen(true)}
+        >
+          Settings
+        </Button>
 
         <AvatarGroup
           max={4}
@@ -118,6 +131,11 @@ export default function BoardBar({ board }) {
       </Box>
 
       <InviteDialog open={inviteOpen} onClose={() => setInviteOpen(false)} board={board} />
+      <BoardSettingsDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
+
     </Box>
   );
 }

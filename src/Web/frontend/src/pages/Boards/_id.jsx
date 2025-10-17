@@ -31,7 +31,7 @@ function Board() {
             <AppBar />
 
             {/* BoardBar */}
-            <BoardBar board={board} />
+            <BoardBar />
 
             {/* Board Content */}
             <BoardContent

@@ -35,6 +35,17 @@ export const useBoardStore = create((set, get) => ({
         }
     },
 
+    // Update board
+    updateBoard: async (boardId, updateBoardDto) => {
+        set({ loading: true, error: null });
+        try {
+            const updatedBoard = await apiService.updateBoard(boardId, updateBoardDto);
+            set({ board: {...get().board, ...updatedBoard}, loading: false });
+        } catch (err) {
+            set({ error: err.message, loading: false });
+        }
+    },
+
     // Create column
     createColumn: async (createColumnDto) => {
         const boardId = get().boardId;
