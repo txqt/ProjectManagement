@@ -42,11 +42,11 @@ A full-stack project management application inspired by Trello, built with ASP.N
    ```
 
 ## Redis Setup
-If you do not have Redis running, you can use the provided folder `Redis-8.2.2-Windows-x64-msys2-with-Service`:
+If you do not have Redis running, you can use the provided folder `redis`:
 
 1. Open PowerShell and navigate to the folder:
    ```powershell
-   cd .\Redis-8.2.2-Windows-x64-msys2-with-Service
+   cd .\redis
    ```
 2. Start Redis server:
    ```powershell
