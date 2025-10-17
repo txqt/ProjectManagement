@@ -39,6 +39,8 @@ import { toast } from 'react-toastify';
 import { apiService } from '~/services/api';
 import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
 import { useBoardStore } from '~/stores/boardStore';
+import InviteDialog from '~/components/BoardInvites/InviteDialog';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 function TabPanel({ children, value, index, ...other }) {
   return (
@@ -57,29 +59,32 @@ function TabPanel({ children, value, index, ...other }) {
 export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
   const board = useBoardStore(state => state.board);
   const updateBoard = useBoardStore(state => state.updateBoard);
+  const removeBoardMember = useBoardStore(state => state.removeBoardMember);
   const [currentTab, setCurrentTab] = useState(0);
   const [loading, setLoading] = useState(false);
-  
+
   // General settings
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState('private');
   const [cover, setCover] = useState('');
-  
+
   // Members
   const [members, setMembers] = useState([]);
   const [editingMemberId, setEditingMemberId] = useState(null);
   const [newRole, setNewRole] = useState('');
-  
+
   // Advanced settings
   const [allowComments, setAllowComments] = useState(true);
   const [allowAttachments, setAllowAttachments] = useState(true);
-  
+
   // Unsplash menu
   const [unsplashAnchor, setUnsplashAnchor] = useState(null);
-  
+
   // Danger zone
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   useEffect(() => {
     if (board && open) {
@@ -100,19 +105,20 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
   // General Settings Handlers
   const handleSaveGeneral = async () => {
     if (!title.trim()) {
-      toast.error('Board title is required');
+      toast.error('Board  title is required');
       return;
     }
 
     setLoading(true);
     try {
-      const updatedBoard = await updateBoard(board.id, {
-        title,
-        description,
-        type,
-        cover
-      });
-      
+      const updatedBoard = await updateBoard(
+        {
+          title,
+          description,
+          type,
+          cover
+        });
+
       if (onBoardUpdated) onBoardUpdated(updatedBoard);
       toast.success('Board settings updated successfully');
     } catch (error) {
@@ -133,11 +139,11 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
     setLoading(true);
     try {
       // await apiService.updateBoardMemberRole(board.id, memberId, { role });
-      
-      setMembers(prev => 
+
+      setMembers(prev =>
         prev.map(m => m.id === memberId ? { ...m, role } : m)
       );
-      
+
       setEditingMemberId(null);
       toast.success('Member role updated');
     } catch (error) {
@@ -150,10 +156,10 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
 
   const handleRemoveMember = async (memberId) => {
     if (!window.confirm('Remove this member from the board?')) return;
-    
+
     setLoading(true);
     try {
-      // await apiService.removeBoardMember(board.id, memberId);
+      await removeBoardMember(memberId);
       setMembers(prev => prev.filter(m => m.id !== memberId));
       toast.success('Member removed');
     } catch (error) {
@@ -168,11 +174,11 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
   const handleSaveAdvanced = async () => {
     setLoading(true);
     try {
-      const updatedBoard = await updateBoard(board.id, {
+      const updatedBoard = await updateBoard({
         allowComments,
         allowAttachments
       });
-      
+
       if (onBoardUpdated) onBoardUpdated(updatedBoard);
       toast.success('Advanced settings updated');
     } catch (error) {
@@ -211,15 +217,15 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
 
   return (
     <>
-      <Dialog 
-        open={open} 
-        onClose={onClose} 
-        maxWidth="md" 
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
         fullWidth
         PaperProps={{ sx: { minHeight: '600px' } }}
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6">Board Settings</Typography>
+          <Typography variant="h6" component="span">Board Settings</Typography>
           <IconButton onClick={onClose} size="small">
             <CloseIcon />
           </IconButton>
@@ -354,9 +360,19 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
           {/* Members Tab */}
           <TabPanel value={currentTab} index={1}>
             <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Board Members ({members.length})
-              </Typography>
+              <Box sx={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Board Members ({members.length})
+                </Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<PersonAddIcon />}
+                  sx={{ color: 'white', borderColor: 'white', '&:hover': { borderColor: 'white' } }}
+                  onClick={() => setInviteOpen(true)}
+                >
+                  Invite
+                </Button>
+              </Box>
               <List>
                 {members.map((member) => (
                   <ListItem key={member.id} divider>
@@ -435,7 +451,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
           <TabPanel value={currentTab} index={2}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Typography variant="subtitle2">Board Features</Typography>
-              
+
               <FormControlLabel
                 control={
                   <Switch
@@ -482,7 +498,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Typography variant="subtitle2">Delete This Board</Typography>
-              
+
               <Typography variant="body2" color="text.secondary">
                 Type the board title "<strong>{board?.title}</strong>" to confirm deletion:
               </Typography>
@@ -514,6 +530,8 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
           <Button onClick={onClose}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      <InviteDialog open={inviteOpen} onClose={() => setInviteOpen(false)} board={board} />
 
       {/* Unsplash Menu */}
       <UnsplashMenu

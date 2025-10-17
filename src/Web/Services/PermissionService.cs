@@ -110,13 +110,6 @@ namespace ProjectManagement.Services
         public async Task<(bool HasPermission, string Reason)> CheckBoardPermissionAsync(string userId, string boardId,
             string permission)
         {
-            // special-case system-wide board creation
-            if (permission == Permissions.Boards.Create)
-            {
-                var basic = await HasBasicUserPermission(userId);
-                return (basic, basic ? "Has basic user permission" : "Missing basic user permission");
-            }
-
             var board = await _context.Boards
                 .Include(b => b.Members)
                 .FirstOrDefaultAsync(b => b.Id == boardId);
@@ -139,14 +132,6 @@ namespace ProjectManagement.Services
                 return (true, $"Granted through role {membership.Role}");
 
             return (false, $"Role '{membership.Role}' does not have permission '{permission}'");
-        }
-
-        private async Task<bool> HasBasicUserPermission(string userId)
-        {
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null) return false;
-            var roles = await _userManager.GetRolesAsync(user);
-            return roles.Any(r => r == "User" || r == "Admin");
         }
 
         private static bool IsViewOnlyPermission(string permission)

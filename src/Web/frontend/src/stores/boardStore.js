@@ -36,11 +36,67 @@ export const useBoardStore = create((set, get) => ({
     },
 
     // Update board
-    updateBoard: async (boardId, updateBoardDto) => {
+    updateBoard: async (updateBoardDto) => {
         set({ loading: true, error: null });
         try {
-            const updatedBoard = await apiService.updateBoard(boardId, updateBoardDto);
+            const updatedBoard = await apiService.updateBoard(get().boardId, updateBoardDto);
             set({ board: {...get().board, ...updatedBoard}, loading: false });
+        } catch (err) {
+            set({ error: err.message, loading: false });
+        }
+    },
+    // Add board member
+    addBoardMember: async (memberEmail) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
+        set({ loading: true, error: null });
+        try {
+            const newMember = await apiService.addBoardMember(boardId, { email: memberEmail });
+            set(state => ({
+                board: {
+                    ...state.board,
+                    members: [...(state.board.members || []), newMember]
+                },
+                loading: false
+            }));
+        } catch (err) {
+            set({ error: err.message, loading: false });
+        }
+    },
+
+    // Remove board member
+    removeBoardMember: async (memberId) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
+        set({ loading: true, error: null });
+        try {
+            await apiService.removeBoardMember(boardId, memberId);
+            set(state => ({
+                board: {
+                    ...state.board,
+                    members: state.board.members.filter(m => m.id !== memberId)
+                },
+                loading: false
+            }));
+        } catch (err) {
+            set({ error: err.message, loading: false });
+        }
+    },
+
+    // Update member role
+    updateMemberRole: async (memberId, newRole) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
+        set({ loading: true, error: null });
+        try {
+            const updatedMember = await apiService.updateBoardMemberRole(boardId, memberId, { role: newRole });
+            set(state => ({
+                board: {
+                    ...state.board,
+                    members: state.board.members.map(m => m.id === memberId ? updatedMember : m)
+                },
+                loading: false
+            }));
         } catch (err) {
             set({ error: err.message, loading: false });
         }

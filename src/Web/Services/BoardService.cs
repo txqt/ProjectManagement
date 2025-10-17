@@ -69,7 +69,7 @@ namespace ProjectManagement.Services
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(b => b.Id == boardId);
 
-            if (board == null || !HasBoardAccess(board, userId))
+            if (board == null)
                 return null;
 
             return BoardResponseHelper.FormatBoardResponse(board, _mapper);;
@@ -99,7 +99,7 @@ namespace ProjectManagement.Services
         public async Task<BoardDto?> UpdateBoardAsync(string boardId, UpdateBoardDto updateBoardDto, string userId)
         {
             var board = await _context.Boards.FirstOrDefaultAsync(b => b.Id == boardId);
-            if (board == null || !CanEditBoard(board, userId))
+            if (board == null)
                 return null;
 
             _mapper.Map(updateBoardDto, board);
@@ -125,7 +125,7 @@ namespace ProjectManagement.Services
         public async Task<BoardMemberDto?> AddMemberAsync(string boardId, AddBoardMemberDto addMemberDto, string userId)
         {
             var board = await _context.Boards.FirstOrDefaultAsync(b => b.Id == boardId);
-            if (board == null || !CanManageBoardMembers(board, userId))
+            if (board == null)
                 return null;
 
             var user = await _userManager.FindByEmailAsync(addMemberDto.Email);
@@ -160,7 +160,7 @@ namespace ProjectManagement.Services
         public async Task<bool> RemoveMemberAsync(string boardId, string memberId, string userId)
         {
             var board = await _context.Boards.FirstOrDefaultAsync(b => b.Id == boardId);
-            if (board == null || !CanManageBoardMembers(board, userId))
+            if (board == null)
                 return false;
 
             var member = await _context.BoardMembers
@@ -176,7 +176,7 @@ namespace ProjectManagement.Services
         public async Task<bool> UpdateMemberRoleAsync(string boardId, string memberId, string role, string userId)
         {
             var board = await _context.Boards.FirstOrDefaultAsync(b => b.Id == boardId);
-            if (board == null || !CanManageBoardMembers(board, userId))
+            if (board == null)
                 return false;
 
             var member = await _context.BoardMembers
@@ -187,25 +187,6 @@ namespace ProjectManagement.Services
             member.Role = role;
             await _context.SaveChangesAsync();
             return true;
-        }
-
-        private bool HasBoardAccess(Board board, string userId)
-        {
-            return board.OwnerId == userId ||
-                   board.Members.Any(m => m.UserId == userId) ||
-                   board.Type == "public";
-        }
-
-        private bool CanEditBoard(Board board, string userId)
-        {
-            return board.OwnerId == userId ||
-                   board.Members.Any(m => m.UserId == userId && (m.Role == "admin" || m.Role == "owner"));
-        }
-
-        private bool CanManageBoardMembers(Board board, string userId)
-        {
-            return board.OwnerId == userId ||
-                   board.Members.Any(m => m.UserId == userId && (m.Role == "admin" || m.Role == "owner"));
         }
     }
 }

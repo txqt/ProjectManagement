@@ -336,8 +336,14 @@ function BoardContent({ board, ...props }) {
         >
             <Box
                 sx={{
-                    bgcolor: (theme) =>
-                        theme.palette.mode === 'dark' ? '#34495e' : '#1976d2',
+                    backgroundImage: board?.cover
+                        ? `url(${board.cover})`
+                        : 'none',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    bgcolor: !board?.cover
+                        ? (theme) => theme.palette.mode === 'dark' ? '#34495e' : '#1976d2'
+                        : 'transparent',
                     width: '100%',
                     height: (theme) => theme.custom.boardContentHeight,
                     p: '10px 0'
