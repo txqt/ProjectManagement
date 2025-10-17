@@ -1,31 +1,31 @@
-import React, { useEffect, useMemo, useState } from 'react';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
-import DeleteIcon from '@mui/icons-material/Delete';
 import AttachmentIcon from '@mui/icons-material/Attachment';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import {
+  Avatar,
   Box,
   Button,
+  CardMedia,
   Dialog,
   DialogContent,
   IconButton,
+  Menu,
+  MenuItem,
   Paper,
   Stack,
-  Typography,
-  Avatar,
-  CardMedia,
-  Menu,
-  MenuItem
+  TextField,
+  Typography
 } from "@mui/material";
+import { useEffect, useMemo, useState } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import { toast } from 'react-toastify';
+import { shallow } from 'zustand/shallow';
+import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
 import { apiService } from '~/services/api';
 import { useBoardStore } from '~/stores/boardStore';
-import { shallow } from 'zustand/shallow';
-import { toast } from 'react-toastify';
-import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu'; // <-- tích hợp UnsplashMenu
 
 const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
   // store functions
@@ -42,6 +42,14 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
     return col?.cards?.find(c => c.id === card.id) ?? null;
   });
   const currentCard = storeCard ?? card;
+
+  const [editTitleMode, setEditTitleMode] = useState(false);
+  const [tempTitle, setTempTitle] = useState(currentCard?.title ?? '');
+
+  useEffect(() => {
+    setTempTitle(currentCard?.title ?? '');
+    setEditTitleMode(false);
+  }, [currentCard?.id, currentCard?.title]);
 
   const [editing, setEditing] = useState(false);
   const [description, setDescription] = useState(currentCard?.description ?? '');
@@ -72,6 +80,20 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
       ['clean']
     ]
   }), []);
+
+  const handleSaveTitle = async () => {
+    if (!tempTitle.trim()) return toast.error('Tiêu đề không được để trống');
+
+    try {
+      await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, title: tempTitle });
+      setEditTitleMode(false);
+      toast.success('Đã cập nhật tiêu đề');
+    } catch (err) {
+      console.error(err);
+      toast.error('Không thể cập nhật tiêu đề');
+    }
+  };
+
 
   const handleSaveDescription = async () => {
     if (!currentCard) return;
@@ -296,7 +318,52 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { height: '75vh' } }} data-no-dnd='true'>
       {/* header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1 }}>
-        <Typography sx={{ p: 1 }} variant="h6">{currentCard?.title ?? 'Card'}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+          {editTitleMode ? (
+            <TextField
+              sx={{
+                p: 1,
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                flex: 1
+              }}
+              autoFocus
+              fullWidth
+              size="medium"
+              value={tempTitle}
+              onChange={(e) => setTempTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveTitle();
+                if (e.key === 'Escape') setEditTitleMode(false);
+              }}
+              onBlur={() => setEditTitleMode(false)}
+              variant="standard"
+              slotProps={{
+                input: { sx: { fontWeight: 'bold', padding: 0 } }
+              }}
+            />
+          ) : (
+            <Typography
+              sx={{
+                p: 1,
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                flex: 1
+              }}
+              variant='h6'
+              onClick={() => setEditTitleMode(true)}
+              title="Click để chỉnh sửa tiêu đề"
+            >
+              {currentCard?.title ?? 'Card'}
+            </Typography>
+          )}
+        </Box>
 
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           {/* Add cover button */}

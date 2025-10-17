@@ -2,9 +2,9 @@
 
 namespace ProjectManagement.Attributes
 {
-    public class RequireSystemPermissionAttribute : AuthorizeAttribute
+    public class RequirePermission : AuthorizeAttribute
     {
-        public RequireSystemPermissionAttribute(string permission)
+        public RequirePermission(string permission)
         {
             Policy = $"Permission.{permission}";
         }

@@ -11,13 +11,14 @@ import React, { memo, useCallback } from 'react';
 import Card from './Card/Card';
 import CardDetailDialog from './Card/CardDetailDialog';
 import ListCardsSkeleton from './ListCardsSkeleton';
+import ConditionalRender from '~/components/ConditionalRender/ConditionalRender';
 
 // OPTIMIZATION: Tách sortable wrapper ra component riêng
 const SortableCardWrapper = memo(function SortableCardWrapper({ card, onContextMenu, onOpen, isPending }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ 
-      id: card.id, 
-      data: { ...card } 
+    useSortable({
+      id: card.id,
+      data: { ...card }
     });
 
   // OPTIMIZATION: Chỉ wrapper nhận transform, Card bên trong stable
@@ -41,14 +42,14 @@ const SortableCardWrapper = memo(function SortableCardWrapper({ card, onContextM
   );
 }, (prevProps, nextProps) => {
   // OPTIMIZATION: Wrapper chỉ re-render khi card hoặc pending thay đổi
-  
+
   if (prevProps.card?.id !== nextProps.card?.id) return false
   if (prevProps.card?.rank !== nextProps.card?.rank) return false
   if (prevProps.isPending !== nextProps.isPending) return false
-  
+
   // IMPORTANT: Phải pass through card changes
   if (prevProps.card !== nextProps.card) return false
-  
+
   return true
 })
 
@@ -150,43 +151,47 @@ const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
         anchorPosition={menuPos ? { top: menuPos.mouseY, left: menuPos.mouseX } : undefined}
         PaperProps={{ onContextMenu: (e) => e.preventDefault() }}
       >
-        <MenuItem onClick={handleDelete}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Delete</ListItemText>
-        </MenuItem>
+        <ConditionalRender permission="cards.delete">
+          <MenuItem onClick={handleDelete}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Delete</ListItemText>
+          </MenuItem>
+        </ConditionalRender>
       </Menu>
 
-      <CardDetailDialog
-        open={dialogOpen}
-        onClose={handleCloseDialog}
-        card={dialogCard}
-      />
+      <ConditionalRender permission="cards.edit">
+        <CardDetailDialog
+          open={dialogOpen}
+          onClose={handleCloseDialog}
+          card={dialogCard}
+        />
+      </ConditionalRender>
     </>
   );
 }, (prevProps, nextProps) => {
   // OPTIMIZATION: Custom comparison cho ListCards
   // IMPORTANT: Phải cho phép re-render khi cards reorder hoặc move
-  
+
   const prevCards = prevProps.cards || []
   const nextCards = nextProps.cards || []
-  
+
   // Nếu length khác → chắc chắn re-render
   if (prevCards.length !== nextCards.length) return false
-  
+
   // So sánh order - chỉ cần check id và rank
   for (let i = 0; i < prevCards.length; i++) {
     if (prevCards[i]?.id !== nextCards[i]?.id) return false
     if (prevCards[i]?.rank !== nextCards[i]?.rank) return false
   }
-  
+
   // So sánh pendingTempIds
   if (prevProps.pendingTempIds !== nextProps.pendingTempIds) return false
-  
+
   // Nếu columnId thay đổi (edge case)
   if (prevProps.columnId !== nextProps.columnId) return false
-  
+
   return true
 });
 

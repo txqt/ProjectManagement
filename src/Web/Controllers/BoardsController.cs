@@ -26,7 +26,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpGet]
-        //[RequireBoardPermission(Permissions.Boards.View)]
+        //[RequirePermission(Permissions.Boards.View)]
         public async Task<ActionResult<IEnumerable<BoardDto>>> GetUserBoards()
         {
             var userId = _userManager.GetUserId(User);
@@ -38,7 +38,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpGet("{boardId}")]
-        [RequireBoardPermission(Permissions.Boards.View)]
+        [RequirePermission(Permissions.Boards.View)]
         public async Task<ActionResult<BoardDto>> GetBoard(string boardId)
         {
             var userId = _userManager.GetUserId(User);
@@ -53,7 +53,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost]
-        //[RequireBoardPermission(Permissions.Boards.Create)]
+        //[RequirePermission(Permissions.Boards.Create)]
         public async Task<ActionResult<BoardDto>> CreateBoard([FromBody] CreateBoardDto createBoardDto)
         {
             var userId = _userManager.GetUserId(User);
@@ -65,7 +65,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{boardId}")]
-        [RequireBoardPermission(Permissions.Boards.Edit)]
+        [RequirePermission(Permissions.Boards.Edit)]
         public async Task<ActionResult<BoardDto>> UpdateBoard(string boardId, [FromBody] UpdateBoardDto updateBoardDto)
         {
             var userId = _userManager.GetUserId(User);
@@ -80,7 +80,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{boardId}")]
-        [RequireBoardPermission(Permissions.Boards.Delete)]
+        [RequirePermission(Permissions.Boards.Delete)]
         public async Task<ActionResult> DeleteBoard(string boardId)
         {
             var userId = _userManager.GetUserId(User);
@@ -95,7 +95,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{boardId}/members")]
-        [RequireBoardPermission(Permissions.Boards.ManageMembers)]
+        [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult<BoardMemberDto>> AddMember(string boardId, [FromBody] AddBoardMemberDto addMemberDto)
         {
             var userId = _userManager.GetUserId(User);
@@ -110,7 +110,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{boardId}/members/{memberId}")]
-        [RequireBoardPermission(Permissions.Boards.ManageMembers)]
+        [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult> RemoveMember(string boardId, string memberId)
         {
             var userId = _userManager.GetUserId(User);
@@ -125,7 +125,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{boardId}/members/{memberId}/role")]
-        [RequireBoardPermission(Permissions.Boards.ManageMembers)]
+        [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult> UpdateMemberRole(string boardId, string memberId, [FromBody] string role)
         {
             var userId = _userManager.GetUserId(User);

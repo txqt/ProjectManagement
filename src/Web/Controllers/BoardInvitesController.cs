@@ -28,7 +28,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost]
-        [RequireBoardPermission(Permissions.Boards.ManageMembers)]
+        [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult<BoardInviteDto>> CreateInvite(
             string boardId,
             [FromBody] CreateBoardInviteDto createInviteDto)
@@ -62,7 +62,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpGet]
-        [RequireBoardPermission(Permissions.Boards.ManageMembers)]
+        [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult<IEnumerable<BoardInviteDto>>> GetBoardInvites(string boardId,
             [FromQuery] string? status = "pending")
         {
@@ -86,7 +86,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{inviteId}/resend")]
-        [RequireBoardPermission(Permissions.Boards.ManageMembers)]
+        [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult> ResendInvite(string boardId, string inviteId)
         {
             var userId = _userManager.GetUserId(User);
@@ -101,7 +101,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{inviteId}")]
-        [RequireBoardPermission(Permissions.Boards.ManageMembers)]
+        [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult> CancelInvite(string boardId, string inviteId)
         {
             var userId = _userManager.GetUserId(User);

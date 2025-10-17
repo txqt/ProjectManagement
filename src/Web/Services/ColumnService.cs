@@ -15,7 +15,8 @@ namespace ProjectManagement.Services
         private readonly IMapper _mapper;
         private readonly IBoardNotificationService _boardNotificationService;
 
-        public ColumnService(ApplicationDbContext context, IMapper mapper, IBoardNotificationService boardNotificationService)
+        public ColumnService(ApplicationDbContext context, IMapper mapper,
+            IBoardNotificationService boardNotificationService)
         {
             _context = context;
             _mapper = mapper;
@@ -27,13 +28,13 @@ namespace ProjectManagement.Services
             var column = await _context.Columns
                 .Include(c => c.Board)
                 .Include(c => c.Cards)
-                    .ThenInclude(card => card.Members)
-                        .ThenInclude(cm => cm.User)
+                .ThenInclude(card => card.Members)
+                .ThenInclude(cm => cm.User)
                 .Include(c => c.Cards)
-                    .ThenInclude(card => card.Comments)
-                        .ThenInclude(comment => comment.User)
+                .ThenInclude(card => card.Comments)
+                .ThenInclude(comment => comment.User)
                 .Include(c => c.Cards)
-                    .ThenInclude(card => card.Attachments)
+                .ThenInclude(card => card.Attachments)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(c => c.Id == columnId);
 
@@ -79,9 +80,9 @@ namespace ProjectManagement.Services
             {
                 return null;
             }
-            
+
             await _boardNotificationService.BroadcastColumnCreated(boardId, createdColumn, userId);
-            
+
             return createdColumn!;
         }
 
@@ -89,7 +90,7 @@ namespace ProjectManagement.Services
         {
             var column = await _context.Columns
                 .Include(c => c.Board)
-                    .ThenInclude(b => b.Members)
+                .ThenInclude(b => b.Members)
                 .FirstOrDefaultAsync(c => c.Id == columnId);
 
             if (column == null)
@@ -105,9 +106,9 @@ namespace ProjectManagement.Services
             {
                 return null;
             }
-            
+
             await _boardNotificationService.BroadcastColumnUpdated(updatedColumn.BoardId, updatedColumn, userId);
-            
+
             return updatedColumn!;
         }
 
@@ -115,7 +116,7 @@ namespace ProjectManagement.Services
         {
             var column = await _context.Columns
                 .Include(c => c.Board)
-                    .ThenInclude(b => b.Members)
+                .ThenInclude(b => b.Members)
                 .FirstOrDefaultAsync(c => c.Id == columnId);
 
             if (column == null)
@@ -141,7 +142,8 @@ namespace ProjectManagement.Services
                 return false;
 
             var columns = await _context.Columns
-                .Include(c=>c.Cards)
+                .Include(c => c.Cards)
+                .ThenInclude(c => c.Members)
                 .Where(c => columnIds.Contains(c.Id))
                 .ToListAsync();
 
@@ -162,12 +164,14 @@ namespace ProjectManagement.Services
                     var prevRank = LexoRank.Parse(prevColumn.Rank);
                     column.Rank = prevRank.GenNext().ToString();
                 }
+
                 column.LastModified = DateTime.UtcNow;
             }
 
             await _context.SaveChangesAsync();
-            
-            await _boardNotificationService.BroadcastColumnsReordered(boardId, columnIds, _mapper.Map<List<ColumnDto>>(columns), userId);
+
+            await _boardNotificationService.BroadcastColumnsReordered(boardId, columnIds,
+                _mapper.Map<List<ColumnDto>>(columns), userId);
             return true;
         }
     }

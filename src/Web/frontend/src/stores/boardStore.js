@@ -458,7 +458,6 @@ export const useBoardStore = create((set, get) => ({
     },
 
     handleColumnsReordered: (data) => {
-        console.log('🟢 ColumnsReordered received:', data);
         if (Array.isArray(data.orderedColumns)) {
             set(state => ({
                 board: {
@@ -517,7 +516,6 @@ export const useBoardStore = create((set, get) => ({
     },
 
     handleCardsReordered: (data) => {
-        console.log('🔵 CardsReordered received:', data);
         if (data.columnId && Array.isArray(data.orderedCards)) {
             set(state => ({
                 board: {
@@ -527,7 +525,6 @@ export const useBoardStore = create((set, get) => ({
                     )
                 }
             }));
-            console.log('Cards updated from server event.');
         }
 
         // if (data.columnId && Array.isArray(data.cardIds)) {

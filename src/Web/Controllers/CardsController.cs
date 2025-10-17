@@ -27,7 +27,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpGet("{cardId}")]
-        [RequireBoardPermission(Permissions.Cards.View)]
+        [RequirePermission(Permissions.Cards.View)]
         public async Task<ActionResult<CardDto>> GetCard(string cardId)
         {
             var userId = _userManager.GetUserId(User);
@@ -42,7 +42,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost]
-        [RequireBoardPermission(Permissions.Cards.Create)]
+        [RequirePermission(Permissions.Cards.Create)]
         public async Task<ActionResult<CardDto>> CreateCard(string columnId, [FromBody] CreateCardDto createCardDto)
         {
             var userId = _userManager.GetUserId(User);
@@ -58,7 +58,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{cardId}")]
-        [RequireBoardPermission(Permissions.Cards.Edit)]
+        [RequirePermission(Permissions.Cards.Edit)]
         public async Task<ActionResult<CardDto>> UpdateCard(string cardId, [FromBody] UpdateCardDto updateCardDto)
         {
             var userId = _userManager.GetUserId(User);
@@ -73,7 +73,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{cardId}")]
-        [RequireBoardPermission(Permissions.Cards.Delete)]
+        [RequirePermission(Permissions.Cards.Delete)]
         public async Task<ActionResult> DeleteCard(string cardId)
         {
             var userId = _userManager.GetUserId(User);
@@ -88,7 +88,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{cardId}/move")]
-        [RequireBoardPermission(Permissions.Cards.Move)]
+        [RequirePermission(Permissions.Cards.Move)]
         public async Task<ActionResult> MoveCard(string cardId, [FromBody] MoveCardDto moveCardDto)
         {
             var userId = _userManager.GetUserId(User);
@@ -103,7 +103,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("reorder")]
-        [RequireBoardPermission(Permissions.Cards.Move)]
+        [RequirePermission(Permissions.Cards.Move)]
         public async Task<ActionResult> ReorderCards(string boardId, string columnId, [FromBody] List<string> cardIds)
         {
             var userId = _userManager.GetUserId(User);
@@ -118,7 +118,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{cardId}/members")]
-        [RequireBoardPermission(Permissions.Cards.Assign)]
+        [RequirePermission(Permissions.Cards.Assign)]
         public async Task<ActionResult> AssignMember(string cardId, [FromBody] string memberEmail)
         {
             var userId = _userManager.GetUserId(User);
@@ -133,7 +133,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{cardId}/members/{memberId}")]
-        [RequireBoardPermission(Permissions.Cards.Assign)]
+        [RequirePermission(Permissions.Cards.Assign)]
         public async Task<ActionResult> UnassignMember(string cardId, string memberId)
         {
             var userId = _userManager.GetUserId(User);

@@ -10,9 +10,11 @@ import { toast } from 'react-toastify'
 import { sortCardsByRank } from '~/utils/sorts'
 import ListCards from './ListCards/ListCards'
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender'
+import { usePermissionAttribute } from '~/hooks/usePermissionAttribute';
 
 // OPTIMIZATION: Memoize với custom comparison
 const Column = memo(({ dragHandleProps, column, ...props }) => {
+  const dndAttr = usePermissionAttribute('columns.reorder', column.boardId);
   const orderedCards = sortCardsByRank(column?.cards)
 
   const [anchorEl, setAnchorEl] = useState(null)
@@ -53,6 +55,7 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
 
   return (
     <Box
+      {...dndAttr}
       sx={{
         minWidth: '300px',
         maxWidth: '300px',
@@ -201,28 +204,28 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
 }, (prevProps, nextProps) => {
   // OPTIMIZATION: Custom comparison để tránh re-render không cần thiết
   // IMPORTANT: Phải cho phép re-render khi cards thay đổi order hoặc content
-  
+
   // So sánh column basic info
   if (prevProps.column?.id !== nextProps.column?.id) return false
   if (prevProps.column?.title !== nextProps.column?.title) return false
   if (prevProps.column?.rank !== nextProps.column?.rank) return false
-  
+
   // So sánh cards - CRITICAL: phải check cả order và content
   const prevCards = prevProps.column?.cards || []
   const nextCards = nextProps.column?.cards || []
-  
+
   if (prevCards.length !== nextCards.length) return false
-  
+
   // Check order và content của cards
   for (let i = 0; i < prevCards.length; i++) {
     // Check nếu ID thay đổi (order khác) hoặc rank thay đổi
     if (prevCards[i]?.id !== nextCards[i]?.id) return false
     if (prevCards[i]?.rank !== nextCards[i]?.rank) return false
   }
-  
+
   // So sánh pendingTempIds
   if (prevProps.pendingTempIds !== nextProps.pendingTempIds) return false
-  
+
   // Nếu tất cả đều giống nhau -> không cần re-render
   return true
 })

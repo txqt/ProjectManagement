@@ -56,13 +56,16 @@ class ApiService {
         error.body = body;
 
         if (response.status === 401 && !options.skipAuthHandling) {
-          // this.setAuthToken(null);
+          this.setAuthToken(null);
           toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-          // window.location.href = '/login';
         }
-        else if (response.status === 429) { 
-          toast.error('Quá nhiều yêu cầu. Vui lòng thử lại sau.');
+        else if( response.status >= 400 && response.status < 500) {
+          toast.error(body?.message || 'Yêu cầu không hợp lệ.');
         }
+        else if (response.status >= 500) {
+          toast.error('Lỗi máy chủ. Vui lòng thử lại sau.');
+        }
+
 
         throw error;
       }

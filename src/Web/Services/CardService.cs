@@ -220,7 +220,7 @@ namespace ProjectManagement.Services
 
             return dto;
         }
-        
+
         public async Task<bool> ReorderCardsAsync(string boardId, string columnId, List<string> cardIds, string userId)
         {
             var board = await _context.Boards
@@ -231,6 +231,7 @@ namespace ProjectManagement.Services
 
             var column = await _context.Columns
                 .Include(c => c.Cards)
+                .ThenInclude(c => c.Members)
                 .FirstOrDefaultAsync(c => c.Id == columnId && c.BoardId == boardId);
 
             if (column == null) return false;

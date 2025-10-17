@@ -74,8 +74,12 @@ namespace ProjectManagement.Mappings
             CreateMap<UpdateCardDto, Card>()
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
-            CreateMap<CardMember, CardMemberDto>();
-
+            CreateMap<CardMember, CardMemberDto>()
+                .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User));
+            
+            CreateMap<CardMemberDto, CardMember>()
+                .ForMember(dest => dest.User, opt => opt.Ignore());
+            
             // ==========================
             // Comment mappings
             // ==========================

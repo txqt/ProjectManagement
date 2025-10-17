@@ -10,9 +10,11 @@ import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { useBoardStore } from '~/stores/boardStore';
+import { usePermissionAttribute } from '~/hooks/usePermissionAttribute';
 
 // OPTIMIZATION: Card chỉ render khi data thực sự thay đổi
 const Card = memo(({ card, onOpen, isDragging, isPending }) => {
+  const dndAttr = usePermissionAttribute('cards.move', card.boardId);
   const storeCard = useBoardStore(s => {
     const cols = s.board?.columns ?? [];
     if (!card?.id || !card?.columnId) return null;
@@ -23,7 +25,7 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
   
   const shouldShowCardAction = () => {
     return (
-      !!currentCard?.memberIds?.length ||
+      !!currentCard?.members?.length ||
       !!currentCard?.comments?.length ||
       !!currentCard?.attachments?.length
     );
@@ -39,6 +41,7 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
 
   return (
     <MuiCard
+      {...dndAttr}
       sx={{
         cursor: 'pointer',
         boxShadow: '0 1px 1px rgba(0,0,0,0.2)',
@@ -63,9 +66,9 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
 
       {shouldShowCardAction() && (
         <CardActions sx={{ p: '0 4px 8px 4px' }}>
-          {!!currentCard?.memberIds?.length && (
+          {!!currentCard?.members.length && (
             <Button size='small' startIcon={<GroupIcon />}>
-              {currentCard?.memberIds?.length}
+              {currentCard?.members.length}
             </Button>
           )}
 
@@ -94,7 +97,7 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
   if (prevProps.card?.rank !== nextProps.card?.rank) return false
 
   // So sánh counts (không cần deep compare arrays)
-  if (prevProps.card?.memberIds?.length !== nextProps.card?.memberIds?.length) return false
+  if (prevProps.card?.members?.length !== nextProps.card?.members?.length) return false
   if (prevProps.card?.comments?.length !== nextProps.card?.comments?.length) return false
   if (prevProps.card?.attachments?.length !== nextProps.card?.attachments?.length) return false
 
