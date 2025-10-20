@@ -172,7 +172,7 @@ namespace ProjectManagement.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
             }
             catch (InvalidOperationException ex)
             {

@@ -1,4 +1,6 @@
-﻿namespace ProjectManagement.Models.Domain.Common
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ProjectManagement.Models.Domain.Common
 {
     public abstract class BaseAuditableEntity : BaseEntity
     {
@@ -6,6 +8,7 @@
 
         public string? CreatedBy { get; set; }
 
+        [ConcurrencyCheck]
         public DateTime LastModified { get; set; }
 
         public string? LastModifiedBy { get; set; }

@@ -223,10 +223,7 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
 
     if (typeof storeAssign === 'function') {
       try {
-        const success = await storeAssign(currentCard.columnId, currentCard.id, email);
-        if (!success) {
-          // store should show toast if needed
-        }
+        await storeAssign(currentCard.columnId, currentCard.id, email);
       } catch (err) {
         console.error('assign error:', err);
         toast.error('Gán thành viên thất bại');

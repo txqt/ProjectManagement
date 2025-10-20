@@ -63,6 +63,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
   const removeBoardMember = useBoardStore(state => state.removeBoardMember);
   const [currentTab, setCurrentTab] = useState(0);
   const [loading, setLoading] = useState(false);
+  const boardMembers = useBoardStore(state => state.board?.members ?? []);
 
   // General settings
   const [title, setTitle] = useState('');
@@ -71,7 +72,6 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
   const [cover, setCover] = useState('');
 
   // Members
-  const [members, setMembers] = useState([]);
   const [editingMemberId, setEditingMemberId] = useState(null);
   const [newRole, setNewRole] = useState('');
 
@@ -93,7 +93,6 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
       setDescription(board.description || '');
       setType(board.type || 'private');
       setCover(board.cover || '');
-      setMembers(board.members || []);
       setAllowComments(board.allowComments ?? true);
       setAllowAttachments(board.allowAttachments ?? true);
     }
@@ -122,9 +121,6 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
 
       if (onBoardUpdated) onBoardUpdated(updatedBoard);
       toast.success('Board settings updated successfully');
-    } catch (error) {
-      console.error('Failed to update board:', error);
-      toast.error('Failed to update board settings');
     } finally {
       setLoading(false);
     }
@@ -141,16 +137,10 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
     try {
       await updateBoardMemberRole(memberId, role);
 
-      setMembers(prev =>
-        prev.map(m => m.id === memberId ? { ...m, role } : m)
-      );
-
       setEditingMemberId(null);
       toast.success('Member role updated');
-    } catch (error) {
-      console.error('Failed to update member role:', error);
-      toast.error('Failed to update member role');
-    } finally {
+    }
+    finally {
       setLoading(false);
     }
   };
@@ -161,7 +151,6 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
     setLoading(true);
     try {
       await removeBoardMember(memberId);
-      setMembers(prev => prev.filter(m => m.id !== memberId));
       toast.success('Member removed');
     } catch (error) {
       console.error('Failed to remove member:', error);
@@ -182,9 +171,6 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
 
       if (onBoardUpdated) onBoardUpdated(updatedBoard);
       toast.success('Advanced settings updated');
-    } catch (error) {
-      console.error('Failed to update advanced settings:', error);
-      toast.error('Failed to update settings');
     } finally {
       setLoading(false);
     }
@@ -208,9 +194,6 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
       onClose();
       // Redirect to home page
       window.location.href = '/';
-    } catch (error) {
-      console.error('Failed to delete board:', error);
-      toast.error('Failed to delete board');
     } finally {
       setLoading(false);
     }
@@ -363,7 +346,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
             <Box>
               <Box sx={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Typography variant="subtitle2" gutterBottom>
-                  Board Members ({members.length})
+                  Board Members ({boardMembers.length})
                 </Typography>
                 <Button
                   variant="outlined"
@@ -375,7 +358,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
                 </Button>
               </Box>
               <List>
-                {members.map((member) => (
+                {boardMembers.map((member) => (
                   <ListItem key={member.id} divider>
                     <ListItemAvatar>
                       <Avatar src={member.user?.avatar}>

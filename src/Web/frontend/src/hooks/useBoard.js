@@ -109,9 +109,9 @@ export const useBoard = (boardId) => {
     signalRService.onCardUnassigned?.(handleCardUnassigned);
 
     // User presence events
-    signalRService.onUserJoined?.((data) => {
+    // signalRService.onUserJoined?.((data) => {
       
-    });
+    // });
 
     signalRService.onUserLeft?.((data) => {
       toast.info(`${data.user.userName} left the board`, {

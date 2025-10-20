@@ -1,4 +1,3 @@
-import { toast } from 'react-toastify';
 import { API_ROOT } from '~/utils/constants';
 
 class ApiService {
@@ -57,13 +56,6 @@ class ApiService {
 
         if (response.status === 401 && !options.skipAuthHandling) {
           this.setAuthToken(null);
-          toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-        }
-        else if( response.status >= 400 && response.status < 500) {
-          toast.error(body?.message || 'Yêu cầu không hợp lệ.');
-        }
-        else if (response.status >= 500) {
-          toast.error('Lỗi máy chủ. Vui lòng thử lại sau.');
         }
 
 

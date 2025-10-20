@@ -31,7 +31,7 @@ export const useBoardStore = create((set, get) => ({
             }
             set({ board, loading: false });
         } catch (err) {
-            set({ error: err.message, loading: false });
+            set({ error: err.message || err, loading: false });
         }
     },
 
@@ -40,9 +40,10 @@ export const useBoardStore = create((set, get) => ({
         set({ loading: true, error: null });
         try {
             const updatedBoard = await apiService.updateBoard(get().boardId, updateBoardDto);
-            set({ board: {...get().board, ...updatedBoard}, loading: false });
+            set({ board: { ...get().board, ...updatedBoard }, loading: false });
         } catch (err) {
-            set({ error: err.message, loading: false });
+            set({ error: err.message || err, loading: false });
+            throw err;
         }
     },
     // Add board member
@@ -60,7 +61,8 @@ export const useBoardStore = create((set, get) => ({
                 loading: false
             }));
         } catch (err) {
-            set({ error: err.message, loading: false });
+            set({ error: err.message || err, loading: false });
+            throw err;
         }
     },
 
@@ -79,7 +81,8 @@ export const useBoardStore = create((set, get) => ({
                 loading: false
             }));
         } catch (err) {
-            set({ error: err.message, loading: false });
+            set({ error: err.message || err, loading: false });
+            throw err;
         }
     },
 
@@ -88,18 +91,17 @@ export const useBoardStore = create((set, get) => ({
         const boardId = get().boardId;
         if (!boardId) throw new Error('No board selected');
         set({ loading: true, error: null });
-        try {
-            await apiService.updateBoardMemberRole(boardId, memberId, {role: newRole});
-            set(state => ({
-                board: {
-                    ...state.board,
-                    members: state.board.members.map(m => m.id === memberId ? { ...m, role: newRole } : m)
-                },
-                loading: false
-            }));
-        } catch (err) {
-            set({ error: err.message, loading: false });
-        }
+
+        await apiService.updateBoardMemberRole(boardId, memberId, { role: newRole });
+        set(state => ({
+            board: {
+                ...state.board,
+                members: state.board.members.map(m =>
+                    m.id === memberId ? { ...m, role: newRole } : m
+                ),
+            },
+            loading: false,
+        }));
     },
 
     // Create column
