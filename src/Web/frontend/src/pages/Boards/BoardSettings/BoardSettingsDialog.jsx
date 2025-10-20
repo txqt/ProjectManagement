@@ -59,6 +59,7 @@ function TabPanel({ children, value, index, ...other }) {
 export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
   const board = useBoardStore(state => state.board);
   const updateBoard = useBoardStore(state => state.updateBoard);
+  const updateBoardMemberRole = useBoardStore(state => state.updateBoardMemberRole);
   const removeBoardMember = useBoardStore(state => state.removeBoardMember);
   const [currentTab, setCurrentTab] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -138,7 +139,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
   const handleUpdateMemberRole = async (memberId, role) => {
     setLoading(true);
     try {
-      // await apiService.updateBoardMemberRole(board.id, memberId, { role });
+      await updateBoardMemberRole(memberId, role);
 
       setMembers(prev =>
         prev.map(m => m.id === memberId ? { ...m, role } : m)

@@ -22,4 +22,8 @@
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Compile Remove="Services\RoleHierarchyService.cs" />
+	</ItemGroup>
+
 </Project>

@@ -98,45 +98,120 @@ namespace ProjectManagement.Controllers
         [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult<BoardMemberDto>> AddMember(string boardId, [FromBody] AddBoardMemberDto addMemberDto)
         {
-            var userId = _userManager.GetUserId(User);
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
+            try
+            {
+                var userId = _userManager.GetUserId(User);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
 
-            var member = await _boardService.AddMemberAsync(boardId, addMemberDto, userId);
-            if (member == null)
-                return BadRequest("User not found or already a member");
-
-            return Ok(member);
+                var member = await _boardService.AddMemberAsync(boardId, addMemberDto, userId);
+                return Ok(member);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { error = ex.Message });
+            }
         }
 
         [HttpDelete("{boardId}/members/{memberId}")]
         [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult> RemoveMember(string boardId, string memberId)
         {
-            var userId = _userManager.GetUserId(User);
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
+            try
+            {
+                var userId = _userManager.GetUserId(User);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
 
-            var success = await _boardService.RemoveMemberAsync(boardId, memberId, userId);
-            if (!success)
-                return NotFound();
-
-            return NoContent();
+                await _boardService.RemoveMemberAsync(boardId, memberId, userId);
+                return NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
         }
 
         [HttpPut("{boardId}/members/{memberId}/role")]
         [RequirePermission(Permissions.Boards.ManageMembers)]
-        public async Task<ActionResult> UpdateMemberRole(string boardId, string memberId, [FromBody] string role)
+        public async Task<ActionResult> UpdateMemberRole(
+            string boardId, 
+            string memberId, 
+            [FromBody] UpdateMemberRoleDto updateRoleDto)
         {
-            var userId = _userManager.GetUserId(User);
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
+            try
+            {
+                var userId = _userManager.GetUserId(User);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
 
-            var success = await _boardService.UpdateMemberRoleAsync(boardId, memberId, role, userId);
-            if (!success)
-                return NotFound();
+                await _boardService.UpdateMemberRoleAsync(boardId, memberId, updateRoleDto.Role, userId);
+        
+                return Ok(new 
+                { 
+                    message = "Member role updated successfully",
+                    memberId,
+                    newRole = updateRoleDto.Role 
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { error = ex.Message });
+            }
+        }
+        
+        [HttpPost("{boardId}/transfer-ownership")]
+        [RequirePermission(Permissions.Boards.Delete)] // Chỉ owner mới có permission này
+        public async Task<ActionResult> TransferOwnership(
+            string boardId,
+            [FromBody] TransferOwnershipDto dto)
+        {
+            try
+            {
+                var userId = _userManager.GetUserId(User);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
 
-            return NoContent();
+                await _boardService.TransferOwnershipAsync(boardId, dto.NewOwnerId, userId);
+        
+                return Ok(new 
+                { 
+                    message = "Board ownership transferred successfully",
+                    newOwnerId = dto.NewOwnerId 
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { error = ex.Message });
+            }
         }
     }
 }

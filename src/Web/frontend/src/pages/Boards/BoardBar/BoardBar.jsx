@@ -21,6 +21,7 @@ import { useAuth } from '~/hooks/useAuth';
 import SettingsIcon from '@mui/icons-material/Settings';
 import BoardSettingsDialog from '~/pages/Boards/BoardSettings/BoardSettingsDialog';
 import { useBoardStore } from '~/stores/boardStore';
+import ConditionalRender from '~/components/ConditionalRender/ConditionalRender';
 
 const MENU_STYPES = {
   color: 'white',
@@ -97,14 +98,16 @@ export default function BoardBar() {
         >
           Invite
         </Button>
-        <Button
-          variant="outlined"
-          startIcon={<SettingsIcon />}
-          sx={{ color: 'white', borderColor: 'white', '&:hover': { borderColor: 'white' } }}
-          onClick={() => setSettingsOpen(true)}
-        >
-          Settings
-        </Button>
+        <ConditionalRender permission="boards.manage_members">
+          <Button
+            variant="outlined"
+            startIcon={<SettingsIcon />}
+            sx={{ color: 'white', borderColor: 'white', '&:hover': { borderColor: 'white' } }}
+            onClick={() => setSettingsOpen(true)}
+          >
+            Settings
+          </Button>
+        </ConditionalRender>
 
         <AvatarGroup
           max={4}

@@ -80,11 +80,13 @@ function AppBar() {
             />
 
             <Divider sx={{ my: 2 }} />
-            <ModeSelect label="Theme" value={themeMode} onChange={setThemeMode} />
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <ModeSelect label="Theme" value={themeMode} onChange={setThemeMode} />
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                 <NotificationBell />
             </Box>
-            <Box sx={{ mt: 2, ml: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                 <Tooltip title="Help">
                     <HelpOutlineIcon sx={{ color: 'white' }} />
                 </Tooltip>

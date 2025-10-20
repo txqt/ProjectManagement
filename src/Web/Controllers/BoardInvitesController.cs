@@ -17,14 +17,11 @@ namespace ProjectManagement.Controllers
     {
         private readonly IBoardInviteService _inviteService;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly INotificationService _notificationService;
 
-        public BoardInvitesController(IBoardInviteService inviteService, UserManager<ApplicationUser> userManager,
-            INotificationService notificationService)
+        public BoardInvitesController(IBoardInviteService inviteService, UserManager<ApplicationUser> userManager)
         {
             _inviteService = inviteService;
             _userManager = userManager;
-            _notificationService = notificationService;
         }
 
         [HttpPost]
@@ -43,8 +40,6 @@ namespace ProjectManagement.Controllers
                 if (invite == null)
                     return BadRequest("Failed to create invite");
 
-                await _notificationService.CreateBoardInviteNotificationAsync(invite.InviteeId,
-                    User?.Identity?.Name ?? "", invite.Board.Title, invite.Id);
                 return Ok(invite);
             }
             catch (ArgumentException ex)

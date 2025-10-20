@@ -84,16 +84,16 @@ export const useBoardStore = create((set, get) => ({
     },
 
     // Update member role
-    updateMemberRole: async (memberId, newRole) => {
+    updateBoardMemberRole: async (memberId, newRole) => {
         const boardId = get().boardId;
         if (!boardId) throw new Error('No board selected');
         set({ loading: true, error: null });
         try {
-            const updatedMember = await apiService.updateBoardMemberRole(boardId, memberId, { role: newRole });
+            await apiService.updateBoardMemberRole(boardId, memberId, {role: newRole});
             set(state => ({
                 board: {
                     ...state.board,
-                    members: state.board.members.map(m => m.id === memberId ? updatedMember : m)
+                    members: state.board.members.map(m => m.id === memberId ? { ...m, role: newRole } : m)
                 },
                 loading: false
             }));

@@ -2,6 +2,7 @@
 using Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using ProjectManagement.Authorization;
 using ProjectManagement.Helpers;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Board;
@@ -30,18 +31,18 @@ namespace ProjectManagement.Services
             var boards = await _context.Boards
                 .Include(b => b.Owner)
                 .Include(b => b.Members)
-                    .ThenInclude(m => m.User)
+                .ThenInclude(m => m.User)
                 .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
-                        .ThenInclude(card => card.Members)
-                            .ThenInclude(cm => cm.User)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Members)
+                .ThenInclude(cm => cm.User)
                 .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
-                        .ThenInclude(card => card.Comments)
-                            .ThenInclude(comment => comment.User)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Comments)
+                .ThenInclude(comment => comment.User)
                 .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
-                        .ThenInclude(card => card.Attachments)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Attachments)
                 .Where(b => b.OwnerId == userId || b.Members.Any(m => m.UserId == userId))
                 .AsSplitQuery()
                 .ToListAsync();
@@ -54,25 +55,26 @@ namespace ProjectManagement.Services
             var board = await _context.Boards
                 .Include(b => b.Owner)
                 .Include(b => b.Members)
-                    .ThenInclude(m => m.User)
+                .ThenInclude(m => m.User)
                 .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
-                        .ThenInclude(card => card.Members)
-                            .ThenInclude(cm => cm.User)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Members)
+                .ThenInclude(cm => cm.User)
                 .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
-                        .ThenInclude(card => card.Comments)
-                            .ThenInclude(comment => comment.User)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Comments)
+                .ThenInclude(comment => comment.User)
                 .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
-                        .ThenInclude(card => card.Attachments)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Attachments)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(b => b.Id == boardId);
 
             if (board == null)
                 return null;
 
-            return BoardResponseHelper.FormatBoardResponse(board, _mapper);;
+            return BoardResponseHelper.FormatBoardResponse(board, _mapper);
+            ;
         }
 
         public async Task<BoardDto> CreateBoardAsync(CreateBoardDto createBoardDto, string userId)
@@ -90,7 +92,7 @@ namespace ProjectManagement.Services
             var createdBoard = await _context.Boards
                 .Include(b => b.Owner)
                 .Include(b => b.Members)
-                    .ThenInclude(m => m.User)
+                .ThenInclude(m => m.User)
                 .FirstOrDefaultAsync(b => b.Id == board.Id);
 
             return _mapper.Map<BoardDto>(createdBoard);
@@ -122,28 +124,61 @@ namespace ProjectManagement.Services
             return true;
         }
 
-        public async Task<BoardMemberDto?> AddMemberAsync(string boardId, AddBoardMemberDto addMemberDto, string userId)
+        public async Task<BoardMemberDto?> AddMemberAsync(string boardId, AddBoardMemberDto addMemberDto,
+            string currentUserId)
         {
-            var board = await _context.Boards.FirstOrDefaultAsync(b => b.Id == boardId);
+            var board = await _context.Boards
+                .Include(b => b.Members)
+                .FirstOrDefaultAsync(b => b.Id == boardId);
+
             if (board == null)
-                return null;
+                throw new ArgumentException("Board not found");
 
             var user = await _userManager.FindByEmailAsync(addMemberDto.Email);
             if (user == null)
-                return null;
+                throw new ArgumentException("User not found");
 
             // Check if user is already a member
             var existingMember = await _context.BoardMembers
                 .FirstOrDefaultAsync(bm => bm.BoardId == boardId && bm.UserId == user.Id);
+
             if (existingMember != null)
-                return null;
+                throw new InvalidOperationException("User is already a member of this board");
+
+            // Validate role
+            if (!RoleHierarchy.IsValidBoardRole(addMemberDto.Role))
+                throw new ArgumentException($"Invalid role: {addMemberDto.Role}");
+
+            // Lấy role của current user
+            string currentUserRole;
+            if (board.OwnerId == currentUserId)
+            {
+                currentUserRole = RoleHierarchy.Owner;
+            }
+            else
+            {
+                var currentUserMembership = board.Members.FirstOrDefault(m => m.UserId == currentUserId);
+                if (currentUserMembership == null)
+                    throw new UnauthorizedAccessException("You are not a member of this board");
+
+                currentUserRole = currentUserMembership.Role;
+            }
+
+            // Kiểm tra có thể assign role này không
+            if (addMemberDto.Role.ToLower() == RoleHierarchy.Owner)
+                throw new InvalidOperationException(
+                    "Cannot assign Owner role. Use transfer ownership feature instead.");
+
+            if (!RoleHierarchy.IsBoardRoleHigherThan(currentUserRole, addMemberDto.Role))
+                throw new UnauthorizedAccessException(
+                    $"You can only add members with roles lower than your role '{currentUserRole}'");
 
             var member = new BoardMember
             {
                 Id = Guid.NewGuid().ToString(),
                 BoardId = boardId,
                 UserId = user.Id,
-                Role = addMemberDto.Role,
+                Role = addMemberDto.Role.ToLower(),
                 JoinedAt = DateTime.UtcNow
             };
 
@@ -157,36 +192,160 @@ namespace ProjectManagement.Services
             return _mapper.Map<BoardMemberDto>(createdMember);
         }
 
-        public async Task<bool> RemoveMemberAsync(string boardId, string memberId, string userId)
+        public async Task<bool> RemoveMemberAsync(string boardId, string memberId, string currentUserId)
         {
-            var board = await _context.Boards.FirstOrDefaultAsync(b => b.Id == boardId);
+            var board = await _context.Boards
+                .Include(b => b.Members)
+                .FirstOrDefaultAsync(b => b.Id == boardId);
+
             if (board == null)
-                return false;
+                throw new ArgumentException("Board not found");
 
-            var member = await _context.BoardMembers
+            var targetMember = await _context.BoardMembers
                 .FirstOrDefaultAsync(bm => bm.Id == memberId && bm.BoardId == boardId);
-            if (member == null)
-                return false;
 
-            _context.BoardMembers.Remove(member);
+            if (targetMember == null)
+                throw new ArgumentException("Member not found");
+
+            // Lấy role của current user
+            string currentUserRole;
+            if (board.OwnerId == currentUserId)
+            {
+                currentUserRole = RoleHierarchy.Owner;
+            }
+            else
+            {
+                var currentUserMembership = board.Members.FirstOrDefault(m => m.UserId == currentUserId);
+                if (currentUserMembership == null)
+                    throw new UnauthorizedAccessException("You are not a member of this board");
+
+                currentUserRole = currentUserMembership.Role;
+            }
+
+            // Kiểm tra có phải tự remove không
+            bool isSelfRemoval = targetMember.UserId == currentUserId;
+
+            // Kiểm tra hierarchy
+            var (canRemove, reason) = RoleHierarchy.CanRemoveBoardMember(
+                currentUserRole,
+                targetMember.Role,
+                isSelfRemoval
+            );
+
+            if (!canRemove)
+                throw new UnauthorizedAccessException(reason);
+
+            _context.BoardMembers.Remove(targetMember);
             await _context.SaveChangesAsync();
+
             return true;
         }
 
-        public async Task<bool> UpdateMemberRoleAsync(string boardId, string memberId, string role, string userId)
+        public async Task<bool> UpdateMemberRoleAsync(string boardId, string memberId, string newRole,
+            string currentUserId)
         {
-            var board = await _context.Boards.FirstOrDefaultAsync(b => b.Id == boardId);
+            var board = await _context.Boards
+                .Include(b => b.Members)
+                .FirstOrDefaultAsync(b => b.Id == boardId);
+
             if (board == null)
-                return false;
+                throw new ArgumentException("Board not found");
 
-            var member = await _context.BoardMembers
+            var targetMember = await _context.BoardMembers
                 .FirstOrDefaultAsync(bm => bm.Id == memberId && bm.BoardId == boardId);
-            if (member == null)
-                return false;
 
-            member.Role = role;
+            if (targetMember == null)
+                throw new ArgumentException("Member not found");
+
+            // Validate role
+            if (!RoleHierarchy.IsValidBoardRole(newRole))
+                throw new ArgumentException($"Invalid role: {newRole}");
+
+            // Lấy role của current user
+            string currentUserRole;
+            if (board.OwnerId == currentUserId)
+            {
+                currentUserRole = RoleHierarchy.Owner;
+            }
+            else
+            {
+                var currentUserMembership = board.Members.FirstOrDefault(m => m.UserId == currentUserId);
+                if (currentUserMembership == null)
+                    throw new UnauthorizedAccessException("You are not a member of this board");
+
+                currentUserRole = currentUserMembership.Role;
+            }
+
+            // Kiểm tra có phải tự thay đổi role của mình không
+            bool isSelfChange = targetMember.UserId == currentUserId;
+
+            if (isSelfChange)
+                throw new InvalidOperationException("You cannot change your own role");
+
+            // Kiểm tra hierarchy
+            var (canChange, reason) = RoleHierarchy.CanChangeBoardMemberRole(
+                currentUserRole,
+                targetMember.Role,
+                newRole
+            );
+
+            if (!canChange)
+                throw new UnauthorizedAccessException(reason);
+
+            // Cập nhật role
+            targetMember.Role = newRole;
             await _context.SaveChangesAsync();
+
             return true;
+        }
+        
+        public async Task TransferOwnershipAsync(string boardId, string newOwnerId, string currentUserId)
+        {
+            var board = await _context.Boards
+                .Include(b => b.Members)
+                .FirstOrDefaultAsync(b => b.Id == boardId);
+
+            if (board == null)
+                throw new ArgumentException("Board not found");
+
+            // Chỉ owner hiện tại mới có thể transfer
+            if (board.OwnerId != currentUserId)
+                throw new UnauthorizedAccessException("Only the board owner can transfer ownership");
+
+            // Không thể transfer cho chính mình
+            if (newOwnerId == currentUserId)
+                throw new InvalidOperationException("Cannot transfer ownership to yourself");
+
+            // Kiểm tra new owner có tồn tại không
+            var newOwner = await _userManager.FindByIdAsync(newOwnerId);
+            if (newOwner == null)
+                throw new ArgumentException("New owner user not found");
+
+            // Kiểm tra new owner có phải là member không
+            var newOwnerMembership = board.Members.FirstOrDefault(m => m.UserId == newOwnerId);
+            if (newOwnerMembership == null)
+                throw new InvalidOperationException("New owner must be a member of the board first");
+
+            // Chuyển ownership
+            // 1. Owner cũ thành admin
+            var oldOwnerMembership = new BoardMember
+            {
+                Id = Guid.NewGuid().ToString(),
+                BoardId = boardId,
+                UserId = currentUserId,
+                Role = RoleHierarchy.BoardAdmin,
+                JoinedAt = DateTime.UtcNow
+            };
+            _context.BoardMembers.Add(oldOwnerMembership);
+
+            // 2. Remove membership của new owner (vì sẽ trở thành owner)
+            _context.BoardMembers.Remove(newOwnerMembership);
+
+            // 3. Update board owner
+            board.OwnerId = newOwnerId;
+            board.LastModified = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
         }
     }
 }

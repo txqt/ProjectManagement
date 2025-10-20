@@ -12,5 +12,6 @@ namespace ProjectManagement.Services.Interfaces
         Task<BoardMemberDto?> AddMemberAsync(string boardId, AddBoardMemberDto addMemberDto, string userId);
         Task<bool> RemoveMemberAsync(string boardId, string memberId, string userId);
         Task<bool> UpdateMemberRoleAsync(string boardId, string memberId, string role, string userId);
+        Task TransferOwnershipAsync(string boardId, string newOwnerId, string currentUserId);
     }
 }
