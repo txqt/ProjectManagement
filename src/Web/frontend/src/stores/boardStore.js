@@ -46,6 +46,13 @@ export const useBoardStore = create((set, get) => ({
             throw err;
         }
     },
+    // Delete board
+    deleteBoard: async () => {
+        set({ loading: true, error: null });
+        await apiService.deleteBoard(get().boardId);
+        set({ board: null, boardId: null, loading: false });
+    },
+
     // Add board member
     addBoardMember: async (memberEmail) => {
         const boardId = get().boardId;

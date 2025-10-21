@@ -58,6 +58,7 @@ function TabPanel({ children, value, index, ...other }) {
 
 export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
   const board = useBoardStore(state => state.board);
+  const deleteBoard = useBoardStore(state => state.deleteBoard);
   const updateBoard = useBoardStore(state => state.updateBoard);
   const updateBoardMemberRole = useBoardStore(state => state.updateBoardMemberRole);
   const removeBoardMember = useBoardStore(state => state.removeBoardMember);
@@ -189,7 +190,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
 
     setLoading(true);
     try {
-      // await apiService.deleteBoard(board.id);
+      await deleteBoard(board.id);
       toast.success('Board deleted successfully');
       onClose();
       // Redirect to home page
