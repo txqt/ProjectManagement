@@ -82,7 +82,7 @@ namespace ProjectManagement.Services
             var board = _mapper.Map<Board>(createBoardDto);
             board.OwnerId = userId;
             board.Id = Guid.NewGuid().ToString();
-            board.Created = DateTime.UtcNow;
+            board.CreatedAt = DateTime.UtcNow;
             board.LastModified = DateTime.UtcNow;
 
             _context.Boards.Add(board);

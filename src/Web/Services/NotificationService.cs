@@ -41,7 +41,7 @@ namespace ProjectManagement.Services
                 BoardId = createNotificationDto.BoardId,
                 CardId = createNotificationDto.CardId,
                 InviteId = createNotificationDto.InviteId,
-                Created = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Notifications.Add(notification);
@@ -68,7 +68,7 @@ namespace ProjectManagement.Services
             }
 
             var notifications = await query
-                .OrderByDescending(n => n.Created)
+                .OrderByDescending(n => n.CreatedAt)
                 .Skip(skip)
                 .Take(take)
                 .Include(n => n.Board)

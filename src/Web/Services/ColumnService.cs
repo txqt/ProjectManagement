@@ -57,7 +57,7 @@ namespace ProjectManagement.Services
             var column = _mapper.Map<Column>(createColumnDto);
             column.Id = Guid.NewGuid().ToString();
             column.BoardId = boardId;
-            column.Created = DateTime.UtcNow;
+            column.CreatedAt = DateTime.UtcNow;
             column.LastModified = DateTime.UtcNow;
 
             // Generate LexoRank for new column

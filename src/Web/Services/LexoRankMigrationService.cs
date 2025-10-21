@@ -29,7 +29,7 @@ namespace ProjectManagement.Services
             {
                 _logger.LogInformation($"Migrating board: {board.Id}");
 
-                var columns = board.Columns.OrderBy(c => c.Created).ToList();
+                var columns = board.Columns.OrderBy(c => c.CreatedAt).ToList();
                 for (int i = 0; i < columns.Count; i++)
                 {
                     if (i == 0)
@@ -54,7 +54,7 @@ namespace ProjectManagement.Services
             {
                 _logger.LogInformation($"Migrating column: {column.Id}");
 
-                var cards = column.Cards.OrderBy(c => c.Created).ToList();
+                var cards = column.Cards.OrderBy(c => c.CreatedAt).ToList();
                 for (int i = 0; i < cards.Count; i++)
                 {
                     if (i == 0)

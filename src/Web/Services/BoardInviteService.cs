@@ -73,7 +73,7 @@ namespace ProjectManagement.Services
                 InviteeId = existingUser?.Id,
                 Role = createInviteDto.Role,
                 Message = createInviteDto.Message,
-                Created = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
                 ExpiresAt = DateTime.UtcNow.AddDays(7)
             };
 
@@ -120,7 +120,7 @@ namespace ProjectManagement.Services
             }
 
             var invites = await query
-                .OrderByDescending(i => i.Created)
+                .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
             return _mapper.Map<IEnumerable<BoardInviteDto>>(invites);
@@ -144,7 +144,7 @@ namespace ProjectManagement.Services
             }
 
             var invites = await query
-                .OrderByDescending(i => i.Created)
+                .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
             return _mapper.Map<IEnumerable<BoardInviteDto>>(invites);

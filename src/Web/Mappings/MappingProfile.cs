@@ -62,9 +62,9 @@ namespace ProjectManagement.Mappings
             // ==========================
             CreateMap<Card, CardDto>()
                 .ForMember(dest => dest.Members, opt => opt.MapFrom(src => src.Members))
-                .ForMember(dest => dest.Comments, opt => opt.MapFrom(src => src.Comments.OrderBy(c => c.Created)))
+                .ForMember(dest => dest.Comments, opt => opt.MapFrom(src => src.Comments.OrderBy(c => c.CreatedAt)))
                 .ForMember(dest => dest.Attachments,
-                    opt => opt.MapFrom(src => src.Attachments.OrderBy(a => a.Created)))
+                    opt => opt.MapFrom(src => src.Attachments.OrderBy(a => a.CreatedAt)))
                 .AfterMap((src, dest) =>
                 {
                     // Optional: ensure cards remain sorted correctly (no additional sorting needed)

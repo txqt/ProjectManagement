@@ -63,7 +63,7 @@ namespace ProjectManagement.Services
             card.Id = Guid.NewGuid().ToString();
             card.ColumnId = columnId;
             card.BoardId = column.BoardId;
-            card.Created = DateTime.UtcNow;
+            card.CreatedAt = DateTime.UtcNow;
             card.LastModified = DateTime.UtcNow;
 
             // Generate LexoRank for new card

@@ -150,7 +150,7 @@ namespace ProjectManagement.Data
                         Description = "A private board owned by Alice",
                         Type = "private",
                         OwnerId = alice.Id,
-                        Created = DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
                         LastModified = DateTime.UtcNow
                     };
                     context.Boards.Add(privateBoard);
@@ -162,7 +162,7 @@ namespace ProjectManagement.Data
                         Description = "A public board for team collaboration",
                         Type = "public",
                         OwnerId = alice.Id,
-                        Created = DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
                         LastModified = DateTime.UtcNow
                     };
                     context.Boards.Add(publicBoard);
@@ -198,7 +198,7 @@ namespace ProjectManagement.Data
                             Id = Guid.NewGuid().ToString(),
                             Title = "Backlog",
                             BoardId = publicBoard.Id,
-                            Created = DateTime.UtcNow,
+                            CreatedAt = DateTime.UtcNow,
                             LastModified = DateTime.UtcNow
                         },
                         new Column
@@ -206,7 +206,7 @@ namespace ProjectManagement.Data
                             Id = Guid.NewGuid().ToString(),
                             Title = "In Progress",
                             BoardId = publicBoard.Id,
-                            Created = DateTime.UtcNow,
+                            CreatedAt = DateTime.UtcNow,
                             LastModified = DateTime.UtcNow
                         },
                         new Column
@@ -214,7 +214,7 @@ namespace ProjectManagement.Data
                             Id = Guid.NewGuid().ToString(),
                             Title = "Done",
                             BoardId = publicBoard.Id,
-                            Created = DateTime.UtcNow,
+                            CreatedAt = DateTime.UtcNow,
                             LastModified = DateTime.UtcNow
                         }
                     };
@@ -233,7 +233,7 @@ namespace ProjectManagement.Data
                             Description = "Implement JWT authentication with role-based permissions",
                             BoardId = publicBoard.Id,
                             ColumnId = columns[0].Id,
-                            Created = DateTime.UtcNow,
+                            CreatedAt = DateTime.UtcNow,
                             LastModified = DateTime.UtcNow
                         },
                         new Card
@@ -243,7 +243,7 @@ namespace ProjectManagement.Data
                             Description = "Create board CRUD operations with proper permissions",
                             BoardId = publicBoard.Id,
                             ColumnId = columns[1].Id,
-                            Created = DateTime.UtcNow,
+                            CreatedAt = DateTime.UtcNow,
                             LastModified = DateTime.UtcNow
                         },
                         new Card
@@ -253,7 +253,7 @@ namespace ProjectManagement.Data
                             Description = "Add drag and drop functionality for cards",
                             BoardId = publicBoard.Id,
                             ColumnId = columns[2].Id,
-                            Created = DateTime.UtcNow,
+                            CreatedAt = DateTime.UtcNow,
                             LastModified = DateTime.UtcNow
                         }
                     };
