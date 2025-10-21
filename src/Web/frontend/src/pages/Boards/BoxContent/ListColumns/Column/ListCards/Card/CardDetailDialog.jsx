@@ -3,6 +3,7 @@ import AttachmentIcon from '@mui/icons-material/Attachment';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import {
   Avatar,
   Box,
@@ -16,9 +17,10 @@ import {
   Paper,
   Stack,
   TextField,
-  Typography
+  Typography,
+  Alert
 } from "@mui/material";
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { toast } from 'react-toastify';
@@ -27,50 +29,91 @@ import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
 import { apiService } from '~/services/api';
 import { useBoardStore } from '~/stores/boardStore';
 
-const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
-  // store functions
+const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription }) => {
+  // ========================================
+  // CRITICAL FIX: Always get fresh card from store
+  // ========================================
+  const storeCard = useBoardStore(
+    useCallback(
+      (s) => {
+        if (!initialCard?.id) return null;
+        
+        const cols = s.board?.columns ?? [];
+        for (const col of cols) {
+          const found = col.cards?.find(c => c.id === initialCard.id);
+          if (found) return found;
+        }
+        return null;
+      },
+      [initialCard?.id]
+    )
+  );
+
+  // Use store card if available, fallback to initial
+  const currentCard = storeCard ?? initialCard;
+
+  // ========================================
+  // Store functions
+  // ========================================
   const storeAssign = useBoardStore((s) => s.assignCardMember);
   const storeUnassign = useBoardStore((s) => s.unassignCardMember);
   const boardMembers = useBoardStore((s) => s.board?.members ?? [], shallow);
   const updateCard = useBoardStore((s) => s.updateCard);
 
-  // get latest card from store (fallback to prop)
-  const storeCard = useBoardStore(s => {
-    const cols = s.board?.columns ?? [];
-    if (!card?.id || !card?.columnId) return null;
-    const col = cols.find(c => c.id === card.columnId);
-    return col?.cards?.find(c => c.id === card.id) ?? null;
-  });
-  const currentCard = storeCard ?? card;
-
+  // ========================================
+  // Local state
+  // ========================================
   const [editTitleMode, setEditTitleMode] = useState(false);
-  const [tempTitle, setTempTitle] = useState(currentCard?.title ?? '');
-
-  useEffect(() => {
-    setTempTitle(currentCard?.title ?? '');
-    setEditTitleMode(false);
-  }, [currentCard?.id, currentCard?.title]);
-
+  const [tempTitle, setTempTitle] = useState('');
   const [editing, setEditing] = useState(false);
-  const [description, setDescription] = useState(currentCard?.description ?? '');
-
-  // member UI
+  const [description, setDescription] = useState('');
+  
+  // Member UI
   const [memberMenuAnchor, setMemberMenuAnchor] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
-
-  // cover menu + upload refs
-  // const fileInputRef = useRef(null);
-
-  // UnsplashMenu anchor (tách component)
+  
+  // Cover menu
   const [unsplashAnchor, setUnsplashAnchor] = useState(null);
 
-  useEffect(() => {
-    setDescription(currentCard?.description ?? '');
-    setEditing(false);
-  }, [currentCard?.id, currentCard?.description, currentCard?.cover]);
+  // ========================================
+  // Detect if card moved to different column
+  // ========================================
+  const cardMovedWarning = useMemo(() => {
+    if (!initialCard || !currentCard) return null;
+    if (initialCard.columnId !== currentCard.columnId) {
+      return 'Card đã được di chuyển sang column khác. Dialog sẽ đóng khi bạn lưu.';
+    }
+    return null;
+  }, [initialCard?.columnId, currentCard?.columnId]);
 
+  // ========================================
+  // Auto-close if card deleted from store
+  // ========================================
+  useEffect(() => {
+    if (open && initialCard?.id && !storeCard) {
+      console.warn('Card không còn tồn tại trong store, đóng dialog');
+      toast.info('Card đã bị xóa');
+      onClose();
+    }
+  }, [open, initialCard?.id, storeCard, onClose]);
+
+  // ========================================
+  // Sync local state with store card
+  // ========================================
+  useEffect(() => {
+    if (!currentCard) return;
+    
+    setTempTitle(currentCard.title ?? '');
+    setDescription(currentCard.description ?? '');
+    setEditTitleMode(false);
+    setEditing(false);
+  }, [currentCard?.id, currentCard?.title, currentCard?.description]);
+
+  // ========================================
+  // ReactQuill config
+  // ========================================
   const modules = useMemo(() => ({
     toolbar: [
       [{ header: [1, 2, false] }],
@@ -81,38 +124,70 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
     ]
   }), []);
 
+  // ========================================
+  // Save handlers
+  // ========================================
   const handleSaveTitle = async () => {
-    if (!tempTitle.trim()) return toast.error('Tiêu đề không được để trống');
+    if (!tempTitle.trim()) {
+      toast.error('Tiêu đề không được để trống');
+      return;
+    }
+
+    if (!currentCard) return;
 
     try {
-      await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, title: tempTitle });
+      await updateCard(currentCard.columnId, currentCard.id, { 
+        ...currentCard, 
+        title: tempTitle 
+      });
       setEditTitleMode(false);
       toast.success('Đã cập nhật tiêu đề');
+
+      // Close if card moved
+      if (cardMovedWarning) {
+        setTimeout(onClose, 500);
+      }
     } catch (err) {
-      console.error(err);
+      console.error('handleSaveTitle error:', err);
       toast.error('Không thể cập nhật tiêu đề');
     }
   };
 
-
   const handleSaveDescription = async () => {
     if (!currentCard) return;
-    if (typeof onSaveDescription === 'function') onSaveDescription(currentCard, description);
-    else console.log('Save description:', currentCard?.id, description);
 
-    if (typeof updateCard === 'function') {
-      await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, description });
-    } else {
-      console.warn('[CardDetailDialog] updateCard not provided');
+    try {
+      if (typeof onSaveDescription === 'function') {
+        onSaveDescription(currentCard, description);
+      }
+
+      if (typeof updateCard === 'function') {
+        await updateCard(currentCard.columnId, currentCard.id, { 
+          ...currentCard, 
+          description 
+        });
+      }
+      
+      setEditing(false);
+      toast.success('Đã cập nhật mô tả');
+
+      // Close if card moved
+      if (cardMovedWarning) {
+        setTimeout(onClose, 500);
+      }
+    } catch (err) {
+      console.error('handleSaveDescription error:', err);
+      toast.error('Không thể cập nhật mô tả');
     }
-    setEditing(false);
   };
 
-  // --- Unsplash (tích hợp UnsplashMenu) ---
+  // ========================================
+  // Cover handlers
+  // ========================================
   const openAddCoverMenu = (e) => {
-    // open the UnsplashMenu anchored to target
     setUnsplashAnchor(e.currentTarget);
   };
+
   const closeUnsplashMenu = () => {
     setUnsplashAnchor(null);
   };
@@ -122,97 +197,80 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
     if (!currentCard || !url) return;
 
     try {
-      const success = await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, cover: url });
-      if (success) toast.success('Đã cập nhật cover từ Unsplash');
-      else toast.error('Không thể cập nhật cover');
+      const success = await updateCard(currentCard.columnId, currentCard.id, { 
+        ...currentCard, 
+        cover: url 
+      });
+      
+      if (success) {
+        toast.success('Đã cập nhật cover từ Unsplash');
+      } else {
+        toast.error('Không thể cập nhật cover');
+      }
     } catch (err) {
-      console.error('handleSelectUnsplashImage error', err);
+      console.error('handleSelectUnsplashImage error:', err);
       toast.error('Không thể cập nhật cover');
     } finally {
       closeUnsplashMenu();
     }
   };
 
-  // --- File upload (version cũ) ---
-  // const handleUploadClick = () => {
-  //   // if any menu open, close it (we only use UnsplashMenu now)
-  //   closeUnsplashMenu();
-  //   fileInputRef.current?.click();
-  // };
-
-  // const handleFileChange = async (e) => {
-  //   const file = e.target.files?.[0];
-  //   if (!file || !currentCard) return;
-
-  //   // Placeholder behavior — adapt to your actual upload endpoint
-  //   try {
-  //     const formData = new FormData();
-  //     formData.append('file', file);
-
-  //     // apiService.uploadFile should return { url: '...' } or similar
-  //     const response = await apiService.uploadFile?.(formData);
-  //     const url = response?.url;
-  //     if (!url) {
-  //       toast.error('Server không trả về URL ảnh');
-  //       return;
-  //     }
-
-  //     const success = await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, cover: url });
-  //     if (success) toast.success('Đã cập nhật cover từ file upload');
-  //     else toast.error('Không thể cập nhật cover');
-  //   } catch (err) {
-  //     console.error('handleFileChange error', err);
-  //     toast.error('Lỗi khi tải ảnh lên');
-  //   } finally {
-  //     e.target.value = '';
-  //   }
-  // };
-
-  // choose URL (kept)
-  // const handleChooseUrl = async () => {
-  //   closeUnsplashMenu();
-  //   const url = window.prompt('Dán URL ảnh làm cover:');
-  //   if (!url || !currentCard) return;
-
-  //   try {
-  //     const success = await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, cover: url });
-  //     if (success) toast.success('Đã cập nhật cover');
-  //     else toast.error('Không thể cập nhật cover');
-  //   } catch (err) {
-  //     console.error('handleChooseUrl error', err);
-  //     toast.error('Không thể cập nhật cover');
-  //   }
-  // };
-
   const handleDeleteCover = async () => {
     if (!currentCard) return;
 
     try {
-      const success = await updateCard(currentCard.columnId, currentCard.id, { ...currentCard, cover: null });
-      if (success) toast.success('Đã xoá cover');
-      else toast.error('Không thể xoá cover');
+      const success = await updateCard(currentCard.columnId, currentCard.id, { 
+        ...currentCard, 
+        cover: null 
+      });
+      
+      if (success) {
+        toast.success('Đã xoá cover');
+      } else {
+        toast.error('Không thể xoá cover');
+      }
     } catch (err) {
-      console.error('handleDeleteCover error', err);
+      console.error('handleDeleteCover error:', err);
       toast.error('Không thể xoá cover');
     }
   };
 
-  // --- member helpers & assign/unassign (giữ nguyên logic cũ) ---
-  const getUserIdFrom = (item) => item?.user?.id ?? item?.userId ?? item?.id ?? null;
-  const getUserEmailFrom = (item) => item?.user?.email ?? item?.email ?? item?.userEmail ?? null;
-  const getDisplayNameFrom = (item) => item?.user?.userName ?? item?.user?.fullName ?? item?.fullName ?? item?.userName ?? item?.name ?? 'Unknown';
-  const getAvatarFrom = (item) => item?.user?.avatar ?? item?.avatar ?? item?.avatarUrl ?? item?.user?.avatarUrl ?? null;
+  // ========================================
+  // Member helpers
+  // ========================================
+  const getUserIdFrom = (item) => 
+    item?.user?.id ?? item?.userId ?? item?.id ?? null;
+  
+  const getUserEmailFrom = (item) => 
+    item?.user?.email ?? item?.email ?? item?.userEmail ?? null;
+  
+  const getDisplayNameFrom = (item) => 
+    item?.user?.userName ?? 
+    item?.user?.fullName ?? 
+    item?.fullName ?? 
+    item?.userName ?? 
+    item?.name ?? 
+    'Unknown';
+  
+  const getAvatarFrom = (item) => 
+    item?.user?.avatar ?? 
+    item?.avatar ?? 
+    item?.avatarUrl ?? 
+    item?.user?.avatarUrl ?? 
+    null;
+  
   const isUserAssignedToCard = (cardObj, userIdOrEmail) => {
     if (!cardObj?.members) return false;
     return cardObj.members.some(m => {
-      const mid = m?.user?.id ?? m?.userId ?? m?.id ?? null;
-      const memEmail = m?.user?.email ?? m?.email ?? null;
+      const mid = getUserIdFrom(m);
+      const memEmail = getUserEmailFrom(m);
       return (mid && mid === userIdOrEmail) || (memEmail && memEmail === userIdOrEmail);
     });
   };
 
   const assignHandler = async (selectedItem) => {
     if (!currentCard) return;
+    
     const email = getUserEmailFrom(selectedItem);
     const userId = getUserIdFrom(selectedItem);
 
@@ -228,14 +286,12 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
         console.error('assign error:', err);
         toast.error('Gán thành viên thất bại');
       }
-      return;
     }
-
-    console.warn('No assignCardMember available (store or props)');
   };
 
   const unassignHandler = async (member) => {
     if (!currentCard) return;
+    
     const memberId = member?.id ?? getUserIdFrom(member);
     if (!memberId) return;
 
@@ -246,52 +302,61 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
         console.error('unassign error:', err);
         toast.error('Gỡ thành viên thất bại');
       }
-      return;
     }
-
-    console.warn('No unassignCardMember available (store or props)');
   };
 
-  // open member menu
   const handleOpenMemberMenu = (e) => {
     setMemberMenuAnchor(e.currentTarget);
     setSearchQuery('');
     setSearchResults(boardMembers.slice(0, 5));
   };
+
   const handleCloseMemberMenu = () => {
     setMemberMenuAnchor(null);
     setSearchQuery('');
     setSearchResults([]);
   };
 
-  // search members (giữ nguyên logic)
+  // ========================================
+  // Search members
+  // ========================================
   useEffect(() => {
-    if (memberMenuAnchor == null) return;
+    if (!memberMenuAnchor) return;
+    
     let mounted = true;
     const q = (searchQuery || '').trim().toLowerCase();
+    
     const timer = setTimeout(async () => {
       if (!mounted) return;
+      
       setLoadingMembers(true);
+      
       try {
         if (!q) {
           if (mounted) setSearchResults(boardMembers.slice(0, 5));
           return;
         }
+
         const localMatches = boardMembers.filter(m => {
-          const name = (m?.user?.userName ?? m?.user?.fullName ?? '').toString().toLowerCase();
-          const email = (m?.user?.email ?? '').toString().toLowerCase();
-          const role = (m?.role ?? '').toString().toLowerCase();
+          const name = (getDisplayNameFrom(m) || '').toLowerCase();
+          const email = (getUserEmailFrom(m) || '').toLowerCase();
+          const role = (m?.role || '').toLowerCase();
           return name.includes(q) || email.includes(q) || role.includes(q);
         });
+
         const results = [...localMatches];
+
         if (results.length < 5) {
           try {
             const apiRes = await apiService.searchUsers(q, 1, 5);
             const remote = (apiRes?.items ?? []).filter(u => {
               const uid = getUserIdFrom(u);
               const email = getUserEmailFrom(u);
-              return !boardMembers.some(bm => getUserIdFrom(bm) === uid || getUserEmailFrom(bm) === email);
+              return !boardMembers.some(bm => 
+                getUserIdFrom(bm) === uid || getUserEmailFrom(bm) === email
+              );
             });
+
             for (let i = 0; i < remote.length && results.length < 5; i++) {
               results.push(remote[i]);
             }
@@ -299,11 +364,13 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
             console.error('searchUsers error:', err);
           }
         }
+
         if (mounted) setSearchResults(results.slice(0, 5));
       } finally {
         if (mounted) setLoadingMembers(false);
       }
     }, 300);
+
     return () => {
       mounted = false;
       clearTimeout(timer);
@@ -311,9 +378,21 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
     };
   }, [searchQuery, boardMembers, memberMenuAnchor]);
 
+  // ========================================
+  // Render
+  // ========================================
+  if (!currentCard) return null;
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { height: '75vh' } }} data-no-dnd='true'>
-      {/* header */}
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      fullWidth 
+      maxWidth="md" 
+      PaperProps={{ sx: { height: '75vh' } }} 
+      data-no-dnd='true'
+    >
+      {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
           {editTitleMode ? (
@@ -357,13 +436,12 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
               onClick={() => setEditTitleMode(true)}
               title="Click để chỉnh sửa tiêu đề"
             >
-              {currentCard?.title ?? 'Card'}
+              {currentCard.title}
             </Typography>
           )}
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          {/* Add cover button */}
           <Button
             startIcon={<AddPhotoAlternateIcon />}
             variant="outlined"
@@ -373,13 +451,11 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
             Thêm cover
           </Button>
 
-          <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+          <IconButton onClick={onClose} size="small">
+            <CloseIcon />
+          </IconButton>
         </Box>
 
-        {/* hidden file input */}
-        {/* <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} /> */}
-
-        {/* UnsplashMenu component (tách riêng) */}
         <UnsplashMenu
           anchorEl={unsplashAnchor}
           onClose={closeUnsplashMenu}
@@ -391,7 +467,14 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
       </Box>
 
       <DialogContent sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* Top 20%: cover */}
+        {/* Warning if card moved */}
+        {cardMovedWarning && (
+          <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ m: 1 }}>
+            {cardMovedWarning}
+          </Alert>
+        )}
+
+        {/* Cover section */}
         <Box
           sx={{
             flex: '0 0 20%',
@@ -399,16 +482,14 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
             '&:hover .cover-overlay': { opacity: 1 }
           }}
         >
-          {currentCard?.cover ? (
+          {currentCard.cover ? (
             <>
               <CardMedia
                 component="img"
-                src={currentCard?.cover}
+                src={currentCard.cover}
                 alt="cover"
                 sx={{ height: '200px', width: '100%', objectFit: 'cover' }}
               />
-
-              {/* overlay delete button - xuất hiện khi hover */}
               <Box
                 className="cover-overlay"
                 sx={{
@@ -419,63 +500,71 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
                   transition: 'opacity 0.18s',
                 }}
               >
-                <IconButton size="small" onClick={handleDeleteCover} sx={{ bgcolor: 'rgba(255,255,255,0.7)' }}>
+                <IconButton 
+                  size="small" 
+                  onClick={handleDeleteCover} 
+                  sx={{ bgcolor: 'rgba(255,255,255,0.7)' }}
+                >
                   <DeleteIcon />
                 </IconButton>
               </Box>
             </>
           ) : (
-            <Box
-              sx={{
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative'
-              }}>
+            <Box sx={{ 
+              height: '100%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
               <Typography color="text.secondary">No cover</Typography>
             </Box>
           )}
         </Box>
 
-        {/* Bottom 80% */}
+        {/* Content section */}
         <Box sx={{ flex: '1 1 80%', p: 2, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Box 1: actions */}
+          {/* Actions */}
           <Paper sx={{ p: 1 }} elevation={0}>
             <Stack direction="row" spacing={1} alignItems="center">
-              <Button startIcon={<AttachmentIcon />} variant="outlined">Đính kèm</Button>
+              <Button startIcon={<AttachmentIcon />} variant="outlined">
+                Đính kèm
+              </Button>
             </Stack>
           </Paper>
 
-          {/* Box 2: members */}
+          {/* Members */}
           <Paper sx={{ p: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="subtitle1">Thành viên</Typography>
               <Button size="small" onClick={handleOpenMemberMenu}>Thêm</Button>
             </Box>
             <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
-              {currentCard?.members?.length ? currentCard.members.map(m => {
-                const displayName = getDisplayNameFrom(m);
-                const uid = getUserIdFrom(m);
-                return (
-                  <Avatar
-                    key={uid ?? m.id ?? Math.random().toString(36).slice(2)}
-                    alt={displayName}
-                    sx={{ width: 32, height: 32, cursor: 'pointer' }}
-                    onClick={() => {
-                      if (window.confirm(`Gỡ ${displayName} khỏi card?`)) {
-                        unassignHandler(m);
-                      }
-                    }}
-                  >
-                    {displayName?.[0]?.toUpperCase() ?? '?'}
-                  </Avatar>
-                );
-              }) : <Typography color="text.secondary">Chưa có thành viên</Typography>}
+              {currentCard.members?.length ? (
+                currentCard.members.map(m => {
+                  const displayName = getDisplayNameFrom(m);
+                  const uid = getUserIdFrom(m);
+                  return (
+                    <Avatar
+                      key={uid ?? m.id ?? Math.random().toString(36).slice(2)}
+                      alt={displayName}
+                      sx={{ width: 32, height: 32, cursor: 'pointer' }}
+                      onClick={() => {
+                        if (window.confirm(`Gỡ ${displayName} khỏi card?`)) {
+                          unassignHandler(m);
+                        }
+                      }}
+                    >
+                      {displayName?.[0]?.toUpperCase() ?? '?'}
+                    </Avatar>
+                  );
+                })
+              ) : (
+                <Typography color="text.secondary">Chưa có thành viên</Typography>
+              )}
             </Box>
           </Paper>
 
-          {/* Member menu*/}
+          {/* Member menu */}
           <Menu
             anchorEl={memberMenuAnchor}
             open={Boolean(memberMenuAnchor)}
@@ -485,10 +574,16 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
             <Box sx={{ p: 1 }}>
               <input
                 type="text"
-                placeholder="Tìm kiếm các thành viên"
+                placeholder="Tìm kiếm thành viên"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid #ccc', outline: 'none' }}
+                style={{ 
+                  width: '100%', 
+                  padding: '6px 8px', 
+                  borderRadius: 6, 
+                  border: '1px solid #ccc', 
+                  outline: 'none' 
+                }}
               />
             </Box>
 
@@ -497,19 +592,22 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
                 <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
                   Đang tải...
                 </Typography>
-              ) : (searchResults?.length ?? 0) === 0 ? (
+              ) : searchResults.length === 0 ? (
                 <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
                   Không có kết quả
                 </Typography>
               ) : (
-                searchResults.slice(0, 5).map((item) => {
+                searchResults.map((item) => {
                   const uid = getUserIdFrom(item);
                   const displayName = getDisplayNameFrom(item);
                   const avatar = getAvatarFrom(item);
                   return (
                     <MenuItem
                       key={uid ?? Math.random().toString(36).slice(2)}
-                      onClick={async () => { await assignHandler(item); handleCloseMemberMenu(); }}
+                      onClick={async () => {
+                        await assignHandler(item);
+                        handleCloseMemberMenu();
+                      }}
                       sx={{ gap: 1 }}
                     >
                       <Avatar src={avatar} sx={{ width: 28, height: 28, mr: 1 }}>
@@ -523,12 +621,16 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
             </Box>
           </Menu>
 
-          {/* Box 3: description using ReactQuill */}
+          {/* Description */}
           <Paper sx={{ p: 1, flex: '1 1 auto', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="subtitle1">Mô tả</Typography>
               {!editing && (
-                <Button size="small" startIcon={<EditIcon />} onClick={() => setEditing(true)}>
+                <Button 
+                  size="small" 
+                  startIcon={<EditIcon />} 
+                  onClick={() => setEditing(true)}
+                >
                   {description ? 'Chỉnh sửa' : 'Thêm'}
                 </Button>
               )}
@@ -538,17 +640,41 @@ const CardDetailDialog = ({ open, onClose, card, onSaveDescription }) => {
               {editing ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                   <Box sx={{ flex: '1 1 auto' }}>
-                    <ReactQuill theme="snow" value={description} onChange={setDescription} modules={modules} />
+                    <ReactQuill 
+                      theme="snow" 
+                      value={description} 
+                      onChange={setDescription} 
+                      modules={modules} 
+                    />
                   </Box>
 
                   <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                    <Button variant="contained" size="small" onClick={handleSaveDescription}>Save</Button>
-                    <Button variant="outlined" size="small" onClick={() => { setEditing(false); setDescription(currentCard?.description ?? ''); }}>Cancel</Button>
+                    <Button 
+                      variant="contained" 
+                      size="small" 
+                      onClick={handleSaveDescription}
+                    >
+                      Save
+                    </Button>
+                    <Button 
+                      variant="outlined" 
+                      size="small" 
+                      onClick={() => {
+                        setEditing(false);
+                        setDescription(currentCard.description ?? '');
+                      }}
+                    >
+                      Cancel
+                    </Button>
                   </Box>
                 </Box>
               ) : (
                 <Box sx={{ minHeight: 120 }}>
-                  <div dangerouslySetInnerHTML={{ __html: description || '<i style="color:#999">Không có mô tả</i>' }} />
+                  <div 
+                    dangerouslySetInnerHTML={{ 
+                      __html: description || '<i style="color:#999">Không có mô tả</i>' 
+                    }} 
+                  />
                 </Box>
               )}
             </Box>
