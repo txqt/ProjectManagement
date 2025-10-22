@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -247,12 +247,17 @@ const AttachmentSection = ({ card }) => {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [attachMenuAnchor, setAttachMenuAnchor] = useState(null);
+  const fileInputRef = useRef(null);
 
   const attachments = useMemo(() => {
     return (card?.attachments || []).sort((a, b) => 
       new Date(b.createdAt) - new Date(a.createdAt)
     );
   }, [card?.attachments]);
+
+  const linkAttachments = useMemo(() => attachments.filter(a => (a.type || '').toLowerCase() === 'link'), [attachments]);
+  const fileAttachments = useMemo(() => attachments.filter(a => (a.type || '').toLowerCase() !== 'link'), [attachments]);
 
   const handleSubmit = async () => {
     if (!attachmentName.trim() || !attachmentUrl.trim()) {
@@ -324,19 +329,29 @@ const AttachmentSection = ({ card }) => {
         <Button
           size="small"
           startIcon={<AttachFileIcon />}
-          onClick={() => setShowForm(!showForm)}
-        >
-          Add
-        </Button>
-        <Button
-          size="small"
-          component="label"
-          sx={{ ml: 1 }}
+          onClick={(e) => setAttachMenuAnchor(e.currentTarget)}
           disabled={uploadingFile}
         >
-          Upload
-          <input hidden type="file" onChange={handleFileChange} />
+          Add / Upload
         </Button>
+        <Menu
+          anchorEl={attachMenuAnchor}
+          open={Boolean(attachMenuAnchor)}
+          onClose={() => setAttachMenuAnchor(null)}
+        >
+          <MenuItem onClick={() => {
+            setAttachMenuAnchor(null);
+            setShowForm(false);
+            // trigger file input
+            fileInputRef.current?.click();
+          }}>
+            <FileIcon fontSize="small" sx={{ mr: 1 }} /> Upload
+          </MenuItem>
+          <MenuItem onClick={() => { setAttachMenuAnchor(null); setShowForm(prev => !prev); setAttachmentType('link'); }}>
+            <EditIcon fontSize="small" sx={{ mr: 1 }} /> Add
+          </MenuItem>
+        </Menu>
+        <input ref={fileInputRef} hidden type="file" onChange={handleFileChange} />
       </Box>
 
       {/* Add Attachment Form */}
@@ -374,35 +389,63 @@ const AttachmentSection = ({ card }) => {
         </Box>
       )}
 
-      {/* Attachment List */}
-      <List dense>
-        {attachments.map((attachment) => (
-          <ListItem
-            key={attachment.id}
-            secondaryAction={
-              <IconButton edge="end" onClick={() => handleDelete(attachment.id)}>
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            }
-          >
-            <ListItemAvatar>{getIcon(attachment.type)}</ListItemAvatar>
-            <ListItemText
-              primary={
-                <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-                  {attachment.name}
-                </a>
-              }
-              secondary={formatDistanceToNow(new Date(attachment.createdAt), { addSuffix: true })}
-            />
-          </ListItem>
-        ))}
-
-        {attachments.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-            No attachments
+      {/* Links section */}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="subtitle2">Links ({linkAttachments.length})</Typography>
+        {linkAttachments.length > 0 ? (
+          <List dense>
+            {linkAttachments.map(a => (
+              <ListItem key={a.id} secondaryAction={
+                <IconButton edge="end" onClick={() => handleDelete(a.id)}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              }>
+                <ListItemText
+                  primary={<a href={a.url} target="_blank" rel="noopener noreferrer">{a.name}</a>}
+                  secondary={formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}
+                />
+              </ListItem>
+            ))}
+          </List>
+        ) : (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 1 }}>
+            No links
           </Typography>
         )}
-      </List>
+      </Box>
+
+      {/* Files section */}
+      <Box>
+        <Typography variant="subtitle2">Files ({fileAttachments.length})</Typography>
+        {fileAttachments.length > 0 ? (
+          <List dense>
+            {fileAttachments.map((attachment) => (
+              <ListItem
+                key={attachment.id}
+                secondaryAction={
+                  <IconButton edge="end" onClick={() => handleDelete(attachment.id)}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                }
+              >
+                <ListItemAvatar>{getIcon(attachment.type)}</ListItemAvatar>
+                <ListItemText
+                  primary={
+                    <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                      {attachment.name}
+                    </a>
+                  }
+                  secondary={formatDistanceToNow(new Date(attachment.createdAt), { addSuffix: true })}
+                />
+              </ListItem>
+            ))}
+          </List>
+        ) : (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 1 }}>
+            No files
+          </Typography>
+        )}
+      </Box>
     </Paper>
   );
 };
