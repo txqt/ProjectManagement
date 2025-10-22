@@ -23,7 +23,7 @@ Pop-Location
 Write-Host "Starting backend (dotnet run) and frontend (pnpm dev) in separate terminals..."
 
 # Start backend
-Start-Process powershell -ArgumentList '-NoExit','-Command',"cd '$PSScriptRoot/../src/Web'; dotnet run"
+Start-Process powershell -ArgumentList '-NoExit','-Command',"cd '$PSScriptRoot/../src/Web'; dotnet run --launch-profile 'https'"
 
 # Start frontend
 Start-Process powershell -ArgumentList '-NoExit','-Command',"cd '$PSScriptRoot/../src/Web/frontend'; pnpm dev"
