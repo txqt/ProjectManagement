@@ -44,7 +44,7 @@ const CommentSection = ({ card }) => {
   const [selectedComment, setSelectedComment] = useState(null);
 
   const comments = useMemo(() => {
-    return (card?.comments || []).sort((a, b) => 
+    return (card?.comments || []).sort((a, b) =>
       new Date(a.createdAt) - new Date(b.createdAt)
     );
   }, [card?.comments]);
@@ -251,7 +251,7 @@ const AttachmentSection = ({ card }) => {
   const fileInputRef = useRef(null);
 
   const attachments = useMemo(() => {
-    return (card?.attachments || []).sort((a, b) => 
+    return (card?.attachments || []).sort((a, b) =>
       new Date(b.createdAt) - new Date(a.createdAt)
     );
   }, [card?.attachments]);
@@ -390,9 +390,10 @@ const AttachmentSection = ({ card }) => {
       )}
 
       {/* Links section */}
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="subtitle2">Links ({linkAttachments.length})</Typography>
-        {linkAttachments.length > 0 ? (
+      {linkAttachments.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2">Links ({linkAttachments.length})</Typography>
+
           <List dense>
             {linkAttachments.map(a => (
               <ListItem key={a.id} secondaryAction={
@@ -407,17 +408,14 @@ const AttachmentSection = ({ card }) => {
               </ListItem>
             ))}
           </List>
-        ) : (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 1 }}>
-            No links
-          </Typography>
-        )}
-      </Box>
+        </Box>
+      )}
 
       {/* Files section */}
-      <Box>
-        <Typography variant="subtitle2">Files ({fileAttachments.length})</Typography>
-        {fileAttachments.length > 0 ? (
+      {fileAttachments.length > 0 && (
+        <Box>
+          <Typography variant="subtitle2">Files ({fileAttachments.length})</Typography>
+
           <List dense>
             {fileAttachments.map((attachment) => (
               <ListItem
@@ -440,12 +438,8 @@ const AttachmentSection = ({ card }) => {
               </ListItem>
             ))}
           </List>
-        ) : (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 1 }}>
-            No files
-          </Typography>
-        )}
-      </Box>
+        </Box>
+      )}
     </Paper>
   );
 };

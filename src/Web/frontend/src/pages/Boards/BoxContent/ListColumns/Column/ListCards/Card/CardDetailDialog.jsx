@@ -18,6 +18,10 @@ import {
   Stack,
   TextField,
   Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  CircularProgress,
   Alert
 } from "@mui/material";
 import { useEffect, useMemo, useState, useCallback } from 'react';
@@ -60,6 +64,8 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const storeUnassign = useBoardStore((s) => s.unassignCardMember);
   const boardMembers = useBoardStore((s) => s.board?.members ?? [], shallow);
   const updateCard = useBoardStore((s) => s.updateCard);
+  const columns = useBoardStore((s) => s.board?.columns ?? []);
+  const moveCard = useBoardStore((s) => s.moveCard);
 
   // ========================================
   // Local state
@@ -68,6 +74,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const [tempTitle, setTempTitle] = useState('');
   const [editing, setEditing] = useState(false);
   const [description, setDescription] = useState('');
+  const [moving, setMoving] = useState(false);
   // Comments
   // Comments handled by CommentSection component
 
@@ -79,6 +86,8 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
   // Cover menu
   const [unsplashAnchor, setUnsplashAnchor] = useState(null);
+  // Move menu anchor (context menu)
+  const [moveMenuAnchor, setMoveMenuAnchor] = useState(null);
 
   // ========================================
   // Detect if card moved to different column
@@ -445,6 +454,54 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {/* Move column fallback (Button + Menu context menu) */}
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            {/* Button that opens a Menu listing columns */}
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={(e) => setMoveMenuAnchor(e.currentTarget)}
+              disabled={moving}
+            >
+              Move to column
+            </Button>
+
+            <Menu
+              anchorEl={moveMenuAnchor}
+              open={Boolean(moveMenuAnchor)}
+              onClose={() => setMoveMenuAnchor(null)}
+              PaperProps={{ sx: { minWidth: 240 } }}
+            >
+              {columns.map(col => (
+                <MenuItem
+                  key={col.id}
+                  onClick={async () => {
+                    const toColumnId = col.id;
+                    setMoveMenuAnchor(null);
+                    if (!toColumnId || toColumnId === currentCard.columnId) return;
+                    setMoving(true);
+                    try {
+                      const dest = columns.find(c => c.id === toColumnId);
+                      const newIndex = (dest?.cards?.length) ?? 0;
+                      await moveCard(currentCard.columnId, toColumnId, currentCard.id, newIndex);
+                      toast.success('Card moved');
+                      if (cardMovedWarning) setTimeout(onClose, 500);
+                    } catch (err) {
+                      console.error('moveCard error:', err);
+                      toast.error('Failed to move card');
+                    } finally {
+                      setMoving(false);
+                    }
+                  }}
+                >
+                  {col.title || col.name || col.id}
+                </MenuItem>
+              ))}
+            </Menu>
+
+            {moving && <CircularProgress size={20} />}
+          </Box>
+
           <Button
             startIcon={<AddPhotoAlternateIcon />}
             variant="outlined"
@@ -527,6 +584,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         {/* Content section */}
         <Box sx={{ flex: '1 1 80%', p: 2, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
           {/* Actions */}
+
           {/* Attachments Section (centralized) */}
           <AttachmentSection card={currentCard} />
 

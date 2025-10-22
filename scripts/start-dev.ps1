@@ -1,22 +1,37 @@
 # Start dev dependencies and run backend + frontend
 # Usage: .\scripts\start-dev.ps1
 
-Write-Host "Starting Postgres and Redis via docker-compose..."
-docker-compose up -d
+Write-Host "Checking Docker availability..."
+$dockerExists = (Get-Command docker -ErrorAction SilentlyContinue) -ne $null
+$composeExists = (Get-Command docker-compose -ErrorAction SilentlyContinue) -ne $null
 
-Write-Host "Waiting for Postgres to be ready..."
-# Wait a bit (naive)
-Start-Sleep -s 5
+if ($dockerExists -and $composeExists) {
+    Write-Host "Docker detected. Starting Postgres and Redis via docker-compose..."
+    docker-compose up -d
+    Write-Host "Waiting for Postgres to be ready..."
+    Start-Sleep -Seconds 5
+}
+else {
+    Write-Host "Docker or docker-compose not found. Assuming local Postgres/Redis are already running."
+}
 
-Write-Host "Run EF migrations..."
-Push-Location src/Web
+Write-Host "Running EF migrations..."
+Push-Location "$PSScriptRoot/../src/Web"
 dotnet ef database update
 Pop-Location
 
 Write-Host "Starting backend (dotnet run) and frontend (pnpm dev) in separate terminals..."
+
 # Start backend
-Start-Process powershell -ArgumentList '-NoExit','-Command','cd src/Web; dotnet run'
+Start-Process powershell -ArgumentList '-NoExit','-Command',"cd '$PSScriptRoot/../src/Web'; dotnet run"
+
 # Start frontend
-Start-Process powershell -ArgumentList '-NoExit','-Command','cd src/Web/frontend; pnpm dev'
+Start-Process powershell -ArgumentList '-NoExit','-Command',"cd '$PSScriptRoot/../src/Web/frontend'; pnpm dev"
+
+# Optional: start redis script if exists
+$redisScript = Join-Path $PSScriptRoot "../redis/start.bat"
+if (Test-Path $redisScript) {
+    Start-Process powershell -ArgumentList '-NoExit','-Command',"& '$redisScript'"
+}
 
 Write-Host "Dev environment launched."
