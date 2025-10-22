@@ -127,6 +127,10 @@ builder.Services.AddStackExchangeRedisCache(options =>
 
 builder.Services.AddScoped<IUnsplashCacheService, UnsplashRedisCacheService>();
 
+// Attachment & Comment services
+builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+builder.Services.AddScoped<ICommentService, CommentService>();
+
 // Add Background Services
 builder.Services.AddHostedService<NotificationCleanupService>();
 
@@ -193,6 +197,9 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseCors("AllowReactApp");
+
+// Serve uploaded files from wwwroot (uploads)
+app.UseStaticFiles();
 
 
 app.UseAuthentication();

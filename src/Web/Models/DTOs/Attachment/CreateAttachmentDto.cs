@@ -17,7 +17,7 @@ namespace ProjectManagement.Models.DTOs.Attachment
         public string Type { get; set; } = "file";
 
         // Navigation properties
-        public UserDto Owner { get; set; } = null!;
+        public UserDto? Owner { get; set; }
         public List<ColumnDto> Columns { get; set; } = new List<ColumnDto>();
         public List<BoardMemberDto> Members { get; set; } = new List<BoardMemberDto>();
     }

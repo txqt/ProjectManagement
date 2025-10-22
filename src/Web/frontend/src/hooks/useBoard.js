@@ -45,6 +45,22 @@ export const useBoard = (boardId) => {
   const handleCardAssigned = useBoardStore((state) => state.handleCardAssigned);
   const handleCardUnassigned = useBoardStore((state) => state.handleCardUnassigned);
 
+  // Comment actions
+  const createComment = useBoardStore((state) => state.createComment);
+  const updateComment = useBoardStore((state) => state.updateComment);
+  const deleteComment = useBoardStore((state) => state.deleteComment);
+
+  // Attachment actions
+  const createAttachment = useBoardStore((state) => state.createAttachment);
+  const deleteAttachment = useBoardStore((state) => state.deleteAttachment);
+
+  // SignalR handlers
+  const handleCommentAdded = useBoardStore((state) => state.handleCommentAdded);
+  const handleCommentUpdated = useBoardStore((state) => state.handleCommentUpdated);
+  const handleCommentDeleted = useBoardStore((state) => state.handleCommentDeleted);
+  const handleAttachmentAdded = useBoardStore((state) => state.handleAttachmentAdded);
+  const handleAttachmentDeleted = useBoardStore((state) => state.handleAttachmentDeleted);
+
   // Set boardId khi thay đổi
   useEffect(() => {
     if (boardId) {
@@ -120,6 +136,15 @@ export const useBoard = (boardId) => {
       });
     });
 
+    // Comment events
+    signalRService.onCommentAdded?.(handleCommentAdded);
+    signalRService.onCommentUpdated?.(handleCommentUpdated);
+    signalRService.onCommentDeleted?.(handleCommentDeleted);
+
+    // Attachment events
+    signalRService.onAttachmentAdded?.(handleAttachmentAdded);
+    signalRService.onAttachmentDeleted?.(handleAttachmentDeleted);
+
     // Cleanup function
     return () => {
       // Best-effort cleanup
@@ -141,6 +166,12 @@ export const useBoard = (boardId) => {
       signalRService.offCardMoved?.(handleCardMoved);
       signalRService.offCardAssigned?.(handleCardAssigned);
       signalRService.offCardUnassigned?.(handleCardUnassigned);
+
+      signalRService.offCommentAdded?.(handleCommentAdded);
+      signalRService.offCommentUpdated?.(handleCommentUpdated);
+      signalRService.offCommentDeleted?.(handleCommentDeleted);
+      signalRService.offAttachmentAdded?.(handleAttachmentAdded);
+      signalRService.offAttachmentDeleted?.(handleAttachmentDeleted);
 
       // Try generic off method
       if (typeof signalRService.off === 'function') {
@@ -175,7 +206,12 @@ export const useBoard = (boardId) => {
     handleCardsReordered,
     handleCardMoved,
     handleCardAssigned,
-    handleCardUnassigned
+    handleCardUnassigned,
+    createComment,
+    updateComment,
+    deleteComment,
+    createAttachment,
+    deleteAttachment
   ]);
 
   return {

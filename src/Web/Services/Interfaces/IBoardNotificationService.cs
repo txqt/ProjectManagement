@@ -1,6 +1,8 @@
 ﻿using ProjectManagement.Models.Domain.Entities;
+using ProjectManagement.Models.DTOs.Attachment;
 using ProjectManagement.Models.DTOs.Card;
 using ProjectManagement.Models.DTOs.Column;
+using ProjectManagement.Models.DTOs.Comment;
 using ProjectManagement.Models.DTOs.Notification;
 
 namespace ProjectManagement.Services.Interfaces
@@ -24,5 +26,14 @@ namespace ProjectManagement.Services.Interfaces
         Task SendNotificationToUser(string userId, NotificationDto notification);
         Task BroadcastNotificationRead(string userId, string notificationId);
         Task BroadcastNotificationDeleted(string userId, string notificationId);
+        
+        // Comment events
+        Task BroadcastCommentAdded(string boardId, string columnId, string cardId, CommentDto comment, string userId);
+        Task BroadcastCommentUpdated(string boardId, string columnId, string cardId, CommentDto comment, string userId);
+        Task BroadcastCommentDeleted(string boardId, string columnId, string cardId, string commentId, string userId);
+        
+        // Attachment events
+        Task BroadcastAttachmentAdded(string boardId, string columnId, string cardId, AttachmentDto attachment, string userId);
+        Task BroadcastAttachmentDeleted(string boardId, string columnId, string cardId, string attachmentId, string userId);
     }
 }

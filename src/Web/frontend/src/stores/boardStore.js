@@ -690,5 +690,312 @@ export const useBoardStore = create((set, get) => ({
                 )
             }
         }));
+    },
+
+    createComment: async (columnId, cardId, commentData) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
+
+        try {
+            const newComment = await apiService.createComment(boardId, columnId, cardId, commentData);
+
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === columnId
+                            ? {
+                                ...col,
+                                cards: col.cards.map(card =>
+                                    card.id === cardId
+                                        ? {
+                                            ...card,
+                                            comments: [...(card.comments || []), newComment].sort((a, b) =>
+                                                new Date(a.createdAt) - new Date(b.createdAt)
+                                            )
+                                        }
+                                        : card
+                                )
+                            }
+                            : col
+                    )
+                }
+            }));
+
+            return newComment;
+        } catch (err) {
+            console.error('createComment error:', err);
+            throw err;
+        }
+    },
+
+    updateComment: async (columnId, cardId, commentId, updateData) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
+
+        try {
+            const updatedComment = await apiService.updateComment(boardId, columnId, cardId, commentId, updateData);
+
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === columnId
+                            ? {
+                                ...col,
+                                cards: col.cards.map(card =>
+                                    card.id === cardId
+                                        ? {
+                                            ...card,
+                                            comments: card.comments.map(c =>
+                                                c.id === commentId ? updatedComment : c
+                                            )
+                                        }
+                                        : card
+                                )
+                            }
+                            : col
+                    )
+                }
+            }));
+
+            return updatedComment;
+        } catch (err) {
+            console.error('updateComment error:', err);
+            throw err;
+        }
+    },
+
+    deleteComment: async (columnId, cardId, commentId) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
+
+        const originalBoard = get().board;
+
+        // Optimistic update
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === columnId
+                        ? {
+                            ...col,
+                            cards: col.cards.map(card =>
+                                card.id === cardId
+                                    ? {
+                                        ...card,
+                                        comments: card.comments.filter(c => c.id !== commentId)
+                                    }
+                                    : card
+                            )
+                        }
+                        : col
+                )
+            }
+        }));
+
+        try {
+            await apiService.deleteComment(boardId, columnId, cardId, commentId);
+        } catch (err) {
+            set({ board: originalBoard });
+            throw err;
+        }
+    },
+
+    // ========== ATTACHMENT ACTIONS ==========
+    createAttachment: async (columnId, cardId, attachmentData) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
+
+        try {
+            const newAttachment = await apiService.createAttachment(boardId, columnId, cardId, attachmentData);
+
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === columnId
+                            ? {
+                                ...col,
+                                cards: col.cards.map(card =>
+                                    card.id === cardId
+                                        ? {
+                                            ...card,
+                                            attachments: [...(card.attachments || []), newAttachment].sort((a, b) =>
+                                                new Date(a.createdAt) - new Date(b.createdAt)
+                                            )
+                                        }
+                                        : card
+                                )
+                            }
+                            : col
+                    )
+                }
+            }));
+
+            return newAttachment;
+        } catch (err) {
+            console.error('createAttachment error:', err);
+            throw err;
+        }
+    },
+
+    deleteAttachment: async (columnId, cardId, attachmentId) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
+
+        const originalBoard = get().board;
+
+        // Optimistic update
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === columnId
+                        ? {
+                            ...col,
+                            cards: col.cards.map(card =>
+                                card.id === cardId
+                                    ? {
+                                        ...card,
+                                        attachments: card.attachments.filter(a => a.id !== attachmentId)
+                                    }
+                                    : card
+                            )
+                        }
+                        : col
+                )
+            }
+        }));
+
+        try {
+            await apiService.deleteAttachment(boardId, columnId, cardId, attachmentId);
+        } catch (err) {
+            set({ board: originalBoard });
+            throw err;
+        }
+    },
+
+    // ========== SIGNALR HANDLERS FOR COMMENTS ==========
+    handleCommentAdded: (data) => {
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === data.columnId
+                        ? {
+                            ...col,
+                            cards: col.cards.map(card =>
+                                card.id === data.cardId
+                                    ? {
+                                        ...card,
+                                        comments: [...(card.comments || []), data.comment].sort((a, b) =>
+                                            new Date(a.createdAt) - new Date(b.createdAt)
+                                        )
+                                    }
+                                    : card
+                            )
+                        }
+                        : col
+                )
+            }
+        }));
+    },
+
+    handleCommentUpdated: (data) => {
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === data.columnId
+                        ? {
+                            ...col,
+                            cards: col.cards.map(card =>
+                                card.id === data.cardId
+                                    ? {
+                                        ...card,
+                                        comments: card.comments.map(c =>
+                                            c.id === data.comment.id ? data.comment : c
+                                        )
+                                    }
+                                    : card
+                            )
+                        }
+                        : col
+                )
+            }
+        }));
+    },
+
+    handleCommentDeleted: (data) => {
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === data.columnId
+                        ? {
+                            ...col,
+                            cards: col.cards.map(card =>
+                                card.id === data.cardId
+                                    ? {
+                                        ...card,
+                                        comments: card.comments.filter(c => c.id !== data.commentId)
+                                    }
+                                    : card
+                            )
+                        }
+                        : col
+                )
+            }
+        }));
+    },
+
+    // ========== SIGNALR HANDLERS FOR ATTACHMENTS ==========
+    handleAttachmentAdded: (data) => {
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === data.columnId
+                        ? {
+                            ...col,
+                            cards: col.cards.map(card =>
+                                card.id === data.cardId
+                                    ? {
+                                        ...card,
+                                        attachments: [...(card.attachments || []), data.attachment].sort((a, b) =>
+                                            new Date(a.createdAt) - new Date(b.createdAt)
+                                        )
+                                    }
+                                    : card
+                            )
+                        }
+                        : col
+                )
+            }
+        }));
+    },
+
+    handleAttachmentDeleted: (data) => {
+        set(state => ({
+            board: {
+                ...state.board,
+                columns: state.board.columns.map(col =>
+                    col.id === data.columnId
+                        ? {
+                            ...col,
+                            cards: col.cards.map(card =>
+                                card.id === data.cardId
+                                    ? {
+                                        ...card,
+                                        attachments: card.attachments.filter(a => a.id !== data.attachmentId)
+                                    }
+                                    : card
+                            )
+                        }
+                        : col
+                )
+            }
+        }));
     }
 }));

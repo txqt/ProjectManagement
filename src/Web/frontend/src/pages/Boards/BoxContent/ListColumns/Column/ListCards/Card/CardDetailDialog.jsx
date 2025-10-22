@@ -28,6 +28,7 @@ import { shallow } from 'zustand/shallow';
 import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
 import { apiService } from '~/services/api';
 import { useBoardStore } from '~/stores/boardStore';
+import { CommentSection, AttachmentSection } from './CommentAttachmentSections';
 
 const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription }) => {
   // ========================================
@@ -37,7 +38,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     useCallback(
       (s) => {
         if (!initialCard?.id) return null;
-        
+
         const cols = s.board?.columns ?? [];
         for (const col of cols) {
           const found = col.cards?.find(c => c.id === initialCard.id);
@@ -67,13 +68,18 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const [tempTitle, setTempTitle] = useState('');
   const [editing, setEditing] = useState(false);
   const [description, setDescription] = useState('');
-  
+  // Attachments & comments
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [comments, setComments] = useState([]);
+
   // Member UI
   const [memberMenuAnchor, setMemberMenuAnchor] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  
+
   // Cover menu
   const [unsplashAnchor, setUnsplashAnchor] = useState(null);
 
@@ -104,9 +110,11 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   // ========================================
   useEffect(() => {
     if (!currentCard) return;
-    
+
     setTempTitle(currentCard.title ?? '');
     setDescription(currentCard.description ?? '');
+    setAttachments(currentCard.attachments ?? []);
+    setComments(currentCard.comments ?? []);
     setEditTitleMode(false);
     setEditing(false);
   }, [currentCard?.id, currentCard?.title, currentCard?.description]);
@@ -136,9 +144,9 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     if (!currentCard) return;
 
     try {
-      await updateCard(currentCard.columnId, currentCard.id, { 
-        ...currentCard, 
-        title: tempTitle 
+      await updateCard(currentCard.columnId, currentCard.id, {
+        ...currentCard,
+        title: tempTitle
       });
       setEditTitleMode(false);
       toast.success('Đã cập nhật tiêu đề');
@@ -162,12 +170,12 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
       }
 
       if (typeof updateCard === 'function') {
-        await updateCard(currentCard.columnId, currentCard.id, { 
-          ...currentCard, 
-          description 
+        await updateCard(currentCard.columnId, currentCard.id, {
+          ...currentCard,
+          description
         });
       }
-      
+
       setEditing(false);
       toast.success('Đã cập nhật mô tả');
 
@@ -197,11 +205,11 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     if (!currentCard || !url) return;
 
     try {
-      const success = await updateCard(currentCard.columnId, currentCard.id, { 
-        ...currentCard, 
-        cover: url 
+      const success = await updateCard(currentCard.columnId, currentCard.id, {
+        ...currentCard,
+        cover: url
       });
-      
+
       if (success) {
         toast.success('Đã cập nhật cover từ Unsplash');
       } else {
@@ -219,11 +227,11 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     if (!currentCard) return;
 
     try {
-      const success = await updateCard(currentCard.columnId, currentCard.id, { 
-        ...currentCard, 
-        cover: null 
+      const success = await updateCard(currentCard.columnId, currentCard.id, {
+        ...currentCard,
+        cover: null
       });
-      
+
       if (success) {
         toast.success('Đã xoá cover');
       } else {
@@ -238,27 +246,27 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   // ========================================
   // Member helpers
   // ========================================
-  const getUserIdFrom = (item) => 
+  const getUserIdFrom = (item) =>
     item?.user?.id ?? item?.userId ?? item?.id ?? null;
-  
-  const getUserEmailFrom = (item) => 
+
+  const getUserEmailFrom = (item) =>
     item?.user?.email ?? item?.email ?? item?.userEmail ?? null;
-  
-  const getDisplayNameFrom = (item) => 
-    item?.user?.userName ?? 
-    item?.user?.fullName ?? 
-    item?.fullName ?? 
-    item?.userName ?? 
-    item?.name ?? 
+
+  const getDisplayNameFrom = (item) =>
+    item?.user?.userName ??
+    item?.user?.fullName ??
+    item?.fullName ??
+    item?.userName ??
+    item?.name ??
     'Unknown';
-  
-  const getAvatarFrom = (item) => 
-    item?.user?.avatar ?? 
-    item?.avatar ?? 
-    item?.avatarUrl ?? 
-    item?.user?.avatarUrl ?? 
+
+  const getAvatarFrom = (item) =>
+    item?.user?.avatar ??
+    item?.avatar ??
+    item?.avatarUrl ??
+    item?.user?.avatarUrl ??
     null;
-  
+
   const isUserAssignedToCard = (cardObj, userIdOrEmail) => {
     if (!cardObj?.members) return false;
     return cardObj.members.some(m => {
@@ -270,7 +278,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
   const assignHandler = async (selectedItem) => {
     if (!currentCard) return;
-    
+
     const email = getUserEmailFrom(selectedItem);
     const userId = getUserIdFrom(selectedItem);
 
@@ -291,7 +299,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
   const unassignHandler = async (member) => {
     if (!currentCard) return;
-    
+
     const memberId = member?.id ?? getUserIdFrom(member);
     if (!memberId) return;
 
@@ -322,15 +330,15 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   // ========================================
   useEffect(() => {
     if (!memberMenuAnchor) return;
-    
+
     let mounted = true;
     const q = (searchQuery || '').trim().toLowerCase();
-    
+
     const timer = setTimeout(async () => {
       if (!mounted) return;
-      
+
       setLoadingMembers(true);
-      
+
       try {
         if (!q) {
           if (mounted) setSearchResults(boardMembers.slice(0, 5));
@@ -352,7 +360,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
             const remote = (apiRes?.items ?? []).filter(u => {
               const uid = getUserIdFrom(u);
               const email = getUserEmailFrom(u);
-              return !boardMembers.some(bm => 
+              return !boardMembers.some(bm =>
                 getUserIdFrom(bm) === uid || getUserEmailFrom(bm) === email
               );
             });
@@ -384,12 +392,12 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   if (!currentCard) return null;
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      fullWidth 
-      maxWidth="md" 
-      PaperProps={{ sx: { height: '75vh' } }} 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="md"
+      PaperProps={{ sx: { height: '75vh' } }}
       data-no-dnd='true'
     >
       {/* Header */}
@@ -500,9 +508,9 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                   transition: 'opacity 0.18s',
                 }}
               >
-                <IconButton 
-                  size="small" 
-                  onClick={handleDeleteCover} 
+                <IconButton
+                  size="small"
+                  onClick={handleDeleteCover}
                   sx={{ bgcolor: 'rgba(255,255,255,0.7)' }}
                 >
                   <DeleteIcon />
@@ -510,11 +518,11 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
               </Box>
             </>
           ) : (
-            <Box sx={{ 
-              height: '100%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center' 
+            <Box sx={{
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}>
               <Typography color="text.secondary">No cover</Typography>
             </Box>
@@ -526,11 +534,44 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
           {/* Actions */}
           <Paper sx={{ p: 1 }} elevation={0}>
             <Stack direction="row" spacing={1} alignItems="center">
-              <Button startIcon={<AttachmentIcon />} variant="outlined">
+              <Button startIcon={<AttachmentIcon />} variant="outlined" component="label" disabled={uploading}>
                 Đính kèm
+                <input
+                  hidden
+                  type="file"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !currentCard) return;
+                    setUploading(true);
+                    try {
+                      await apiService.uploadAttachment(
+                        useBoardStore.getState().boardId,
+                        currentCard.columnId,
+                        currentCard.id,
+                        file
+                      );
+
+                      // reload card
+                      const card = await apiService.getCard(useBoardStore.getState().boardId, currentCard.columnId, currentCard.id);
+                      setAttachments(card.attachments ?? []);
+                    } catch (err) {
+                      console.error('uploadAttachment error', err);
+                      toast.error('Không thể upload file');
+                    } finally {
+                      setUploading(false);
+                      e.target.value = '';
+                    }
+                  }}
+                />
               </Button>
             </Stack>
           </Paper>
+
+          {/* Attachments Section */}
+          <AttachmentSection card={currentCard} />
+
+          {/* Comments Section */}
+          <CommentSection card={currentCard} />
 
           {/* Members */}
           <Paper sx={{ p: 1 }}>
@@ -577,12 +618,12 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                 placeholder="Tìm kiếm thành viên"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ 
-                  width: '100%', 
-                  padding: '6px 8px', 
-                  borderRadius: 6, 
-                  border: '1px solid #ccc', 
-                  outline: 'none' 
+                style={{
+                  width: '100%',
+                  padding: '6px 8px',
+                  borderRadius: 6,
+                  border: '1px solid #ccc',
+                  outline: 'none'
                 }}
               />
             </Box>
@@ -626,9 +667,9 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="subtitle1">Mô tả</Typography>
               {!editing && (
-                <Button 
-                  size="small" 
-                  startIcon={<EditIcon />} 
+                <Button
+                  size="small"
+                  startIcon={<EditIcon />}
                   onClick={() => setEditing(true)}
                 >
                   {description ? 'Chỉnh sửa' : 'Thêm'}
@@ -640,25 +681,25 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
               {editing ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                   <Box sx={{ flex: '1 1 auto' }}>
-                    <ReactQuill 
-                      theme="snow" 
-                      value={description} 
-                      onChange={setDescription} 
-                      modules={modules} 
+                    <ReactQuill
+                      theme="snow"
+                      value={description}
+                      onChange={setDescription}
+                      modules={modules}
                     />
                   </Box>
 
                   <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                    <Button 
-                      variant="contained" 
-                      size="small" 
+                    <Button
+                      variant="contained"
+                      size="small"
                       onClick={handleSaveDescription}
                     >
                       Save
                     </Button>
-                    <Button 
-                      variant="outlined" 
-                      size="small" 
+                    <Button
+                      variant="outlined"
+                      size="small"
                       onClick={() => {
                         setEditing(false);
                         setDescription(currentCard.description ?? '');
@@ -670,10 +711,10 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                 </Box>
               ) : (
                 <Box sx={{ minHeight: 120 }}>
-                  <div 
-                    dangerouslySetInnerHTML={{ 
-                      __html: description || '<i style="color:#999">Không có mô tả</i>' 
-                    }} 
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: description || '<i style="color:#999">Không có mô tả</i>'
+                    }}
                   />
                 </Box>
               )}

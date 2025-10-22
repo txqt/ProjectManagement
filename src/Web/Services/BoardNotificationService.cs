@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using ProjectManagement.Hubs;
+using ProjectManagement.Models.DTOs.Attachment;
 using ProjectManagement.Models.DTOs.Card;
 using ProjectManagement.Models.DTOs.Column;
+using ProjectManagement.Models.DTOs.Comment;
 using ProjectManagement.Models.DTOs.Notification;
 using ProjectManagement.Services.Interfaces;
 
@@ -133,5 +135,77 @@ namespace ProjectManagement.Services
             string userId) =>
             _hub.Clients.Group(GroupName(boardId))
                 .SendAsync("CardUnassigned", new { card = cardDto, columnId, unassignedUserId, userId });
+        
+        // Comment events
+        public async Task BroadcastCommentAdded(string boardId, string columnId, string cardId, CommentDto comment, string userId)
+        {
+            await _hub.Clients
+                .Group(GroupName(boardId))
+                .SendAsync("CommentAdded", new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    comment,
+                    userId
+                });
+        }
+
+        public async Task BroadcastCommentUpdated(string boardId, string columnId, string cardId, CommentDto comment, string userId)
+        {
+            await _hub.Clients
+                .Group(GroupName(boardId))
+                .SendAsync("CommentUpdated", new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    comment,
+                    userId
+                });
+        }
+
+        public async Task BroadcastCommentDeleted(string boardId, string columnId, string cardId, string commentId, string userId)
+        {
+            await _hub.Clients
+                .Group(GroupName(boardId))
+                .SendAsync("CommentDeleted", new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    commentId,
+                    userId
+                });
+        }
+
+        // Attachment events
+        public async Task BroadcastAttachmentAdded(string boardId, string columnId, string cardId, AttachmentDto attachment, string userId)
+        {
+            await _hub.Clients
+                .Group(GroupName(boardId))
+                .SendAsync("AttachmentAdded", new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    attachment,
+                    userId
+                });
+        }
+
+        public async Task BroadcastAttachmentDeleted(string boardId, string columnId, string cardId, string attachmentId, string userId)
+        {
+            await _hub.Clients
+                .Group(GroupName(boardId))
+                .SendAsync("AttachmentDeleted", new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    attachmentId,
+                    userId
+                });
+        }
     }
 }

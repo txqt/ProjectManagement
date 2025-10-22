@@ -1,4 +1,5 @@
-﻿using ProjectManagement.Models.DTOs.Notification;
+﻿using ProjectManagement.Models.DTOs.Comment;
+using ProjectManagement.Models.DTOs.Notification;
 
 namespace ProjectManagement.Services.Interfaces
 {

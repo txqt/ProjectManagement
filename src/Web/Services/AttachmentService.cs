@@ -12,12 +12,14 @@ namespace ProjectManagement.Services
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly IWebHostEnvironment _env;
+        private readonly IBoardNotificationService _boardNotificationService;
 
-        public AttachmentService(ApplicationDbContext context, IMapper mapper, IWebHostEnvironment env)
+        public AttachmentService(ApplicationDbContext context, IMapper mapper, IWebHostEnvironment env, IBoardNotificationService boardNotificationService)
         {
             _context = context;
             _mapper = mapper;
             _env = env;
+            _boardNotificationService = boardNotificationService;
         }
 
         public async Task<AttachmentDto> UploadAsync(string boardId, string cardId, IFormFile file, string userId)
@@ -55,22 +57,77 @@ namespace ProjectManagement.Services
             return _mapper.Map<AttachmentDto>(attachment);
         }
 
-        public async Task DeleteAsync(string attachmentId, string userId)
+        public async Task<IEnumerable<AttachmentDto>> GetAttachmentsAsync(string cardId)
         {
-            var attachment = await _context.Attachments.Include(a => a.Card).FirstOrDefaultAsync(a => a.Id == attachmentId);
-            if (attachment == null) throw new ArgumentException("Attachment not found");
+            var attachments = await _context.Attachments
+                .Where(a => a.CardId == cardId)
+                .OrderBy(a => a.CreatedAt)
+                .ToListAsync();
 
-            // Try to delete file
-            try
+            return _mapper.Map<IEnumerable<AttachmentDto>>(attachments);
+        }
+
+        public async Task<AttachmentDto> CreateAttachmentAsync(string cardId, CreateAttachmentDto createAttachmentDto, string userId)
+        {
+            var card = await _context.Cards
+                .Include(c => c.Board)
+                .FirstOrDefaultAsync(c => c.Id == cardId);
+
+            if (card == null)
+                throw new ArgumentException("Card not found");
+
+            var attachment = new Attachment
             {
-                var webRoot = _env.WebRootPath ?? "wwwroot";
-                var physical = Path.Combine(webRoot, attachment.Url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                if (System.IO.File.Exists(physical)) System.IO.File.Delete(physical);
-            }
-            catch { /* ignore */ }
+                Id = Guid.NewGuid().ToString(),
+                CardId = cardId,
+                Name = createAttachmentDto.Name,
+                Url = createAttachmentDto.Url,
+                Type = createAttachmentDto.Type ?? "file",
+                CreatedAt = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow
+            };
+
+            _context.Attachments.Add(attachment);
+            await _context.SaveChangesAsync();
+
+            var attachmentDto = _mapper.Map<AttachmentDto>(attachment);
+
+            await _boardNotificationService.BroadcastAttachmentAdded(
+                card.BoardId,
+                card.ColumnId,
+                cardId,
+                attachmentDto,
+                userId
+            );
+
+            return attachmentDto;
+        }
+
+        public async Task<bool> DeleteAttachmentAsync(string attachmentId, string userId)
+        {
+            var attachment = await _context.Attachments
+                .Include(a => a.Card)
+                .FirstOrDefaultAsync(a => a.Id == attachmentId);
+
+            if (attachment == null)
+                return false;
+
+            var boardId = attachment.Card.BoardId;
+            var columnId = attachment.Card.ColumnId;
+            var cardId = attachment.CardId;
 
             _context.Attachments.Remove(attachment);
             await _context.SaveChangesAsync();
+
+            await _boardNotificationService.BroadcastAttachmentDeleted(
+                boardId,
+                columnId,
+                cardId,
+                attachmentId,
+                userId
+            );
+
+            return true;
         }
     }
 }

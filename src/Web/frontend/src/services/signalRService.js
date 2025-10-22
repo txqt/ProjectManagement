@@ -316,6 +316,49 @@ class SignalRService {
   onCardUnassigned(callback) {
     this._addListener('CardUnassigned', callback);
   }
+
+  // Comment listeners
+  onCommentAdded(callback) {
+    this._addListener('CommentAdded', callback);
+  }
+
+  onCommentUpdated(callback) {
+    this._addListener('CommentUpdated', callback);
+  }
+
+  onCommentDeleted(callback) {
+    this._addListener('CommentDeleted', callback);
+  }
+
+  // Attachment listeners
+  onAttachmentAdded(callback) {
+    this._addListener('AttachmentAdded', callback);
+  }
+
+  onAttachmentDeleted(callback) {
+    this._addListener('AttachmentDeleted', callback);
+  }
+
+  // Remove listeners
+  offCommentAdded(callback) {
+    this._removeListener('CommentAdded', callback);
+  }
+
+  offCommentUpdated(callback) {
+    this._removeListener('CommentUpdated', callback);
+  }
+
+  offCommentDeleted(callback) {
+    this._removeListener('CommentDeleted', callback);
+  }
+
+  offAttachmentAdded(callback) {
+    this._removeListener('AttachmentAdded', callback);
+  }
+
+  offAttachmentDeleted(callback) {
+    this._removeListener('AttachmentDeleted', callback);
+  }
 }
 
 export const signalRService = new SignalRService();

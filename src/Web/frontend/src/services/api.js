@@ -355,6 +355,72 @@ class ApiService {
     const q = encodeURIComponent((query || 'wallpaper').trim());
     return this.request(`/unsplash/search?query=${q}&per_page=${perPage}`);
   }
+
+  // Attachment methods
+  async getAttachments(boardId, columnId, cardId) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/attachments`);
+  }
+
+  async createAttachment(boardId, columnId, cardId, attachmentData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/attachments`, {
+      method: 'POST',
+      body: JSON.stringify(attachmentData),
+    });
+  }
+
+  async deleteAttachment(boardId, columnId, cardId, attachmentId) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/attachments/${attachmentId}`, {
+      method: 'DELETE',
+    });
+  }
+  async uploadAttachment(boardId, columnId, cardId, file) {
+    const url = `${this.baseURL}/boards/${boardId}/columns/${columnId}/cards/${cardId}/attachments`;
+    const token = this.token;
+    const form = new FormData();
+    form.append('file', file);
+
+    const headers = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const res = await fetch(url, { method: 'POST', body: form, headers });
+    if (!res.ok) {
+      let body = null;
+      try { body = await res.json(); } catch { body = await res.text(); }
+      const error = new Error(body?.message || body || `HTTP error ${res.status}`);
+      error.status = res.status;
+      error.body = body;
+      throw error;
+    }
+
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) return await res.json();
+    return res;
+  }
+
+  // Comment methods
+  async getComments(boardId, columnId, cardId) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/comments`);
+  }
+
+  async createComment(boardId, columnId, cardId, commentData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(commentData),
+    });
+  }
+
+  async updateComment(boardId, columnId, cardId, commentId, updateData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/comments/${commentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+  }
+
+  async deleteComment(boardId, columnId, cardId, commentId) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/comments/${commentId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const apiService = new ApiService();
