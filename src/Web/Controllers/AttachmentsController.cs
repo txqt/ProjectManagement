@@ -12,6 +12,7 @@ namespace ProjectManagement.Controllers
     [ApiController]
     [Route("api/boards/{boardId}/columns/{columnId}/cards/{cardId}/[controller]")]
     [Authorize]
+    [RequirePermission(ProjectManagement.Authorization.Permissions.Cards.Attach)]
     public class AttachmentsController : ControllerBase
     {
         private readonly IAttachmentService _attachmentService;

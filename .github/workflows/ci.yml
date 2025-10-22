@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: projectmanagement_test
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore backend
+      run: |
+        cd src/Web
+        dotnet restore
+
+    - name: Build backend
+      run: |
+        cd src/Web
+        dotnet build --configuration Release --no-restore
+
+    - name: Install Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install frontend deps
+      run: |
+        cd src/Web/frontend
+        pnpm install
+
+    - name: Build frontend
+      run: |
+        cd src/Web/frontend
+        pnpm build
+
+    - name: Run backend tests (if exist)
+      run: |
+        echo "No backend tests configured"

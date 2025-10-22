@@ -1,0 +1,14 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Database=projectmanagement_dev;Username=postgres;Password=postgres"
+  },
+  "Redis": "localhost:6379",
+  "Jwt": {
+    "Key": "REPLACE_WITH_SECURE_KEY",
+    "Issuer": "ProjectManagement",
+    "Audience": "ProjectManagementClient"
+  },
+  "Unsplash": {
+    "AccessKey": "REPLACE_WITH_UNSPLASH_KEY"
+  }
+}
