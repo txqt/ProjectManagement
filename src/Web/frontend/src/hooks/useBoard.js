@@ -107,112 +107,110 @@ export const useBoard = (boardId) => {
 
   // Kết nối SignalR event handlers
   useEffect(() => {
-    if (!isConnected || !signalRService) return;
+  if (!isConnected || !signalRService) return;
 
-    // Column events
-    signalRService.onColumnCreated?.(handleColumnCreated);
-    signalRService.onColumnUpdated?.(handleColumnUpdated);
-    signalRService.onColumnDeleted?.(handleColumnDeleted);
-    signalRService.onColumnsReordered?.(handleColumnsReordered);
+  // Column events
+  signalRService.onColumnCreated?.(handleColumnCreated);
+  signalRService.onColumnUpdated?.(handleColumnUpdated);
+  signalRService.onColumnDeleted?.(handleColumnDeleted);
+  signalRService.onColumnsReordered?.(handleColumnsReordered);
 
-    // Card events
-    signalRService.onCardCreated?.(handleCardCreated);
-    signalRService.onCardUpdated?.(handleCardUpdated);
-    signalRService.onCardDeleted?.(handleCardDeleted);
-    signalRService.onCardsReordered?.(handleCardsReordered);
-    signalRService.onCardMoved?.(handleCardMoved);
-    signalRService.onCardAssigned?.(handleCardAssigned);
-    signalRService.onCardUnassigned?.(handleCardUnassigned);
+  // Card events
+  signalRService.onCardCreated?.(handleCardCreated);
+  signalRService.onCardUpdated?.(handleCardUpdated);
+  signalRService.onCardDeleted?.(handleCardDeleted);
+  signalRService.onCardsReordered?.(handleCardsReordered);
+  signalRService.onCardMoved?.(handleCardMoved);
+  signalRService.onCardAssigned?.(handleCardAssigned);
+  signalRService.onCardUnassigned?.(handleCardUnassigned);
 
-    // User presence events
-    // signalRService.onUserJoined?.((data) => {
-      
-    // });
-
-    signalRService.onUserLeft?.((data) => {
-      toast.info(`${data.user.userName} left the board`, {
-        position: 'bottom-left',
-        autoClose: 2000
-      });
+  // User presence events
+  signalRService.onUserLeft?.((data) => {
+    toast.info(`${data.user.userName} left the board`, {
+      position: 'bottom-left',
+      autoClose: 2000
     });
+  });
 
-    // Comment events
-    signalRService.onCommentAdded?.(handleCommentAdded);
-    signalRService.onCommentUpdated?.(handleCommentUpdated);
-    signalRService.onCommentDeleted?.(handleCommentDeleted);
+  // Comment events
+  signalRService.onCommentAdded?.(handleCommentAdded);
+  signalRService.onCommentUpdated?.(handleCommentUpdated);
+  signalRService.onCommentDeleted?.(handleCommentDeleted);
 
-    // Attachment events
-    signalRService.onAttachmentAdded?.(handleAttachmentAdded);
-    signalRService.onAttachmentDeleted?.(handleAttachmentDeleted);
+  // ✅ FIX: Attachment events - THÊM VÀO ĐÂY
+  signalRService.onAttachmentAdded?.(handleAttachmentAdded);
+  signalRService.onAttachmentDeleted?.(handleAttachmentDeleted);
 
-    // Cleanup function
-    return () => {
-      // Best-effort cleanup
-      if (typeof signalRService.removeAllListeners === 'function') {
-        signalRService.removeAllListeners();
-        return;
+  // Cleanup function
+  return () => {
+    // Best-effort cleanup
+    if (typeof signalRService.removeAllListeners === 'function') {
+      signalRService.removeAllListeners();
+      return;
+    }
+
+    // Try specific off methods
+    signalRService.offColumnCreated?.(handleColumnCreated);
+    signalRService.offColumnUpdated?.(handleColumnUpdated);
+    signalRService.offColumnDeleted?.(handleColumnDeleted);
+    signalRService.offColumnsReordered?.(handleColumnsReordered);
+
+    signalRService.offCardCreated?.(handleCardCreated);
+    signalRService.offCardUpdated?.(handleCardUpdated);
+    signalRService.offCardDeleted?.(handleCardDeleted);
+    signalRService.offCardsReordered?.(handleCardsReordered);
+    signalRService.offCardMoved?.(handleCardMoved);
+    signalRService.offCardAssigned?.(handleCardAssigned);
+    signalRService.offCardUnassigned?.(handleCardUnassigned);
+
+    signalRService.offCommentAdded?.(handleCommentAdded);
+    signalRService.offCommentUpdated?.(handleCommentUpdated);
+    signalRService.offCommentDeleted?.(handleCommentDeleted);
+    
+    signalRService.offAttachmentAdded?.(handleAttachmentAdded);
+    signalRService.offAttachmentDeleted?.(handleAttachmentDeleted);
+
+    // Try generic off method
+    if (typeof signalRService.off === 'function') {
+      try {
+        signalRService.off('columnCreated', handleColumnCreated);
+        signalRService.off('columnUpdated', handleColumnUpdated);
+        signalRService.off('columnDeleted', handleColumnDeleted);
+        signalRService.off('columnsReordered', handleColumnsReordered);
+
+        signalRService.off('cardCreated', handleCardCreated);
+        signalRService.off('cardUpdated', handleCardUpdated);
+        signalRService.off('cardDeleted', handleCardDeleted);
+        signalRService.off('cardsReordered', handleCardsReordered);
+        signalRService.off('cardMoved', handleCardMoved);
+        signalRService.off('cardAssigned', handleCardAssigned);
+        signalRService.off('cardUnassigned', handleCardUnassigned);
+      } catch (error) {
+        console.warn('Error removing SignalR listeners:', error);
       }
+    }
+  };
+}, [
+  isConnected,
+  signalRService,
+  handleColumnCreated,
+  handleColumnUpdated,
+  handleColumnDeleted,
+  handleColumnsReordered,
+  handleCardCreated,
+  handleCardUpdated,
+  handleCardDeleted,
+  handleCardsReordered,
+  handleCardMoved,
+  handleCardAssigned,
+  handleCardUnassigned,
+  handleCommentAdded,
+  handleCommentUpdated,
+  handleCommentDeleted,
+  handleAttachmentAdded,
+  handleAttachmentDeleted
+]);
 
-      // Try specific off methods
-      signalRService.offColumnCreated?.(handleColumnCreated);
-      signalRService.offColumnUpdated?.(handleColumnUpdated);
-      signalRService.offColumnDeleted?.(handleColumnDeleted);
-      signalRService.offColumnsReordered?.(handleColumnsReordered);
-
-      signalRService.offCardCreated?.(handleCardCreated);
-      signalRService.offCardUpdated?.(handleCardUpdated);
-      signalRService.offCardDeleted?.(handleCardDeleted);
-      signalRService.offCardsReordered?.(handleCardsReordered);
-      signalRService.offCardMoved?.(handleCardMoved);
-      signalRService.offCardAssigned?.(handleCardAssigned);
-      signalRService.offCardUnassigned?.(handleCardUnassigned);
-
-      signalRService.offCommentAdded?.(handleCommentAdded);
-      signalRService.offCommentUpdated?.(handleCommentUpdated);
-      signalRService.offCommentDeleted?.(handleCommentDeleted);
-      signalRService.offAttachmentAdded?.(handleAttachmentAdded);
-      signalRService.offAttachmentDeleted?.(handleAttachmentDeleted);
-
-      // Try generic off method
-      if (typeof signalRService.off === 'function') {
-        try {
-          signalRService.off('columnCreated', handleColumnCreated);
-          signalRService.off('columnUpdated', handleColumnUpdated);
-          signalRService.off('columnDeleted', handleColumnDeleted);
-          signalRService.off('columnsReordered', handleColumnsReordered);
-
-          signalRService.off('cardCreated', handleCardCreated);
-          signalRService.off('cardUpdated', handleCardUpdated);
-          signalRService.off('cardDeleted', handleCardDeleted);
-          signalRService.off('cardsReordered', handleCardsReordered);
-          signalRService.off('cardMoved', handleCardMoved);
-          signalRService.off('cardAssigned', handleCardAssigned);
-          signalRService.off('cardUnassigned', handleCardUnassigned);
-        } catch (error) {
-          console.warn('Error removing SignalR listeners:', error);
-        }
-      }
-    };
-  }, [
-    isConnected,
-    signalRService,
-    handleColumnCreated,
-    handleColumnUpdated,
-    handleColumnDeleted,
-    handleColumnsReordered,
-    handleCardCreated,
-    handleCardUpdated,
-    handleCardDeleted,
-    handleCardsReordered,
-    handleCardMoved,
-    handleCardAssigned,
-    handleCardUnassigned,
-    createComment,
-    updateComment,
-    deleteComment,
-    createAttachment,
-    deleteAttachment
-  ]);
 
   return {
     // State
