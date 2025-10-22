@@ -246,6 +246,7 @@ const AttachmentSection = ({ card }) => {
   const [attachmentType, setAttachmentType] = useState('file');
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   const attachments = useMemo(() => {
     return (card?.attachments || []).sort((a, b) => 
@@ -279,6 +280,24 @@ const AttachmentSection = ({ card }) => {
     }
   };
 
+  // File upload input handler - uses store.uploadAttachment to centralize
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingFile(true);
+    try {
+      await useBoardStore.getState().uploadAttachment(card.columnId, card.id, file);
+      toast.success('Attachment uploaded');
+      // store will update card.attachments via uploadAttachment
+    } catch (err) {
+      console.error('Failed to upload attachment:', err);
+      toast.error('Failed to upload attachment');
+    } finally {
+      setUploadingFile(false);
+      e.target.value = '';
+    }
+  };
+
   const handleDelete = async (attachmentId) => {
     if (!window.confirm('Delete this attachment?')) return;
 
@@ -308,6 +327,15 @@ const AttachmentSection = ({ card }) => {
           onClick={() => setShowForm(!showForm)}
         >
           Add
+        </Button>
+        <Button
+          size="small"
+          component="label"
+          sx={{ ml: 1 }}
+          disabled={uploadingFile}
+        >
+          Upload
+          <input hidden type="file" onChange={handleFileChange} />
         </Button>
       </Box>
 

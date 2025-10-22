@@ -45,15 +45,6 @@ export const useBoard = (boardId) => {
   const handleCardAssigned = useBoardStore((state) => state.handleCardAssigned);
   const handleCardUnassigned = useBoardStore((state) => state.handleCardUnassigned);
 
-  // Comment actions
-  const createComment = useBoardStore((state) => state.createComment);
-  const updateComment = useBoardStore((state) => state.updateComment);
-  const deleteComment = useBoardStore((state) => state.deleteComment);
-
-  // Attachment actions
-  const createAttachment = useBoardStore((state) => state.createAttachment);
-  const deleteAttachment = useBoardStore((state) => state.deleteAttachment);
-
   // SignalR handlers
   const handleCommentAdded = useBoardStore((state) => state.handleCommentAdded);
   const handleCommentUpdated = useBoardStore((state) => state.handleCommentUpdated);

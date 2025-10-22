@@ -68,11 +68,8 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const [tempTitle, setTempTitle] = useState('');
   const [editing, setEditing] = useState(false);
   const [description, setDescription] = useState('');
-  // Attachments & comments
-  const [attachments, setAttachments] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  const [comments, setComments] = useState([]);
+  // Comments
+  // Comments handled by CommentSection component
 
   // Member UI
   const [memberMenuAnchor, setMemberMenuAnchor] = useState(null);
@@ -92,7 +89,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
       return 'Card đã được di chuyển sang column khác. Dialog sẽ đóng khi bạn lưu.';
     }
     return null;
-  }, [initialCard?.columnId, currentCard?.columnId]);
+  }, [initialCard, currentCard]);
 
   // ========================================
   // Auto-close if card deleted from store
@@ -113,11 +110,9 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
     setTempTitle(currentCard.title ?? '');
     setDescription(currentCard.description ?? '');
-    setAttachments(currentCard.attachments ?? []);
-    setComments(currentCard.comments ?? []);
     setEditTitleMode(false);
     setEditing(false);
-  }, [currentCard?.id, currentCard?.title, currentCard?.description]);
+  }, [currentCard]);
 
   // ========================================
   // ReactQuill config
@@ -532,42 +527,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         {/* Content section */}
         <Box sx={{ flex: '1 1 80%', p: 2, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
           {/* Actions */}
-          <Paper sx={{ p: 1 }} elevation={0}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Button startIcon={<AttachmentIcon />} variant="outlined" component="label" disabled={uploading}>
-                Đính kèm
-                <input
-                  hidden
-                  type="file"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file || !currentCard) return;
-                    setUploading(true);
-                    try {
-                      await apiService.uploadAttachment(
-                        useBoardStore.getState().boardId,
-                        currentCard.columnId,
-                        currentCard.id,
-                        file
-                      );
-
-                      // reload card
-                      const card = await apiService.getCard(useBoardStore.getState().boardId, currentCard.columnId, currentCard.id);
-                      setAttachments(card.attachments ?? []);
-                    } catch (err) {
-                      console.error('uploadAttachment error', err);
-                      toast.error('Không thể upload file');
-                    } finally {
-                      setUploading(false);
-                      e.target.value = '';
-                    }
-                  }}
-                />
-              </Button>
-            </Stack>
-          </Paper>
-
-          {/* Attachments Section */}
+          {/* Attachments Section (centralized) */}
           <AttachmentSection card={currentCard} />
 
           {/* Comments Section */}

@@ -710,9 +710,9 @@ export const useBoardStore = create((set, get) => ({
                                     card.id === cardId
                                         ? {
                                             ...card,
-                                            comments: [...(card.comments || []), newComment].sort((a, b) =>
-                                                new Date(a.createdAt) - new Date(b.createdAt)
-                                            )
+                                            comments: (card.comments || []).some(c => c.id === newComment.id)
+                                                ? card.comments.slice().sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+                                                : [...(card.comments || []), newComment].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
                                         }
                                         : card
                                 )
@@ -821,9 +821,9 @@ export const useBoardStore = create((set, get) => ({
                                     card.id === cardId
                                         ? {
                                             ...card,
-                                            attachments: [...(card.attachments || []), newAttachment].sort((a, b) =>
-                                                new Date(a.createdAt) - new Date(b.createdAt)
-                                            )
+                                            attachments: (card.attachments || []).some(a => a.id === newAttachment.id)
+                                                ? card.attachments.slice().sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+                                                : [...(card.attachments || []), newAttachment].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
                                         }
                                         : card
                                 )
@@ -836,6 +836,47 @@ export const useBoardStore = create((set, get) => ({
             return newAttachment;
         } catch (err) {
             console.error('createAttachment error:', err);
+            throw err;
+        }
+    },
+
+    // Upload binary/file and add as attachment (centralized)
+    uploadAttachment: async (columnId, cardId, file) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
+
+        try {
+            const uploaded = await apiService.uploadAttachment(boardId, columnId, cardId, file);
+
+            // uploaded should be an attachment object
+            const newAttachment = uploaded;
+
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === columnId
+                            ? {
+                                ...col,
+                                cards: col.cards.map(card =>
+                                    card.id === cardId
+                                        ? {
+                                            ...card,
+                                            attachments: (card.attachments || []).some(a => a.id === newAttachment.id)
+                                                ? card.attachments.slice().sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+                                                : [...(card.attachments || []), newAttachment].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+                                        }
+                                        : card
+                                )
+                            }
+                            : col
+                    )
+                }
+            }));
+
+            return newAttachment;
+        } catch (err) {
+            console.error('uploadAttachment error:', err);
             throw err;
         }
     },
@@ -889,9 +930,9 @@ export const useBoardStore = create((set, get) => ({
                                 card.id === data.cardId
                                     ? {
                                         ...card,
-                                        comments: [...(card.comments || []), data.comment].sort((a, b) =>
-                                            new Date(a.createdAt) - new Date(b.createdAt)
-                                        )
+                                        comments: (card.comments || []).some(c => c.id === data.comment.id)
+                                            ? card.comments.slice().sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+                                            : [...(card.comments || []), data.comment].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
                                     }
                                     : card
                             )
@@ -963,9 +1004,9 @@ export const useBoardStore = create((set, get) => ({
                                 card.id === data.cardId
                                     ? {
                                         ...card,
-                                        attachments: [...(card.attachments || []), data.attachment].sort((a, b) =>
-                                            new Date(a.createdAt) - new Date(b.createdAt)
-                                        )
+                                        attachments: (card.attachments || []).some(a => a.id === data.attachment.id)
+                                            ? card.attachments.slice().sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+                                            : [...(card.attachments || []), data.attachment].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
                                     }
                                     : card
                             )
