@@ -10,6 +10,7 @@ import AppBar from './components/AppBar/AppBar';
 
 // Import component HomePage mới
 import HomePage from './pages/HomePage.jsx';
+import JoinBoard from './pages/Boards/JoinBoard/JoinBoard.jsx';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -102,7 +103,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
+      <Route path="/join" element={<JoinBoard />} />
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

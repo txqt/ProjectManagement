@@ -1038,5 +1038,10 @@ export const useBoardStore = create((set, get) => ({
                 )
             }
         }));
+    },
+
+    handleJoinRequestCreated: (data) => {
+    },
+    handleJoinRequestResponded: (data) => {
     }
 }));

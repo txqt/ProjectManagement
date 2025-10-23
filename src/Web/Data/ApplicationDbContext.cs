@@ -22,7 +22,7 @@ namespace Infrastructure
         public DbSet<Attachment> Attachments { get; set; }
         public DbSet<BoardInvite> BoardInvites { get; set; }
         public DbSet<Notification> Notifications { get; set; }
-        
+        public DbSet<BoardShareToken> BoardShareTokens { get; set; }
         public DbSet<BoardJoinRequest> BoardJoinRequests { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -206,6 +206,18 @@ namespace Infrastructure
 
                 // Unique constraint: one pending request per user per board
                 entity.HasIndex(e => new { e.BoardId, e.UserId, e.Status });
+            });
+            
+            builder.Entity<BoardShareToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Token).IsUnique();
+                entity.HasIndex(e => new { e.BoardId, e.IsActive });
+
+                entity.HasOne(e => e.Board)
+                    .WithMany()
+                    .HasForeignKey(e => e.BoardId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

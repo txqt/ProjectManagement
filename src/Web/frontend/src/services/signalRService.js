@@ -359,6 +359,15 @@ class SignalRService {
   offAttachmentDeleted(callback) {
     this._removeListener('AttachmentDeleted', callback);
   }
+
+  // Join Request listeners
+  onJoinRequestCreated(callback) {
+    this._addListener('JoinRequestCreated', callback);
+  }
+
+  onJoinRequestResponded(callback) {
+    this._addListener('JoinRequestResponded', callback);
+  }
 }
 
 export const signalRService = new SignalRService();

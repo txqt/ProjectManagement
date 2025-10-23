@@ -41,6 +41,7 @@ import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
 import { useBoardStore } from '~/stores/boardStore';
 import InviteDialog from '~/components/BoardInvites/InviteDialog';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import BoardJoinRequestsTab from './JoinRequestsTab';
 
 function TabPanel({ children, value, index, ...other }) {
   return (
@@ -226,6 +227,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
           <Tabs value={currentTab} onChange={handleTabChange}>
             <Tab label="General" />
             <Tab label="Members" />
+            <Tab label="Join Requests" />
             <Tab label="Advanced" />
             <Tab label="Danger Zone" />
           </Tabs>
@@ -437,6 +439,10 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
           </TabPanel>
 
           <TabPanel value={currentTab} index={2}>
+            <BoardJoinRequestsTab boardId={board?.id} />
+          </TabPanel>
+
+          <TabPanel value={currentTab} index={3}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Typography variant="subtitle2">Board Features</Typography>
 
@@ -484,7 +490,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
           </TabPanel>
 
           {/* Danger Zone Tab */}
-          <TabPanel value={currentTab} index={3}>
+          <TabPanel value={currentTab} index={4}>
             <Alert severity="error" sx={{ mb: 3 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Warning: Danger Zone

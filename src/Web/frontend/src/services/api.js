@@ -421,6 +421,48 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  async generateShareToken(boardId) {
+    return this.request(`/boards/${boardId}/share-token`, {
+      method: 'POST',
+    });
+  }
+
+  async joinViaShareLink(token, message = null) {
+    return this.request('/boards/join', {
+      method: 'POST',
+      body: JSON.stringify({ token, message }),
+    });
+  }
+
+  async createJoinRequest(boardId, message = null) {
+    return this.request(`/boards/${boardId}/join-requests`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  }
+
+  async getBoardJoinRequests(boardId, status = 'pending') {
+    return this.request(`/boards/${boardId}/join-requests?status=${status}`);
+  }
+
+  async respondToJoinRequest(boardId, requestId, response, role = 'member') {
+    return this.request(`/boards/${boardId}/join-requests/${requestId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({ response, role }),
+    });
+  }
+
+  async cancelJoinRequest(boardId, requestId) {
+    return this.request(`/boards/${boardId}/join-requests/${requestId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getMyJoinRequests(status = null) {
+    const params = status ? `?status=${status}` : '';
+    return this.request(`/join-requests/my-requests${params}`);
+  }
 }
 
 export const apiService = new ApiService();

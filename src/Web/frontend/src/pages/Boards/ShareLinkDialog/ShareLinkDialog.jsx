@@ -12,8 +12,7 @@ import {
   Alert,
   InputAdornment,
   Tooltip,
-  Switch,
-  FormControlLabel
+  CircularProgress
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -22,21 +21,36 @@ import {
   Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
+import { apiService } from '~/services/api';
 
 export default function ShareLinkDialog({ open, onClose, board }) {
   const [copied, setCopied] = useState(false);
   const [shareLink, setShareLink] = useState('');
-  const [allowShareLink, setAllowShareLink] = useState(true);
+  const [tokenData, setTokenData] = useState(null);
+  const [loading, setLoading] = useState(false);
 
+  // Generate token when dialog opens
   useEffect(() => {
-    if (open && board) {
-      // Generate share link from board ID
-      const baseUrl = window.location.origin;
-      const link = `${baseUrl}/boards/${board.id}`;
-      setShareLink(link);
-      setAllowShareLink(board.allowShareLink !== false);
+    if (open && board?.id) {
+      generateShareToken();
     }
-  }, [open, board]);
+  }, [open, board?.id]);
+
+  const generateShareToken = async () => {
+    if (!board?.id) return;
+    
+    setLoading(true);
+    try {
+      const response = await apiService.generateShareToken(board.id);
+      setTokenData(response);
+      setShareLink(response.shareUrl);
+    } catch (err) {
+      console.error('Failed to generate share token:', err);
+      toast.error('Failed to generate share link');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCopy = async () => {
     try {
@@ -53,9 +67,8 @@ export default function ShareLinkDialog({ open, onClose, board }) {
     }
   };
 
-  const handleRefresh = () => {
-    // In a real app, you might want to regenerate a secure token
-    // For now, just show a toast
+  const handleRefresh = async () => {
+    await generateShareToken();
     toast.info('Link refreshed');
   };
 
@@ -71,14 +84,16 @@ export default function ShareLinkDialog({ open, onClose, board }) {
       </DialogTitle>
 
       <DialogContent>
-        {!allowShareLink ? (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Link sharing is disabled for this board. Enable it in board settings to share.
-          </Alert>
+        {loading ? (
+          <Box display="flex" justifyContent="center" py={3}>
+            <CircularProgress />
+          </Box>
         ) : (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Anyone with this link can view the board {board.type === 'public' ? '(public board)' : '(private board - requires membership)'}.
+              {board.type === 'public' 
+                ? 'Anyone with this link can join the board as a member.'
+                : 'Anyone with this link can request to join this private board.'}
             </Typography>
 
             <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
@@ -98,32 +113,31 @@ export default function ShareLinkDialog({ open, onClose, board }) {
                   )
                 }}
               />
-              <Tooltip title="Refresh link">
-                <IconButton onClick={handleRefresh}>
+              <Tooltip title="Generate new link (old link will be invalidated)">
+                <IconButton onClick={handleRefresh} disabled={loading}>
                   <RefreshIcon />
                 </IconButton>
               </Tooltip>
             </Box>
 
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>Board access:</strong>
-                {board.type === 'public' 
-                  ? ' Anyone with the link can view this board.'
-                  : ' Only board members can access this board.'}
-              </Typography>
-            </Alert>
+            {tokenData && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  <strong>Link expires:</strong> {new Date(tokenData.expiresAt).toLocaleDateString()}
+                  <br />
+                  <strong>Board type:</strong> {board.type === 'public' ? 'Public (auto-join)' : 'Private (requires approval)'}
+                </Typography>
+              </Alert>
+            )}
           </>
         )}
       </DialogContent>
 
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
-        {allowShareLink && (
-          <Button variant="contained" onClick={handleCopy}>
-            Copy Link
-          </Button>
-        )}
+        <Button variant="contained" onClick={handleCopy} disabled={loading || !shareLink}>
+          Copy Link
+        </Button>
       </DialogActions>
     </Dialog>
   );
