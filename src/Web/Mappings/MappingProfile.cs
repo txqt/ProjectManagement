@@ -4,6 +4,7 @@ using ProjectManagement.Models.DTOs;
 using ProjectManagement.Models.DTOs.Attachment;
 using ProjectManagement.Models.DTOs.Board;
 using ProjectManagement.Models.DTOs.BoardInvite;
+using ProjectManagement.Models.DTOs.BoardJoinRequest;
 using ProjectManagement.Models.DTOs.Card;
 using ProjectManagement.Models.DTOs.Column;
 using ProjectManagement.Models.DTOs.Comment;
@@ -108,6 +109,9 @@ namespace ProjectManagement.Mappings
 
             CreateMap<CreateNotificationDto, Notification>()
                 .ForMember(d => d.Data, opt => opt.MapFrom<CreateNotificationDtoToNotificationResolver>());
+            
+            CreateMap<BoardJoinRequest, BoardJoinRequestDto>();
+            CreateMap<CreateBoardJoinRequestDto, BoardJoinRequest>();
         }
     }
 }

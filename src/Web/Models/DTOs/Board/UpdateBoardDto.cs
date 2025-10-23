@@ -13,6 +13,10 @@ namespace ProjectManagement.Models.DTOs.Board
 
         public string? Type { get; set; }
 
-        public List<string>? ColumnOrderIds { get; set; }
+        public bool AllowShareInviteLink { get; set; } = true;
+
+        public bool AllowCommentsOnCard { get; set; } = true;
+        
+        public bool AllowAttachmentsOnCard { get; set; } = true;
     }
 }

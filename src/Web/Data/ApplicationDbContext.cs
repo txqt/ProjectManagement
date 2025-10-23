@@ -22,6 +22,8 @@ namespace Infrastructure
         public DbSet<Attachment> Attachments { get; set; }
         public DbSet<BoardInvite> BoardInvites { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        
+        public DbSet<BoardJoinRequest> BoardJoinRequests { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -180,6 +182,30 @@ namespace Infrastructure
                     .WithMany()
                     .HasForeignKey(n => n.InviteId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+            
+            builder.Entity<BoardJoinRequest>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Status).HasDefaultValue(JoinRequestStatus.Pending);
+        
+                entity.HasOne(e => e.Board)
+                    .WithMany(b => b.JoinRequests)
+                    .HasForeignKey(e => e.BoardId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Responder)
+                    .WithMany()
+                    .HasForeignKey(e => e.RespondedBy)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Unique constraint: one pending request per user per board
+                entity.HasIndex(e => new { e.BoardId, e.UserId, e.Status });
             });
         }
     }

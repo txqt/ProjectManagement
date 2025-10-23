@@ -1,8 +1,11 @@
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import ShareIcon from '@mui/icons-material/Share';
+import SettingsIcon from '@mui/icons-material/Settings';
 import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
 import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
 import VpnLockIcon from '@mui/icons-material/VpnLock';
+import GroupIcon from '@mui/icons-material/Group';
 import {
   Avatar,
   AvatarGroup,
@@ -15,10 +18,9 @@ import { useEffect, useState } from 'react';
 import { useSignalR } from '~/hooks/useSignalR';
 import { capitalizeFirstLetter } from '~/utils/formatters';
 import InviteDialog from '../../../components/BoardInvites/InviteDialog';
+import ShareLinkDialog from '../ShareLinkDialog/ShareLinkDialog';
 import BoardBarSkeleton from './BoardBarSkeleton';
-import GroupIcon from '@mui/icons-material/Group';
 import { useAuth } from '~/hooks/useAuth';
-import SettingsIcon from '@mui/icons-material/Settings';
 import BoardSettingsDialog from '~/pages/Boards/BoardSettings/BoardSettingsDialog';
 import { useBoardStore } from '~/stores/boardStore';
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender';
@@ -41,9 +43,10 @@ export default function BoardBar() {
   const board = useBoardStore(state => state.board);
   const { isConnected, users } = useSignalR(board?.id);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [boardMember, setBoardMember] = useState('');
   const { user } = useAuth();
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (board?.members?.length > 0) {
@@ -83,10 +86,6 @@ export default function BoardBar() {
         </Tooltip>
 
         {boardMember && <Chip sx={MENU_STYPES} icon={<GroupIcon />} title={boardMember} />}
-
-        {/* <Chip sx={MENU_STYPES} icon={<AddToDrive />} label="Add to Google Drive" clickable />
-        <Chip sx={MENU_STYPES} icon={<BoltIcon />} label="Automation" clickable />
-        <Chip sx={MENU_STYPES} icon={<FilterListIcon />} label="Filters" clickable /> */}
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -98,6 +97,16 @@ export default function BoardBar() {
         >
           Invite
         </Button>
+
+        <Button
+          variant="outlined"
+          startIcon={<ShareIcon />}
+          sx={{ color: 'white', borderColor: 'white', '&:hover': { borderColor: 'white' } }}
+          onClick={() => setShareOpen(true)}
+        >
+          Share
+        </Button>
+
         <ConditionalRender permission="boards.manage_members">
           <Button
             variant="outlined"
@@ -134,11 +143,11 @@ export default function BoardBar() {
       </Box>
 
       <InviteDialog open={inviteOpen} onClose={() => setInviteOpen(false)} board={board} />
+      <ShareLinkDialog open={shareOpen} onClose={() => setShareOpen(false)} board={board} />
       <BoardSettingsDialog
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
-
     </Box>
   );
 }

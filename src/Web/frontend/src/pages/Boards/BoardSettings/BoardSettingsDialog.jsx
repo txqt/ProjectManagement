@@ -77,8 +77,8 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
   const [newRole, setNewRole] = useState('');
 
   // Advanced settings
-  const [allowComments, setAllowComments] = useState(true);
-  const [allowAttachments, setAllowAttachments] = useState(true);
+  const [allowCommentsOnCard, setallowCommentsOnCard] = useState(true);
+  const [allowAttachmentsOnCard, setallowAttachmentsOnCard] = useState(true);
 
   // Unsplash menu
   const [unsplashAnchor, setUnsplashAnchor] = useState(null);
@@ -88,14 +88,17 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
 
   const [inviteOpen, setInviteOpen] = useState(false);
 
+  const [allowShareInviteLink, setallowShareInviteLink] = useState(true);
+
   useEffect(() => {
     if (board && open) {
       setTitle(board.title || '');
       setDescription(board.description || '');
       setType(board.type || 'private');
       setCover(board.cover || '');
-      setAllowComments(board.allowComments ?? true);
-      setAllowAttachments(board.allowAttachments ?? true);
+      setallowShareInviteLink(board.allowShareInviteLink !== false); // Default true
+      setallowCommentsOnCard(board.allowCommentsOnCard ?? true);
+      setallowAttachmentsOnCard(board.allowAttachmentsOnCard ?? true);
     }
   }, [board, open]);
 
@@ -166,8 +169,9 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
     setLoading(true);
     try {
       const updatedBoard = await updateBoard({
-        allowComments,
-        allowAttachments
+        allowShareInviteLink,
+        allowCommentsOnCard,
+        allowAttachmentsOnCard
       });
 
       if (onBoardUpdated) onBoardUpdated(updatedBoard);
@@ -175,7 +179,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   // Delete Board Handler
   const handleDeleteBoard = async () => {
@@ -432,7 +436,6 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
             </Box>
           </TabPanel>
 
-          {/* Advanced Tab */}
           <TabPanel value={currentTab} index={2}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Typography variant="subtitle2">Board Features</Typography>
@@ -440,8 +443,18 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={allowComments}
-                    onChange={(e) => setAllowComments(e.target.checked)}
+                    checked={allowShareInviteLink}
+                    onChange={(e) => setallowShareInviteLink(e.target.checked)}
+                  />
+                }
+                label="Allow share link (anyone with link can view based on board type)"
+              />
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={allowCommentsOnCard}
+                    onChange={(e) => setallowCommentsOnCard(e.target.checked)}
                   />
                 }
                 label="Allow comments on cards"
@@ -450,11 +463,11 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={allowAttachments}
-                    onChange={(e) => setAllowAttachments(e.target.checked)}
+                    checked={allowAttachmentsOnCard}
+                    onChange={(e) => setallowAttachmentsOnCard(e.target.checked)}
                   />
                 }
-                label="Allow file attachments"
+                label="Allow file attachments on cards"
               />
 
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>

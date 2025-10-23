@@ -12,6 +12,9 @@ namespace ProjectManagement.Models.DTOs.Board
         public string Type { get; set; } = string.Empty;
         public string OwnerId { get; set; } = string.Empty;
         public string? Cover { get; set; }
+        public bool AllowShareInviteLink { get; set; } = true;
+        public bool AllowCommentsOnCard { get; set; } = true;
+        public bool AllowAttachmentsOnCard { get; set; } = true;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 

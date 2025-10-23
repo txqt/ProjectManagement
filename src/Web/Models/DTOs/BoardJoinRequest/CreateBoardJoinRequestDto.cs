@@ -2,6 +2,6 @@
 {
     public class CreateBoardJoinRequestDto
     {
-        
+        public string? Message { get; set; }
     }
 }
