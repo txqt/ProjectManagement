@@ -24,6 +24,34 @@ namespace ProjectManagement.Controllers
             _context = context;
             _userManager = userManager;
         }
+        
+        [HttpGet("{boardId}/share-token")]
+        [RequirePermission(Permissions.Boards.ManageMembers)]
+        public async Task<ActionResult<ShareTokenResponseDto>> GetShareToken(string boardId)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var board = await _context.Boards.FindAsync(boardId);
+            if (board == null)
+                return NotFound("Board not found");
+
+            var activeToken = await _context.BoardShareTokens
+                .Where(t => t.BoardId == boardId && t.IsActive && t.ExpiresAt > DateTime.UtcNow)
+                .OrderByDescending(t => t.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (activeToken == null)
+                return NotFound("No active share token found");
+
+            return Ok(new ShareTokenResponseDto
+            {
+                Token = activeToken.Token,
+                ExpiresAt = activeToken.ExpiresAt,
+                ShareUrl = $"http://localhost:5173/join?token={activeToken.Token}"
+            });
+        }
 
         /// <summary>
         /// Generate or regenerate share token for board

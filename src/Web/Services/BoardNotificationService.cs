@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using ProjectManagement.Hubs;
 using ProjectManagement.Models.DTOs.Attachment;
+using ProjectManagement.Models.DTOs.BoardJoinRequest;
 using ProjectManagement.Models.DTOs.Card;
 using ProjectManagement.Models.DTOs.Column;
 using ProjectManagement.Models.DTOs.Comment;
@@ -70,7 +71,8 @@ namespace ProjectManagement.Services
         public Task BroadcastCardDeleted(string boardId, string columnId, string cardId, string userId) =>
             _hub.Clients.Group(GroupName(boardId)).SendAsync("CardDeleted", new { cardId, columnId, userId });
 
-        public async Task BroadcastCardsReordered(string boardId, string columnId, List<string> cardIds, List<CardDto> orderedCards, string userId)
+        public async Task BroadcastCardsReordered(string boardId, string columnId, List<string> cardIds,
+            List<CardDto> orderedCards, string userId)
         {
             // CHANGED: Pass card ranks instead of IDs
             // Frontend will use these ranks to sort cards
@@ -86,17 +88,12 @@ namespace ProjectManagement.Services
                 });
         }
 
-        public async Task BroadcastColumnsReordered(string boardId, List<string> columnIds, List<ColumnDto> orderedColumns, string userId)
+        public async Task BroadcastColumnsReordered(string boardId, List<string> columnIds,
+            List<ColumnDto> orderedColumns, string userId)
         {
             await _hub.Clients
                 .Group(GroupName(boardId))
-                .SendAsync("ColumnsReordered", new
-                {
-                    boardId,
-                    columnIds,
-                    orderedColumns,
-                    userId
-                });
+                .SendAsync("ColumnsReordered", new { boardId, columnIds, orderedColumns, userId });
         }
 
         public Task BroadcastCardMoved(string boardId, string fromColumnId, string toColumnId, string cardId,
@@ -135,9 +132,10 @@ namespace ProjectManagement.Services
             string userId) =>
             _hub.Clients.Group(GroupName(boardId))
                 .SendAsync("CardUnassigned", new { card = cardDto, columnId, unassignedUserId, userId });
-        
+
         // Comment events
-        public async Task BroadcastCommentAdded(string boardId, string columnId, string cardId, CommentDto comment, string userId)
+        public async Task BroadcastCommentAdded(string boardId, string columnId, string cardId, CommentDto comment,
+            string userId)
         {
             await _hub.Clients
                 .Group(GroupName(boardId))
@@ -151,7 +149,8 @@ namespace ProjectManagement.Services
                 });
         }
 
-        public async Task BroadcastCommentUpdated(string boardId, string columnId, string cardId, CommentDto comment, string userId)
+        public async Task BroadcastCommentUpdated(string boardId, string columnId, string cardId, CommentDto comment,
+            string userId)
         {
             await _hub.Clients
                 .Group(GroupName(boardId))
@@ -165,7 +164,8 @@ namespace ProjectManagement.Services
                 });
         }
 
-        public async Task BroadcastCommentDeleted(string boardId, string columnId, string cardId, string commentId, string userId)
+        public async Task BroadcastCommentDeleted(string boardId, string columnId, string cardId, string commentId,
+            string userId)
         {
             await _hub.Clients
                 .Group(GroupName(boardId))
@@ -180,7 +180,8 @@ namespace ProjectManagement.Services
         }
 
         // Attachment events
-        public async Task BroadcastAttachmentAdded(string boardId, string columnId, string cardId, AttachmentDto attachment, string userId)
+        public async Task BroadcastAttachmentAdded(string boardId, string columnId, string cardId,
+            AttachmentDto attachment, string userId)
         {
             await _hub.Clients
                 .Group(GroupName(boardId))
@@ -194,7 +195,8 @@ namespace ProjectManagement.Services
                 });
         }
 
-        public async Task BroadcastAttachmentDeleted(string boardId, string columnId, string cardId, string attachmentId, string userId)
+        public async Task BroadcastAttachmentDeleted(string boardId, string columnId, string cardId,
+            string attachmentId, string userId)
         {
             await _hub.Clients
                 .Group(GroupName(boardId))
@@ -206,6 +208,25 @@ namespace ProjectManagement.Services
                     attachmentId,
                     userId
                 });
+        }
+
+        public async Task BroadcastJoinRequestCreated(string boardId, BoardJoinRequestDto request)
+        {
+            await _hub.Clients
+                .Group(GroupName(boardId))
+                .SendAsync("JoinRequestCreated", new { boardId, request });
+        }
+
+        public async Task BroadcastJoinRequestResponded(string boardId, string requestId, string status, string userId)
+        {
+            await _hub.Clients
+                .Group(GroupName(boardId))
+                .SendAsync("JoinRequestResponded", new { boardId, requestId, status, userId });
+
+            // Also send to specific user
+            await _hub.Clients
+                .User(userId)
+                .SendAsync("JoinRequestResponded", new { boardId, requestId, status });
         }
     }
 }

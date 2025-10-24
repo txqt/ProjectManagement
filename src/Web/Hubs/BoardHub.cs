@@ -25,8 +25,8 @@ namespace ProjectManagement.Hubs
         public override Task OnConnectedAsync()
         {
             var userId = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                      ?? Context.User?.FindFirst("sub")?.Value
-                      ?? Context.UserIdentifier;
+                         ?? Context.User?.FindFirst("sub")?.Value
+                         ?? Context.UserIdentifier;
             var userName = Context.User?.Identity?.Name ?? userId;
 
             _presence.SetUserForConnection(Context.ConnectionId, new UserDto(userId, userName));
@@ -36,21 +36,29 @@ namespace ProjectManagement.Hubs
 
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            // Khi mất kết nối: lấy các boards đã join, emit UserLeft cho từng group nếu cần
             var boards = _presence.GetBoardsForConnection(Context.ConnectionId).ToArray();
-            if (boards.Any())
+
+            // Lấy user (không xóa ngay)
+            if (_presence.TryGetUserForConnection(Context.ConnectionId, out var user))
             {
-                if (_presence.TryRemoveUserForConnection(Context.ConnectionId, out var user))
+                foreach (var boardId in boards)
                 {
-                    foreach (var boardId in boards)
+                    // Remove khỏi group
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(boardId));
+
+                    // Nếu không còn connection khác của cùng user trong board -> broadcast UserLeft
+                    var hasOther = _presence.HasOtherConnectionsInBoard(user.Id, boardId, Context.ConnectionId);
+                    if (!hasOther)
                     {
-                        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(boardId));
                         await Clients.Group(GroupName(boardId)).SendAsync("UserLeft", new { boardId, user });
                     }
                 }
+
+                // Sau khi đã broadcast (hoặc không), xóa mapping user->connection
+                _presence.TryRemoveUserForConnection(Context.ConnectionId, out _);
             }
 
-            // chắc chắn xóa mapping connection->boards
+            // Xóa connection->boards mapping
             foreach (var boardId in boards)
             {
                 _presence.RemoveConnectionFromBoard(Context.ConnectionId, boardId);
@@ -59,7 +67,6 @@ namespace ProjectManagement.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        // Client gọi để join group của board
         public async Task JoinBoard(string boardId)
         {
             if (string.IsNullOrWhiteSpace(boardId)) return;
@@ -67,15 +74,22 @@ namespace ProjectManagement.Hubs
             await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(boardId));
             _presence.AddConnectionToBoard(Context.ConnectionId, boardId);
 
-            // Phát thông báo user joined to group
-            if (_presence.TryRemoveUserForConnection(Context.ConnectionId, out var tmpUser))
+            // Lấy user hiện tại cho connection này
+            if (!_presence.TryGetUserForConnection(Context.ConnectionId, out var user))
             {
-                // note: TryRemoveUserForConnection vừa lấy user ra, ta cần backup rồi set lại
-                _presence.SetUserForConnection(Context.ConnectionId, tmpUser);
+                // fallback (hiếm khi xảy ra)
+                var userId = Context.UserIdentifier ?? "unknown";
+                var userName = Context.User?.Identity?.Name ?? userId;
+                user = new UserDto(userId, userName);
+                _presence.SetUserForConnection(Context.ConnectionId, user);
             }
 
-            var user = _presence.GetAllConnections().FirstOrDefault(x => x.ConnectionId == Context.ConnectionId).User;
-            await Clients.Group(GroupName(boardId)).SendAsync("UserJoined", new { boardId, user });
+            // Nếu đây là lần đầu user xuất hiện trong board (không có connection khác) -> broadcast UserJoined
+            var alreadyPresent = _presence.HasOtherConnectionsInBoard(user.Id, boardId, Context.ConnectionId);
+            if (!alreadyPresent)
+            {
+                await Clients.Group(GroupName(boardId)).SendAsync("UserJoined", new { boardId, user });
+            }
         }
 
         public async Task LeaveBoard(string boardId)
@@ -85,8 +99,14 @@ namespace ProjectManagement.Hubs
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(boardId));
             _presence.RemoveConnectionFromBoard(Context.ConnectionId, boardId);
 
-            var user = _presence.GetAllConnections().FirstOrDefault(x => x.ConnectionId == Context.ConnectionId).User;
-            await Clients.Group(GroupName(boardId)).SendAsync("UserLeft", new { user });
+            if (_presence.TryGetUserForConnection(Context.ConnectionId, out var user))
+            {
+                var hasOther = _presence.HasOtherConnectionsInBoard(user.Id, boardId, Context.ConnectionId);
+                if (!hasOther)
+                {
+                    await Clients.Group(GroupName(boardId)).SendAsync("UserLeft", new { boardId, user });
+                }
+            }
         }
 
         public Task<List<UserDto>> GetUsersInBoard(string boardId)

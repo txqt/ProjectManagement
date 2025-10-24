@@ -17,19 +17,21 @@ namespace ProjectManagement.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly INotificationService _notificationService;
         private readonly ILogger<BoardJoinRequestService> _logger;
+        private readonly IBoardNotificationService  _boardNotificationService;
 
         public BoardJoinRequestService(
             ApplicationDbContext context,
             IMapper mapper,
             UserManager<ApplicationUser> userManager,
             INotificationService notificationService,
-            ILogger<BoardJoinRequestService> logger)
+            ILogger<BoardJoinRequestService> logger, IBoardNotificationService boardNotificationService)
         {
             _context = context;
             _mapper = mapper;
             _userManager = userManager;
             _notificationService = notificationService;
             _logger = logger;
+            _boardNotificationService = boardNotificationService;
         }
 
         public async Task<BoardJoinRequestDto> CreateJoinRequestAsync(
@@ -114,7 +116,11 @@ namespace ProjectManagement.Services
                 .Include(r => r.User)
                 .FirstOrDefaultAsync(r => r.Id == request.Id);
 
-            return _mapper.Map<BoardJoinRequestDto>(createdRequest);
+            var requestDto = _mapper.Map<BoardJoinRequestDto>(createdRequest);
+            
+            await _boardNotificationService.BroadcastJoinRequestCreated(boardId, requestDto);
+
+            return requestDto;
         }
 
         public async Task<IEnumerable<BoardJoinRequestDto>> GetBoardJoinRequestsAsync(
@@ -278,6 +284,13 @@ namespace ProjectManagement.Services
                     Message = "Join request rejected" 
                 };
             }
+            
+            await _boardNotificationService.BroadcastJoinRequestResponded(
+                request.BoardId,
+                requestId,
+                request.Status,
+                request.UserId
+            );
 
             return new JoinRequestResponseDto 
             { 

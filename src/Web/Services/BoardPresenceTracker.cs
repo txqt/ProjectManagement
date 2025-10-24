@@ -98,5 +98,34 @@ namespace ProjectManagement.Services
                 }
             }
         }
+        
+        public bool TryGetUserForConnection(string connectionId, out UserDto? user)
+            => _connectionUsers.TryGetValue(connectionId, out user);
+
+        /// <summary>
+        /// Kiểm tra xem userId có connection khác (không phải excludeConnectionId) trong boardId hay không.
+        /// </summary>
+        public bool HasOtherConnectionsInBoard(string userId, string boardId, string? excludeConnectionId = null)
+        {
+            foreach (var kv in _connectionBoards)
+            {
+                var connId = kv.Key;
+                if (excludeConnectionId != null && connId == excludeConnectionId) continue;
+
+                var set = kv.Value;
+                // lock nhỏ khi đọc set để tránh race với Add/Remove
+                lock (set)
+                {
+                    if (!set.Contains(boardId)) continue;
+                }
+
+                if (_connectionUsers.TryGetValue(connId, out var u) && u != null && u.Id == userId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 }

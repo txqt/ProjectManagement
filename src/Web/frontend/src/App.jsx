@@ -11,10 +11,12 @@ import AppBar from './components/AppBar/AppBar';
 // Import component HomePage mới
 import HomePage from './pages/HomePage.jsx';
 import JoinBoard from './pages/Boards/JoinBoard/JoinBoard.jsx';
+import { useLocation } from 'react-router-dom';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -31,12 +33,20 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    // ⚡️ Gửi kèm returnUrl trong query string
+    const returnUrl = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/login?returnUrl=${returnUrl}`} replace />;
+  }
+
+  return children;
 };
 
 // Public Route component (redirect to home if already authenticated)
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+  const hasReturnUrl = location.search.includes('returnUrl=');
 
   if (loading) {
     return (
@@ -52,8 +62,12 @@ const PublicRoute = ({ children }) => {
       </Box>
     );
   }
+  
+  if (isAuthenticated && !hasReturnUrl) {
+    return <Navigate to="/" replace />;
+  }
 
-  return isAuthenticated ? <Navigate to="/" replace /> : children;
+  return children;
 };
 
 function AppRoutes() {
@@ -103,7 +117,13 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="/join" element={<JoinBoard />} />
+      <Route
+        path="/join"
+        element={
+          <ProtectedRoute>
+            <JoinBoard />
+          </ProtectedRoute>}
+      />
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -23,7 +23,7 @@ import { toast } from 'react-toastify';
 import { apiService } from '~/services/api';
 import { formatDistanceToNow } from 'date-fns';
 
-export default function JoinRequestsTab({ board }) {
+export default function BoardJoinRequestsTab({ boardId }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(null);
@@ -31,15 +31,17 @@ export default function JoinRequestsTab({ board }) {
   const [selectedRole, setSelectedRole] = useState({});
 
   useEffect(() => {
-    if (board?.id) {
+    if (boardId) {
       loadRequests();
     }
-  }, [board?.id, statusFilter]);
+  }, [boardId, statusFilter]);
 
   const loadRequests = async () => {
+    if (!boardId) return;
+    
     setLoading(true);
     try {
-      const data = await apiService.getBoardJoinRequests(board.id, statusFilter);
+      const data = await apiService.getBoardJoinRequests(boardId, statusFilter);
       setRequests(data || []);
     } catch (err) {
       console.error('Failed to load join requests:', err);
@@ -55,7 +57,7 @@ export default function JoinRequestsTab({ board }) {
     setProcessing(requestId);
     try {
       const result = await apiService.respondToJoinRequest(
-        board.id,
+        boardId,
         requestId,
         response,
         role
@@ -83,6 +85,14 @@ export default function JoinRequestsTab({ board }) {
       default: return 'default';
     }
   };
+
+  if (!boardId) {
+    return (
+      <Alert severity="info">
+        Please select a board first
+      </Alert>
+    );
+  }
 
   if (loading) {
     return (

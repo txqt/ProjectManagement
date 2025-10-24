@@ -463,6 +463,10 @@ class ApiService {
     const params = status ? `?status=${status}` : '';
     return this.request(`/join-requests/my-requests${params}`);
   }
+
+  async getShareToken(boardId) {
+    return this.request(`/boards/${boardId}/share-token`);
+  }
 }
 
 export const apiService = new ApiService();

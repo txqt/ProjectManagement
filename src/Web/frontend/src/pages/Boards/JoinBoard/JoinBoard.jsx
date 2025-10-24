@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Box,
@@ -23,15 +23,6 @@ export default function JoinBoard() {
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
-
-    useEffect(() => {
-        if (isLoading) return; // đợi xác định auth xong
-        // console.log('isAuthenticated:', isAuthenticated);
-        // if (!isAuthenticated) {
-        //     const returnUrl = `/join?token=${token}`;
-        //     navigate(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
-        // }
-    }, [isAuthenticated, isLoading, token, navigate]);
 
     const handleJoin = async () => {
         if (!token) {

@@ -8,12 +8,15 @@ export const useBoardStore = create((set, get) => ({
     currentUser: null,
     pendingTempIds: new Set(),
     boardId: null,
+    joinRequests: [],
 
     // Set board ID
     setBoardId: (boardId) => set({ boardId }),
 
     // Set current user
     setCurrentUser: (user) => set({ currentUser: user }),
+
+    setJoinRequests: (joinRequests) => set({ joinRequests }),
 
     // Load board
     loadBoard: async (boardId) => {
@@ -1041,7 +1044,59 @@ export const useBoardStore = create((set, get) => ({
     },
 
     handleJoinRequestCreated: (data) => {
+        console.log('handleJoinRequestCreated called with data:', data);
+        try {
+            const boardId = data?.boardId || data?.board?.id;
+            const request = data?.request || data;
+
+            // nếu không cùng board thì bỏ qua
+            if (!boardId || boardId !== get().boardId) return;
+
+            set(state => ({
+                joinRequests: [request, ...(state.joinRequests || [])]
+            }));
+        } catch (err) {
+            console.error('handleJoinRequestCreated error', err);
+        }
     },
+
     handleJoinRequestResponded: (data) => {
-    }
+        // data có thể là { boardId, requestId, status, userId }
+        try {
+            const boardId = data?.boardId || data?.board?.id;
+            const requestId = data?.requestId || data?.id;
+            const status = (data?.status || '').toLowerCase();
+
+            // nếu có boardId và không phải board hiện tại -> skip
+            if (boardId && boardId !== get().boardId) return;
+
+            // cập nhật request trong joinRequests nếu có
+            set(state => {
+                const updated = (state.joinRequests || []).map(r => {
+                    if (r.id === requestId) {
+                        return {
+                            ...r,
+                            status,
+                            respondedAt: r.respondedAt || new Date().toISOString()
+                        };
+                    }
+                    return r;
+                });
+                return { joinRequests: updated };
+            });
+
+            // Nếu request được approved -> reload board để lấy member mới
+            if (status === 'approved') {
+                const currentBoardId = get().boardId;
+                if (currentBoardId) {
+                    // reload toàn bộ board: sẽ cập nhật members và columns/các dữ liệu khác
+                    get().loadBoard(currentBoardId).catch(err => {
+                        console.error('Failed to reload board after join request approved', err);
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('handleJoinRequestResponded error', err);
+        }
+    },
 }));

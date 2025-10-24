@@ -14,6 +14,7 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '~/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 const LoginForm = () => {
   const [credentials, setCredentials] = useState({
@@ -26,6 +27,10 @@ const LoginForm = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const returnUrl = searchParams.get('returnUrl') || '/';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,14 +39,15 @@ const LoginForm = () => {
 
     const result = await login(credentials);
     if (result.success) {
-      navigate('/');
+      console.log('Redirecting to:', returnUrl);
+      navigate(returnUrl);
     } else {
       setError(result.error);
     }
 
     setLoading(false);
   };
-
+  
   const handleChange = (e) => {
     setCredentials({
       ...credentials,

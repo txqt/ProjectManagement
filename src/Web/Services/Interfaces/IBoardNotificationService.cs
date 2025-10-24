@@ -1,5 +1,6 @@
 ﻿using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Attachment;
+using ProjectManagement.Models.DTOs.BoardJoinRequest;
 using ProjectManagement.Models.DTOs.Card;
 using ProjectManagement.Models.DTOs.Column;
 using ProjectManagement.Models.DTOs.Comment;
@@ -35,5 +36,8 @@ namespace ProjectManagement.Services.Interfaces
         // Attachment events
         Task BroadcastAttachmentAdded(string boardId, string columnId, string cardId, AttachmentDto attachment, string userId);
         Task BroadcastAttachmentDeleted(string boardId, string columnId, string cardId, string attachmentId, string userId);
+
+        Task BroadcastJoinRequestCreated(string boardId, BoardJoinRequestDto request);
+        Task BroadcastJoinRequestResponded(string boardId, string requestId, string status, string userId);
     }
 }

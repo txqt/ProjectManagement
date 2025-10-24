@@ -548,3 +548,6 @@ appsettings.Development.json
 .idea
 
 uploads/
+
+redis/dump.rdb
+redis/redis_6379.pid

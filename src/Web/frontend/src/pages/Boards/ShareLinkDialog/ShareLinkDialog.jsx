@@ -32,13 +32,30 @@ export default function ShareLinkDialog({ open, onClose, board }) {
   // Generate token when dialog opens
   useEffect(() => {
     if (open && board?.id) {
-      generateShareToken();
+      fetchOrGenerateToken();
     }
   }, [open, board?.id]);
 
+  const fetchOrGenerateToken = async () => {
+    setLoading(true);
+    try {
+      // Thử lấy token cũ
+      const response = await apiService.getShareToken(board.id);
+      setTokenData(response);
+      setShareLink(response.shareUrl);
+    } catch {
+      // Nếu không có hoặc hết hạn thì tạo mới
+      const response = await apiService.generateShareToken(board.id);
+      setTokenData(response);
+      setShareLink(response.shareUrl);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const generateShareToken = async () => {
     if (!board?.id) return;
-    
+
     setLoading(true);
     try {
       const response = await apiService.generateShareToken(board.id);
@@ -57,7 +74,7 @@ export default function ShareLinkDialog({ open, onClose, board }) {
       await navigator.clipboard.writeText(shareLink);
       setCopied(true);
       toast.success('Link copied to clipboard!');
-      
+
       setTimeout(() => {
         setCopied(false);
       }, 2000);
@@ -91,7 +108,7 @@ export default function ShareLinkDialog({ open, onClose, board }) {
         ) : (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {board.type === 'public' 
+              {board.type === 'public'
                 ? 'Anyone with this link can join the board as a member.'
                 : 'Anyone with this link can request to join this private board.'}
             </Typography>

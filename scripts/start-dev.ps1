@@ -15,10 +15,17 @@ else {
     Write-Host "Docker or docker-compose not found. Assuming local Postgres/Redis are already running."
 }
 
-Write-Host "Running EF migrations..."
-Push-Location "$PSScriptRoot/../src/Web"
-dotnet ef database update
-Pop-Location
+# Ask user whether to run EF migrations
+$runMigrations = Read-Host "Do you want to run 'dotnet ef database update'? (y/n)"
+if ($runMigrations -eq "y" -or $runMigrations -eq "Y") {
+    Write-Host "Running EF migrations..."
+    Push-Location "$PSScriptRoot/../src/Web"
+    dotnet ef database update
+    Pop-Location
+}
+else {
+    Write-Host "Skipping EF migrations."
+}
 
 Write-Host "Starting backend (dotnet run) and frontend (pnpm dev) in separate terminals..."
 

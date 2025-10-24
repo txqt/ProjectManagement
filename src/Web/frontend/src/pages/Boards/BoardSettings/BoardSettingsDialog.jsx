@@ -41,7 +41,7 @@ import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
 import { useBoardStore } from '~/stores/boardStore';
 import InviteDialog from '~/components/BoardInvites/InviteDialog';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import BoardJoinRequestsTab from './JoinRequestsTab';
+import BoardJoinRequestsTab from './BoardJoinRequestsTab';
 
 function TabPanel({ children, value, index, ...other }) {
   return (
