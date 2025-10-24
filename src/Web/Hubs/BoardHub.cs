@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using ProjectManagement.Authorization;
 using ProjectManagement.Models.DTOs;
 using ProjectManagement.Models.DTOs.Board;
 using ProjectManagement.Models.DTOs.Card;
 using ProjectManagement.Models.DTOs.Column;
 using ProjectManagement.Services;
+using ProjectManagement.Services.Interfaces;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
@@ -14,10 +16,12 @@ namespace ProjectManagement.Hubs
     public class BoardHub : Hub
     {
         private readonly BoardPresenceTracker _presence;
+        private readonly IPermissionService _permissionService;
 
-        public BoardHub(BoardPresenceTracker presence)
+        public BoardHub(BoardPresenceTracker presence, IPermissionService permissionService)
         {
             _presence = presence;
+            _permissionService = permissionService;
         }
 
         private static string GroupName(string boardId) => $"board-{boardId}";
@@ -38,15 +42,12 @@ namespace ProjectManagement.Hubs
         {
             var boards = _presence.GetBoardsForConnection(Context.ConnectionId).ToArray();
 
-            // Lấy user (không xóa ngay)
             if (_presence.TryGetUserForConnection(Context.ConnectionId, out var user))
             {
                 foreach (var boardId in boards)
                 {
-                    // Remove khỏi group
                     await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(boardId));
 
-                    // Nếu không còn connection khác của cùng user trong board -> broadcast UserLeft
                     var hasOther = _presence.HasOtherConnectionsInBoard(user.Id, boardId, Context.ConnectionId);
                     if (!hasOther)
                     {
@@ -54,11 +55,9 @@ namespace ProjectManagement.Hubs
                     }
                 }
 
-                // Sau khi đã broadcast (hoặc không), xóa mapping user->connection
                 _presence.TryRemoveUserForConnection(Context.ConnectionId, out _);
             }
 
-            // Xóa connection->boards mapping
             foreach (var boardId in boards)
             {
                 _presence.RemoveConnectionFromBoard(Context.ConnectionId, boardId);
@@ -71,24 +70,57 @@ namespace ProjectManagement.Hubs
         {
             if (string.IsNullOrWhiteSpace(boardId)) return;
 
-            await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(boardId));
-            _presence.AddConnectionToBoard(Context.ConnectionId, boardId);
+            var userId = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                         ?? Context.User?.FindFirst("sub")?.Value
+                         ?? Context.UserIdentifier
+                         ?? "unknown";
+            var userName = Context.User?.Identity?.Name ?? userId;
 
-            // Lấy user hiện tại cho connection này
-            if (!_presence.TryGetUserForConnection(Context.ConnectionId, out var user))
+            // 1) Kiểm tra quyền tối thiểu: có quyền View không?
+            var (hasView, reason) =
+                await _permissionService.CheckBoardPermissionAsync(userId, boardId, Permissions.Boards.View);
+            if (!hasView)
             {
-                // fallback (hiếm khi xảy ra)
-                var userId = Context.UserIdentifier ?? "unknown";
-                var userName = Context.User?.Identity?.Name ?? userId;
-                user = new UserDto(userId, userName);
-                _presence.SetUserForConnection(Context.ConnectionId, user);
+                // Không có quyền xem -> chặn join hoàn toàn
+                await Clients.Caller.SendAsync("JoinDenied", new { boardId, reason });
+                return;
             }
 
-            // Nếu đây là lần đầu user xuất hiện trong board (không có connection khác) -> broadcast UserJoined
-            var alreadyPresent = _presence.HasOtherConnectionsInBoard(user.Id, boardId, Context.ConnectionId);
-            if (!alreadyPresent)
+            // 2) Thêm connection vào SignalR group để nhận update (viewer/public cũng cần nhận update)
+            await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(boardId));
+
+            // 3) Quyết định có thêm vào presence hay không:
+            //    Nếu user thực sự là owner/member (có trong GetUserBoardPermissionsAsync) -> thêm presence
+            //    Nếu không (ví dụ: public viewer) -> không thêm presence, và không broadcast UserJoined
+            var userBoards = await _permissionService.GetUserBoardPermissionsAsync(userId);
+            var isMemberOrOwner = userBoards.ContainsKey(boardId);
+
+            if (isMemberOrOwner)
             {
-                await Clients.Group(GroupName(boardId)).SendAsync("UserJoined", new { boardId, user });
+                // đảm bảo UserDto đã được set (OnConnectedAsync có thể đã set)
+                if (!_presence.TryGetUserForConnection(Context.ConnectionId, out var user))
+                {
+                    user = new UserDto(userId, userName);
+                    _presence.SetUserForConnection(Context.ConnectionId, user);
+                }
+
+                // add vào presence mapping cho board
+                _presence.AddConnectionToBoard(Context.ConnectionId, boardId);
+
+                // nếu đây là lần đầu user xuất hiện trong board -> broadcast UserJoined
+                var alreadyPresent = _presence.HasOtherConnectionsInBoard(user.Id, boardId, Context.ConnectionId);
+                if (!alreadyPresent)
+                {
+                    await Clients.Group(GroupName(boardId)).SendAsync("UserJoined", new { boardId, user });
+                }
+
+                // thông báo caller đã join thành công dưới vai trò member
+                await Clients.Caller.SendAsync("JoinSuccess", new { boardId, role = "member" });
+            }
+            else
+            {
+                // public viewer — không hiện trong danh sách online
+                await Clients.Caller.SendAsync("JoinSuccess", new { boardId, role = "viewer" });
             }
         }
 
@@ -97,6 +129,9 @@ namespace ProjectManagement.Hubs
             if (string.IsNullOrWhiteSpace(boardId)) return;
 
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(boardId));
+
+            // Nếu connection được thêm vào presence trước đó -> remove và broadcast UserLeft khi cần
+            // (RemoveConnectionFromBoard an toàn ngay cả khi connection chưa tồn tại trong presence)
             _presence.RemoveConnectionFromBoard(Context.ConnectionId, boardId);
 
             if (_presence.TryGetUserForConnection(Context.ConnectionId, out var user))
@@ -108,7 +143,7 @@ namespace ProjectManagement.Hubs
                 }
             }
         }
-
+        
         public Task<List<UserDto>> GetUsersInBoard(string boardId)
         {
             if (string.IsNullOrWhiteSpace(boardId))
