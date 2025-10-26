@@ -1,14 +1,23 @@
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Database=projectmanagement_dev;Username=postgres;Password=postgres"
+    "DefaultConnection": "Server=127.0.0.1;Port=5432;Database=ProjectManagement;Username=postgres;Password=1;",
+    "Redis": "localhost:6379"
   },
-  "Redis": "localhost:6379",
   "Jwt": {
-    "Key": "REPLACE_WITH_SECURE_KEY",
-    "Issuer": "ProjectManagement",
-    "Audience": "ProjectManagementClient"
+    "Key": "YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()",
+    "Issuer": "TrelloCloneApi",
+    "Audience": "TrelloCloneClient"
   },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore.Database.Command": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
   "Unsplash": {
-    "AccessKey": "REPLACE_WITH_UNSPLASH_KEY"
-  }
+    "AccessKey": "your_unsplash_key"
+  },
+  "ClientUrl": ""
 }

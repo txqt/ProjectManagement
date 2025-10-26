@@ -43,6 +43,11 @@ namespace ProjectManagement.Services
             if (card == null)
                 throw new ArgumentException("Card not found");
 
+            if (card.Board?.AllowCommentsOnCard == false)
+            {
+                throw new ArgumentException("Card is not allow comments");
+            }
+
             var comment = new Comment
             {
                 Id = Guid.NewGuid().ToString(),

@@ -18,11 +18,13 @@ namespace ProjectManagement.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IConfiguration _configuration;
 
-        public BoardShareController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public BoardShareController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IConfiguration configuration)
         {
             _context = context;
             _userManager = userManager;
+            _configuration = configuration;
         }
         
         [HttpGet("{boardId}/share-token")]
@@ -37,6 +39,11 @@ namespace ProjectManagement.Controllers
             if (board == null)
                 return NotFound("Board not found");
 
+            if (!board.AllowShareInviteLink)
+            {
+                return BadRequest("Share invite links are disabled for this board");
+            }
+
             var activeToken = await _context.BoardShareTokens
                 .Where(t => t.BoardId == boardId && t.IsActive && t.ExpiresAt > DateTime.UtcNow)
                 .OrderByDescending(t => t.CreatedAt)
@@ -49,7 +56,7 @@ namespace ProjectManagement.Controllers
             {
                 Token = activeToken.Token,
                 ExpiresAt = activeToken.ExpiresAt,
-                ShareUrl = $"http://localhost:5173/join?token={activeToken.Token}"
+                ShareUrl = $"{_configuration["ClientUrl"]}/join?token={activeToken.Token}"
             });
         }
 
@@ -67,6 +74,11 @@ namespace ProjectManagement.Controllers
             var board = await _context.Boards.FindAsync(boardId);
             if (board == null)
                 return NotFound("Board not found");
+            
+            if (!board.AllowShareInviteLink)
+            {
+                return BadRequest("Share invite links are disabled for this board");
+            }
 
             // Deactivate old tokens
             var oldTokens = await _context.BoardShareTokens
@@ -122,6 +134,9 @@ namespace ProjectManagement.Controllers
                 return BadRequest("Invalid or expired token");
 
             var board = shareToken.Board;
+
+            if (!board.AllowShareInviteLink)
+                return BadRequest("Share invite links are disabled for this board");
 
             // Check if already a member
             var existingMember = board.Members.FirstOrDefault(m => m.UserId == userId);

@@ -14,7 +14,8 @@ namespace ProjectManagement.Services
         private readonly IWebHostEnvironment _env;
         private readonly IBoardNotificationService _boardNotificationService;
 
-        public AttachmentService(ApplicationDbContext context, IMapper mapper, IWebHostEnvironment env, IBoardNotificationService boardNotificationService)
+        public AttachmentService(ApplicationDbContext context, IMapper mapper, IWebHostEnvironment env,
+            IBoardNotificationService boardNotificationService)
         {
             _context = context;
             _mapper = mapper;
@@ -24,8 +25,14 @@ namespace ProjectManagement.Services
 
         public async Task<AttachmentDto> UploadAsync(string boardId, string cardId, IFormFile file, string userId)
         {
-            var card = await _context.Cards.Include(c => c.Board).FirstOrDefaultAsync(c => c.Id == cardId && c.BoardId == boardId);
+            var card = await _context.Cards.Include(c => c.Board)
+                .FirstOrDefaultAsync(c => c.Id == cardId && c.BoardId == boardId);
             if (card == null) throw new ArgumentException("Card not found");
+
+            if (card.Board?.AllowAttachmentsOnCard == false)
+            {
+                throw new ArgumentException("Attachments are not allowed on this card");
+            }
 
             var uploadsRoot = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", boardId, cardId);
             Directory.CreateDirectory(uploadsRoot);
@@ -67,7 +74,8 @@ namespace ProjectManagement.Services
             return _mapper.Map<IEnumerable<AttachmentDto>>(attachments);
         }
 
-        public async Task<AttachmentDto> CreateAttachmentAsync(string cardId, CreateAttachmentDto createAttachmentDto, string userId)
+        public async Task<AttachmentDto> CreateAttachmentAsync(string cardId, CreateAttachmentDto createAttachmentDto,
+            string userId)
         {
             var card = await _context.Cards
                 .Include(c => c.Board)
@@ -75,6 +83,11 @@ namespace ProjectManagement.Services
 
             if (card == null)
                 throw new ArgumentException("Card not found");
+
+            if (card.Board?.AllowAttachmentsOnCard == false)
+            {
+                throw new ArgumentException("Card is not allow attachments");
+            }
 
             var attachment = new Attachment
             {

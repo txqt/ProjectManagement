@@ -1,16 +1,14 @@
-// ===== FILE: Column.jsx (OPTIMIZED) =====
 import AddCardIcon from '@mui/icons-material/AddCard'
 import CloseIcon from '@mui/icons-material/Close'
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
-import DragHandleIcon from '@mui/icons-material/DragHandle'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { TextField, Box, Button, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip, Typography } from '@mui/material'
-import { memo, useState, useCallback } from 'react'
+import { Box, Button, ListItemIcon, ListItemText, Menu, MenuItem, TextField, Tooltip, Typography } from '@mui/material'
+import { memo, useCallback, useState } from 'react'
 import { toast } from 'react-toastify'
+import ConditionalRender from '~/components/ConditionalRender/ConditionalRender'
+import { usePermissionAttribute } from '~/hooks/usePermissionAttribute'
 import { sortCardsByRank } from '~/utils/sorts'
 import ListCards from './ListCards/ListCards'
-import ConditionalRender from '~/components/ConditionalRender/ConditionalRender'
-import { usePermissionAttribute } from '~/hooks/usePermissionAttribute';
 
 // OPTIMIZATION: Memoize với custom comparison
 const Column = memo(({ dragHandleProps, column, ...props }) => {
@@ -50,8 +48,13 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
   }, [props.updateColumn, column.id])
 
   const handleDeleteColumn = useCallback(() => {
+    if (column.cards && column.cards.length > 0) {
+      if (!window.confirm(`Column "${column.title}" has ${column.cards.length} cards. Are you sure you want to delete it?`))
+        return
+    }
+
     props.deleteColumn(column.id)
-  }, [props.deleteColumn, column.id])
+  }, [props.deleteColumn, column])
 
   return (
     <Box
