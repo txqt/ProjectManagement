@@ -1,4 +1,5 @@
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+import { SIGNALR_ROOT } from '~/utils/constants';
 
 class SignalRService {
   constructor() {
@@ -32,7 +33,7 @@ class SignalRService {
   async _createConnection(token) {
     try {
       this.connection = new HubConnectionBuilder()
-        .withUrl(`${import.meta.env.VITE_SIGNALR_HUB_URL}`, {
+        .withUrl(`${SIGNALR_ROOT}`, {
           accessTokenFactory: () => token
         })
         .withAutomaticReconnect([0, 2000, 10000, 30000])

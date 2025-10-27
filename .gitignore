@@ -551,3 +551,5 @@ uploads/
 
 redis/dump.rdb
 redis/redis_6379.pid
+
+appsettings.Production.json

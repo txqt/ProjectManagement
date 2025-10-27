@@ -199,7 +199,7 @@ app.UseRouting();
 
 app.UseCors("AllowReactApp");
 
-// Serve uploaded files from wwwroot (uploads)
+app.UseDefaultFiles();
 app.UseStaticFiles();
 
 
@@ -208,6 +208,8 @@ app.UseAuthorization();
 app.UseGlobalRateLimit();
 
 app.MapControllers();
+
+app.MapFallbackToFile("index.html");
 
 app.MapHub<BoardHub>("/hubs/board");
 

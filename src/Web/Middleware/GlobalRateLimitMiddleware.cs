@@ -96,8 +96,17 @@ namespace ProjectManagement.Middleware
         {
             var path = context.Request.Path.Value?.ToLower() ?? "";
 
-            // Skip cho health checks, swagger, static files
-            var skipPaths = new[] { "/health", "/swagger", "/api/auth/login", "/api/auth/register" };
+            // Skip health checks, swagger, auth, static files
+            var skipPaths = new[]
+            {
+                "/health",
+                "/swagger",
+                "/api/auth/login",
+                "/api/auth/register",
+                "/",
+                "/index.html",
+                "/static"
+            };
 
             return skipPaths.Any(p => path.StartsWith(p));
         }
