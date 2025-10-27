@@ -1,5 +1,4 @@
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
-import { SIGNALR_ROOT } from '~/utils/constants';
 
 class SignalRService {
   constructor() {
@@ -15,7 +14,14 @@ class SignalRService {
 
     // optional current user (null nếu chưa biết)
     this.currentUser = null;
+
+    this.signalrUrl = import.meta.env.VITE_SIGNALR_HUB_URL;
+
+    if (!this.signalrUrl) {
+      throw new Error('VITE_SIGNALR_HUB_URL environment variable is not defined');
+    }
   }
+
 
   async connect(token) {
     if (this.connection?.state === 'Connected') {
@@ -33,7 +39,7 @@ class SignalRService {
   async _createConnection(token) {
     try {
       this.connection = new HubConnectionBuilder()
-        .withUrl(`${SIGNALR_ROOT}`, {
+        .withUrl(`${this.signalrUrl}`, {
           accessTokenFactory: () => token
         })
         .withAutomaticReconnect([0, 2000, 10000, 30000])

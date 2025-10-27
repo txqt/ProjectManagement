@@ -1,8 +1,9 @@
-import { API_ROOT } from '~/utils/constants';
-
 class ApiService {
   constructor() {
-    this.baseURL = API_ROOT;
+    this.baseURL = import.meta.env.VITE_API_BASE_URL;
+    if (!this.baseURL) {
+      throw new Error('VITE_API_BASE_URL environment variable is not set');
+    }
     this.token = localStorage.getItem('authToken');
   }
 
