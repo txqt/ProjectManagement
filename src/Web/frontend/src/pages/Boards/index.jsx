@@ -31,7 +31,7 @@ import { apiService } from "~/services/api";
 import { toast } from "react-toastify";
 
 export default function BoardListView() {
-  const { error, executeRequest } = useApi();
+  const { executeRequest } = useApi();
   const [boards, setBoards] = useState([]);
   const [open, setOpen] = useState(false);
 
@@ -53,8 +53,6 @@ export default function BoardListView() {
         );
         if (success) {
           setBoards(data);
-        } else {
-          toast.error(error);
         }
       } catch (err) {
         toast.error(`Unexpected error: \n ${err}`);
@@ -62,7 +60,7 @@ export default function BoardListView() {
     };
 
     fetchBoards();
-  }, [error, executeRequest]);
+  }, [executeRequest]);
 
   // create board
   const handleCreateBoard = async () => {

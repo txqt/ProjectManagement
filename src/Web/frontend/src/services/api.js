@@ -467,6 +467,22 @@ class ApiService {
   async getShareToken(boardId) {
     return this.request(`/boards/${boardId}/share-token`);
   }
+
+  async quickSearch(q, limit = 5) {
+    const query = encodeURIComponent((q || '').trim());
+    return this.request(`/search/quick?q=${query}&limit=${limit}`);
+  }
+
+  async advancedSearch(request) {
+    return this.request('/search/advanced', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async getRecentSearches() {
+    return this.request('/search/recent');
+  }
 }
 
 export const apiService = new ApiService();
