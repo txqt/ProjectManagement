@@ -188,8 +188,8 @@ const SearchBox = ({ onAdvancedSearchClick }) => {
                             {/* Boards Section */}
                             {suggestions.boards?.length > 0 && (
                                 <>
-                                    <Box sx={{ px: 2, py: 1, bgcolor: 'grey.100' }}>
-                                        <Typography variant="caption" fontWeight="bold" color="text.secondary">
+                                    <Box sx={{ px: 2, py: 1, bgcolor: 'inherit' }}>
+                                        <Typography variant="caption" fontWeight="bold" color="inherit">
                                             BOARDS
                                         </Typography>
                                     </Box>
@@ -219,7 +219,7 @@ const SearchBox = ({ onAdvancedSearchClick }) => {
                                                             sx={{ height: 20, fontSize: '0.7rem' }}
                                                         />
                                                         {board.ownerName && (
-                                                            <Typography variant="caption" color="text.secondary" component="span">
+                                                            <Typography variant="caption" color="inherit" component="span">
                                                                 by {board.ownerName}
                                                             </Typography>
                                                         )}
@@ -235,8 +235,8 @@ const SearchBox = ({ onAdvancedSearchClick }) => {
                             {/* Cards Section */}
                             {suggestions.cards?.length > 0 && (
                                 <>
-                                    <Box sx={{ px: 2, py: 1, bgcolor: 'grey.100' }}>
-                                        <Typography variant="caption" fontWeight="bold" color="text.secondary">
+                                    <Box sx={{ px: 2, py: 1, bgcolor: 'inherit' }}>
+                                        <Typography variant="caption" fontWeight="bold" color="inherit">
                                             CARDS
                                         </Typography>
                                     </Box>
@@ -259,7 +259,7 @@ const SearchBox = ({ onAdvancedSearchClick }) => {
                                             <ListItemText
                                                 primary={card.title}
                                                 secondary={
-                                                    <Typography variant="caption" color="text.secondary">
+                                                    <Typography variant="caption" color="inherit">
                                                         in {card.boardTitle} → {card.columnTitle}
                                                     </Typography>
                                                 }
@@ -273,8 +273,8 @@ const SearchBox = ({ onAdvancedSearchClick }) => {
                             {/* Users Section */}
                             {suggestions.users?.length > 0 && (
                                 <>
-                                    <Box sx={{ px: 2, py: 1, bgcolor: 'grey.100' }}>
-                                        <Typography variant="caption" fontWeight="bold" color="text.secondary">
+                                    <Box sx={{ px: 2, py: 1, bgcolor: 'inherit' }}>
+                                        <Typography variant="caption" fontWeight="bold" color="inherit">
                                             PEOPLE
                                         </Typography>
                                     </Box>
@@ -302,21 +302,21 @@ const SearchBox = ({ onAdvancedSearchClick }) => {
                         </List>
                     ) : (
                         <Box sx={{ p: 3, textAlign: 'center' }}>
-                            <SearchIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-                            <Typography variant="body2" color="text.secondary">
+                            <SearchIcon sx={{ fontSize: 48, color: 'inherit', mb: 1 }} />
+                            <Typography variant="body2" color="inherit">
                                 No results found for "{searchValue}"
                             </Typography>
                         </Box>
                     )}
 
-                    <Box sx={{ p: 1.5, bgcolor: 'grey.50', borderTop: 1, borderColor: 'divider' }}>
+                    <Box sx={{ p: 1.5, bgcolor: 'inherit', borderTop: 1, borderColor: 'divider' }}>
                         <Typography>
                             Returned Count: {suggestions?.returnedCount}
                         </Typography>
                     </Box>
 
                     {/* Footer with Advanced Search button */}
-                    <Box sx={{ p: 1.5, bgcolor: 'grey.50', borderTop: 1, borderColor: 'divider' }}>
+                    <Box sx={{ p: 1.5, bgcolor: 'inherit', borderTop: 1, borderColor: 'divider' }}>
                         <Button
                             fullWidth
                             startIcon={<TuneIcon />}
