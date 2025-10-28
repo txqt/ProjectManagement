@@ -207,6 +207,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseGlobalRateLimit();
 
+app.MapGet("/health", () => Results.Ok("Healthy"));
+
 app.MapControllers();
 
 app.MapFallbackToFile("index.html");
