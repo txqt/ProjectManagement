@@ -1,135 +1,49 @@
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
-import AttachmentIcon from '@mui/icons-material/Attachment';
-import CloseIcon from '@mui/icons-material/Close';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import SubjectIcon from '@mui/icons-material/Subject';
-import CommentIcon from '@mui/icons-material/Comment';
-import HistoryIcon from '@mui/icons-material/History';
-import GroupIcon from '@mui/icons-material/Group';
-import LabelIcon from '@mui/icons-material/Label';
-import CheckBoxIcon from '@mui/icons-material/CheckBox';
-import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ArchiveIcon from '@mui/icons-material/Archive';
+import AttachmentIcon from '@mui/icons-material/Attachment';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import CloseIcon from '@mui/icons-material/Close';
+import CommentIcon from '@mui/icons-material/Comment';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteIcon from '@mui/icons-material/Delete';
+import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
+import EditIcon from '@mui/icons-material/Edit';
+import GroupIcon from '@mui/icons-material/Group';
+import HistoryIcon from '@mui/icons-material/History';
+import LabelIcon from '@mui/icons-material/Label';
+import SubjectIcon from '@mui/icons-material/Subject';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import {
+  Alert,
   Avatar,
   Box,
   Button,
   CardMedia,
+  Chip,
+  CircularProgress,
   Dialog,
   DialogContent,
+  Divider,
   IconButton,
   Menu,
   MenuItem,
-  Paper,
+  Stack,
   TextField,
-  Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  CircularProgress,
-  Alert,
-  Divider,
-  Chip,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Collapse,
-  useTheme,
-  useMediaQuery,
   Tooltip,
-  Stack
+  Typography,
+  useMediaQuery,
+  useTheme
 } from "@mui/material";
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { toast } from 'react-toastify';
 import { shallow } from 'zustand/shallow';
+import ActivityFeed from '~/components/ActivityFeed/ActivityFeed';
 import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
 import { apiService } from '~/services/api';
 import { useBoardStore } from '~/stores/boardStore';
-import { CommentSection, AttachmentSection } from './CommentAttachmentSections';
-import { formatDistanceToNow } from 'date-fns';
-import { useSignalR } from '~/hooks/useSignalR';
-
-// Activity Icons Helper
-const getActivityIcon = (action) => {
-  const iconProps = { fontSize: 'small', sx: { mr: 1 } };
-  
-  const icons = {
-    created: <AddPhotoAlternateIcon {...iconProps} color="success" />,
-    updated: <EditIcon {...iconProps} color="info" />,
-    deleted: <DeleteIcon {...iconProps} color="error" />,
-    moved: <DriveFileMoveIcon {...iconProps} color="warning" />,
-    commented: <CommentIcon {...iconProps} color="primary" />,
-    attached: <AttachmentIcon {...iconProps} color="secondary" />,
-    assigned: <GroupIcon {...iconProps} color="success" />,
-    unassigned: <GroupIcon {...iconProps} color="warning" />
-  };
-  
-  return icons[action] || <EditIcon {...iconProps} />;
-};
-
-// Activity Item Component
-const ActivityItem = ({ activity }) => (
-  <ListItem 
-    alignItems="flex-start" 
-    sx={{ 
-      py: 1.5, 
-      px: 0,
-      '&:hover': { bgcolor: 'action.hover' }
-    }}
-  >
-    <ListItemAvatar>
-      <Avatar 
-        src={activity.user?.avatar} 
-        sx={{ width: 32, height: 32 }}
-      >
-        {activity.user?.userName?.[0]?.toUpperCase()}
-      </Avatar>
-    </ListItemAvatar>
-    <ListItemText
-      primary={
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          {getActivityIcon(activity.action)}
-          <Typography variant="body2" component="span" fontWeight={600}>
-            {activity.user?.userName}
-          </Typography>
-          <Typography variant="body2" component="span" color="text.secondary">
-            {activity.description}
-          </Typography>
-        </Box>
-      }
-      secondary={
-        <Box sx={{ mt: 0.5 }}>
-          <Typography variant="caption" color="text.secondary">
-            {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
-          </Typography>
-          {activity.metadata?.fromColumnTitle && activity.metadata?.toColumnTitle && (
-            <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip 
-                label={activity.metadata.fromColumnTitle} 
-                size="small" 
-                variant="outlined"
-                sx={{ height: 20, fontSize: '0.7rem' }}
-              />
-              <Typography variant="caption">→</Typography>
-              <Chip 
-                label={activity.metadata.toColumnTitle} 
-                size="small" 
-                variant="outlined"
-                sx={{ height: 20, fontSize: '0.7rem' }}
-              />
-            </Box>
-          )}
-        </Box>
-      }
-    />
-  </ListItem>
-);
+import { AttachmentSection, CommentSection } from './CommentAttachmentSections';
 
 // Sidebar Action Button Component
 const SidebarButton = ({ icon, label, onClick, disabled = false }) => (
@@ -175,10 +89,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   );
 
   const currentCard = storeCard ?? initialCard;
-  const boardId = useBoardStore(s => s.board?.id);
-  
-  // SignalR connection
-  const { isConnected } = useSignalR(boardId);
 
   // Store functions
   const storeAssign = useBoardStore((s) => s.assignCardMember);
@@ -194,11 +104,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const [editing, setEditing] = useState(false);
   const [description, setDescription] = useState('');
   const [moving, setMoving] = useState(false);
-  
-  // Activity state
-  const [activities, setActivities] = useState([]);
-  const [loadingActivities, setLoadingActivities] = useState(false);
-  const [showAllActivities, setShowAllActivities] = useState(false);
 
   // Member UI
   const [memberMenuAnchor, setMemberMenuAnchor] = useState(null);
@@ -211,6 +116,14 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const [moveMenuAnchor, setMoveMenuAnchor] = useState(null);
   const [actionsMenuAnchor, setActionsMenuAnchor] = useState(null);
 
+  const [activityDialogOpen, setActivityDialogOpen] = useState(false);
+
+  const openActivityDialog = () => setActivityDialogOpen(true);
+  const closeActivityDialog = () => setActivityDialogOpen(false);
+
+  const [contextMenuAnchor, setContextMenuAnchor] = useState(null);
+  const [showActivityLogsInMenu, setShowActivityLogsInMenu] = useState(false);
+
   // Card moved warning
   const cardMovedWarning = useMemo(() => {
     if (!initialCard || !currentCard) return null;
@@ -219,50 +132,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     }
     return null;
   }, [initialCard, currentCard]);
-
-  // Load activities
-  const loadActivities = useCallback(async () => {
-    if (!boardId || !currentCard?.id) return;
-    
-    setLoadingActivities(true);
-    try {
-      const data = await apiService.getCardActivities(boardId, currentCard.id, 0, 50);
-      setActivities(data || []);
-    } catch (err) {
-      console.error('Failed to load activities:', err);
-    } finally {
-      setLoadingActivities(false);
-    }
-  }, [boardId, currentCard?.id]);
-
-  // Load activities on mount
-  useEffect(() => {
-    if (open && boardId && currentCard?.id) {
-      loadActivities();
-    }
-  }, [open, boardId, currentCard?.id, loadActivities]);
-
-  // Listen for real-time activity updates via SignalR
-  useEffect(() => {
-    if (!open || !isConnected || !currentCard?.id) return;
-
-    const handleActivityLogged = (data) => {
-      // Check if this activity is for current card
-      if (data.activity?.cardId === currentCard.id) {
-        setActivities(prev => [data.activity, ...prev]);
-      }
-    };
-
-    // Subscribe to SignalR event
-    const signalRService = window.signalRService;
-    if (signalRService) {
-      signalRService.onActivityLogged(handleActivityLogged);
-    }
-
-    return () => {
-      // Cleanup if needed (depending on your signalR implementation)
-    };
-  }, [open, isConnected, currentCard?.id]);
 
   // Auto-close if card deleted
   useEffect(() => {
@@ -500,7 +369,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const handleMoveCard = async (toColumnId) => {
     setMoveMenuAnchor(null);
     if (!toColumnId || toColumnId === currentCard.columnId) return;
-    
+
     setMoving(true);
     try {
       const dest = columns.find(c => c.id === toColumnId);
@@ -520,41 +389,42 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
   // Render sidebar (desktop only)
   const renderSidebar = () => (
-    <Box sx={{ width: 200, flexShrink: 0 }}>
+    <Box sx={{ width: 200, flexShrink: 0, overflowY: 'auto', borderLeft: 1, borderColor: 'divider', p: 2 }}>
       <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ px: 2, py: 1, display: 'block' }}>
         ADD TO CARD
       </Typography>
-      
+
       <Stack spacing={1} sx={{ px: 1 }}>
         <SidebarButton
           icon={<GroupIcon fontSize="small" />}
           label="Members"
           onClick={handleOpenMemberMenu}
         />
-        
+
         <SidebarButton
           icon={<LabelIcon fontSize="small" />}
           label="Labels"
           onClick={() => toast.info('Labels feature coming soon')}
         />
-        
+
         <SidebarButton
           icon={<CheckBoxIcon fontSize="small" />}
           label="Checklist"
           onClick={() => toast.info('Checklist feature coming soon')}
         />
-        
+
         <SidebarButton
           icon={<AttachmentIcon fontSize="small" />}
           label="Attachment"
           onClick={() => document.getElementById('attachment-upload')?.click()}
         />
-        
+
         <SidebarButton
           icon={<AddPhotoAlternateIcon fontSize="small" />}
           label="Cover"
           onClick={openAddCoverMenu}
         />
+
       </Stack>
 
       <Divider sx={{ my: 2 }} />
@@ -562,7 +432,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
       <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ px: 2, py: 1, display: 'block' }}>
         ACTIONS
       </Typography>
-      
+
       <Stack spacing={1} sx={{ px: 1 }}>
         <SidebarButton
           icon={<DriveFileMoveIcon fontSize="small" />}
@@ -570,17 +440,28 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
           onClick={(e) => setMoveMenuAnchor(e.currentTarget)}
           disabled={moving}
         />
-        
+
         <SidebarButton
           icon={<ContentCopyIcon fontSize="small" />}
           label="Copy"
           onClick={() => toast.info('Copy feature coming soon')}
         />
-        
+
         <SidebarButton
           icon={<ArchiveIcon fontSize="small" />}
           label="Archive"
           onClick={() => toast.info('Archive feature coming soon')}
+        />
+      </Stack>
+
+      <Divider sx={{ my: 2 }} />
+
+      <Stack spacing={1} sx={{ px: 1 }}>
+        <SidebarButton
+
+          icon={<HistoryIcon fontSize="small" />}
+          label="Activity Logs"
+          onClick={openActivityDialog}
         />
       </Stack>
     </Box>
@@ -594,19 +475,19 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         fullWidth
         maxWidth="lg"
         fullScreen={isMobile}
-        PaperProps={{ 
-          sx: { 
+        PaperProps={{
+          sx: {
             height: isMobile ? '100%' : '90vh',
             maxHeight: isMobile ? '100%' : '90vh'
-          } 
+          }
         }}
         data-no-dnd='true'
       >
         {/* Header */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           p: 2,
           borderBottom: 1,
           borderColor: 'divider'
@@ -655,20 +536,19 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         </Box>
 
         <DialogContent sx={{ p: 0, display: 'flex', overflow: 'hidden' }}>
-          {/* Warning if card moved */}
-          {cardMovedWarning && (
-            <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ m: 2 }}>
-              {cardMovedWarning}
-            </Alert>
-          )}
-
           {/* Main Content Area */}
-          <Box sx={{ 
-            flex: 1, 
+          <Box sx={{
+            flex: 1,
             overflow: 'auto',
             display: 'flex',
             flexDirection: 'column'
           }}>
+            {/* Warning if card moved */}
+            {cardMovedWarning && (
+              <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ m: 2 }}>
+                {cardMovedWarning}
+              </Alert>
+            )}
             {/* Cover Image */}
             {currentCard.cover && (
               <Box
@@ -682,10 +562,10 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                   component="img"
                   src={currentCard.cover}
                   alt="cover"
-                  sx={{ 
-                    height: '100%', 
-                    width: '100%', 
-                    objectFit: 'cover' 
+                  sx={{
+                    height: '100%',
+                    width: '100%',
+                    objectFit: 'cover'
                   }}
                 />
                 <Box
@@ -724,9 +604,9 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
             {/* Content Container */}
             <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
               {/* Left: Main Content */}
-              <Box sx={{ 
-                flex: 1, 
-                p: 3, 
+              <Box sx={{
+                flex: 1,
+                p: 3,
                 overflow: 'auto',
                 minWidth: 0
               }}>
@@ -734,10 +614,10 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="caption" color="text.secondary">
                     in list{' '}
-                    <Typography 
-                      component="span" 
-                      variant="caption" 
-                      sx={{ 
+                    <Typography
+                      component="span"
+                      variant="caption"
+                      sx={{
                         textDecoration: 'underline',
                         cursor: 'pointer',
                         '&:hover': { color: 'primary.main' }
@@ -756,7 +636,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                       Members
                     </Typography>
                   </Box>
-                  
+
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                     {currentCard.members?.map(m => {
                       const displayName = getDisplayNameFrom(m);
@@ -765,9 +645,9 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                         <Tooltip key={uid} title={`${displayName} - Click to remove`}>
                           <Avatar
                             src={getAvatarFrom(m)}
-                            sx={{ 
-                              width: 32, 
-                              height: 32, 
+                            sx={{
+                              width: 32,
+                              height: 32,
                               cursor: 'pointer',
                               '&:hover': { opacity: 0.7 }
                             }}
@@ -782,7 +662,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                         </Tooltip>
                       );
                     })}
-                    
+
                     <IconButton
                       size="small"
                       onClick={handleOpenMemberMenu}
@@ -893,55 +773,20 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                 </Box>
 
                 {/* Activity Log */}
-                <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <HistoryIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      Activity History
-                    </Typography>
+                <Dialog
+                  open={activityDialogOpen}
+                  onClose={closeActivityDialog}
+                  fullWidth
+                  maxWidth="sm"
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                    <Typography variant="h6">Activity Logs</Typography>
+                    <IconButton onClick={closeActivityDialog}><CloseIcon /></IconButton>
                   </Box>
-
-                  {loadingActivities ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                      <CircularProgress size={24} />
-                    </Box>
-                  ) : activities.length === 0 ? (
-                    <Box sx={{ 
-                      p: 3, 
-                      textAlign: 'center', 
-                      bgcolor: 'action.hover',
-                      borderRadius: 1
-                    }}>
-                      <Typography variant="body2" color="text.secondary">
-                        No activity yet
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <>
-                      <List sx={{ p: 0 }}>
-                        {activities
-                          .slice(0, showAllActivities ? activities.length : 5)
-                          .map((activity) => (
-                            <ActivityItem key={activity.id} activity={activity} />
-                          ))}
-                      </List>
-
-                      {activities.length > 5 && (
-                        <Button
-                          fullWidth
-                          size="small"
-                          onClick={() => setShowAllActivities(!showAllActivities)}
-                          sx={{ mt: 1 }}
-                        >
-                          {showAllActivities 
-                            ? 'Show Less' 
-                            : `Show ${activities.length - 5} More Activities`
-                          }
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </Box>
+                  <DialogContent sx={{ maxHeight: '60vh', overflowY: 'auto', p: 2 }}>
+                    <ActivityFeed boardId={currentCard.boardId} cardId={currentCard.id} />
+                  </DialogContent>
+                </Dialog>
               </Box>
 
               {/* Right: Sidebar (Desktop only) */}
@@ -952,9 +797,9 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
         {/* Mobile Action Bar */}
         {isMobile && (
-          <Box sx={{ 
-            p: 2, 
-            borderTop: 1, 
+          <Box sx={{
+            p: 2,
+            borderTop: 1,
             borderColor: 'divider',
             display: 'flex',
             gap: 1,
