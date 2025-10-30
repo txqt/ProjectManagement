@@ -121,9 +121,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const openActivityDialog = () => setActivityDialogOpen(true);
   const closeActivityDialog = () => setActivityDialogOpen(false);
 
-  const [contextMenuAnchor, setContextMenuAnchor] = useState(null);
-  const [showActivityLogsInMenu, setShowActivityLogsInMenu] = useState(false);
-
   // Card moved warning
   const cardMovedWarning = useMemo(() => {
     if (!initialCard || !currentCard) return null;
