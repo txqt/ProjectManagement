@@ -375,6 +375,14 @@ class SignalRService {
   onJoinRequestResponded(callback) {
     this._addListener('JoinRequestResponded', callback);
   }
+
+  onActivityLogged(callback) {
+    this._addListener('ActivityLogged', callback);
+  }
+
+  offActivityLogged() {
+    this._removeListener('ActivityLogged');
+  }
 }
 
 export const signalRService = new SignalRService();

@@ -42,6 +42,7 @@ import { useBoardStore } from '~/stores/boardStore';
 import InviteDialog from '~/components/BoardInvites/InviteDialog';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import BoardJoinRequestsTab from './BoardJoinRequestsTab';
+import ActivityFeed from '~/components/ActivityFeed/ActivityFeed';
 
 function TabPanel({ children, value, index, ...other }) {
   return (
@@ -229,6 +230,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
             <Tab label="Members" />
             <Tab label="Join Requests" />
             <Tab label="Advanced" />
+            <Tab label="Activity" />
             <Tab label="Danger Zone" />
           </Tabs>
         </Box>
@@ -489,8 +491,16 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
             </Box>
           </TabPanel>
 
-          {/* Danger Zone Tab */}
           <TabPanel value={currentTab} index={4}>
+            <ActivityFeed
+              boardId={board?.id}
+              showFilters={true}
+              maxHeight={400}
+            />
+          </TabPanel>
+
+          {/* Danger Zone Tab */}
+          <TabPanel value={currentTab} index={5}>
             <Alert severity="error" sx={{ mb: 3 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Warning: Danger Zone

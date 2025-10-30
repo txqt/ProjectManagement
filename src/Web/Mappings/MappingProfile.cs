@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using Newtonsoft.Json;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs;
+using ProjectManagement.Models.DTOs.Activity;
 using ProjectManagement.Models.DTOs.Attachment;
 using ProjectManagement.Models.DTOs.Board;
 using ProjectManagement.Models.DTOs.BoardInvite;
@@ -112,6 +114,23 @@ namespace ProjectManagement.Mappings
             
             CreateMap<BoardJoinRequest, BoardJoinRequestDto>();
             CreateMap<CreateBoardJoinRequestDto, BoardJoinRequest>();
+            
+            CreateMap<ActivityLog, ActivityLogDto>()
+                .ForMember(dest => dest.Metadata, opt => opt.MapFrom(src =>
+                    !string.IsNullOrEmpty(src.Metadata)
+                        ? JsonConvert.DeserializeObject<Dictionary<string, object>>(src.Metadata)
+                        : null))
+                .ForMember(dest => dest.User, opt => opt.MapFrom(src => new UserDto
+                {
+                    Id = src.User.Id,
+                    UserName = src.User.UserName ?? "",
+                    Email = src.User.Email ?? "",
+                    Avatar = src.User.Avatar
+                }))
+                .ForMember(dest => dest.CardTitle, opt => opt.MapFrom(src =>
+                    src.Card != null ? src.Card.Title : null))
+                .ForMember(dest => dest.ColumnTitle, opt => opt.MapFrom(src =>
+                    src.Column != null ? src.Column.Title : null));
         }
     }
 }

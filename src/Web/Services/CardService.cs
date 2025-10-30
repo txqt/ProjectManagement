@@ -7,6 +7,7 @@ using ProjectManagement.Models.DTOs.Board;
 using ProjectManagement.Models.DTOs.Card;
 using ProjectManagement.Services.Interfaces;
 using LexoAlgorithm;
+using ProjectManagement.Helpers;
 
 namespace ProjectManagement.Services
 {
@@ -17,19 +18,21 @@ namespace ProjectManagement.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IBoardNotificationService _boardNotificationService;
         private readonly INotificationService _notificationService;
+        private readonly IActivityLogService _activityLogService;
 
         public CardService(
             ApplicationDbContext context,
             IMapper mapper,
             UserManager<ApplicationUser> userManager,
             IBoardNotificationService boardNotificationService,
-            INotificationService notificationService)
+            INotificationService notificationService, IActivityLogService activityLogService)
         {
             _context = context;
             _mapper = mapper;
             _userManager = userManager;
             _boardNotificationService = boardNotificationService;
             _notificationService = notificationService;
+            _activityLogService = activityLogService;
         }
 
         public async Task<CardDto?> GetCardAsync(string cardId)
@@ -85,6 +88,15 @@ namespace ProjectManagement.Services
             _context.Cards.Add(card);
             await _context.SaveChangesAsync();
 
+            await ActivityLogger.LogCardCreatedAsync(
+                _activityLogService,
+                userId,
+                card.BoardId,
+                columnId,
+                card.Id,
+                card.Title
+            );
+
             var createdCard = await GetCardAsync(card.Id);
             await _boardNotificationService.BroadcastCardCreated(card.BoardId, card.ColumnId, createdCard, userId);
             return createdCard!;
@@ -129,7 +141,33 @@ namespace ProjectManagement.Services
             _mapper.Map(updateCardDto, card);
             card.LastModified = DateTime.UtcNow;
 
+            var changes = new Dictionary<string, object>();
+            if (updateCardDto.Title != null && updateCardDto.Title != card.Title)
+            {
+                changes["title"] = new { from = card.Title, to = updateCardDto.Title };
+                card.Title = updateCardDto.Title;
+            }
+
+            if (updateCardDto.Description != null && updateCardDto.Description != card.Description)
+            {
+                changes["description"] = "updated";
+                card.Description = updateCardDto.Description;
+            }
+
             await _context.SaveChangesAsync();
+
+            if (changes.Count > 0)
+            {
+                await ActivityLogger.LogCardUpdatedAsync(
+                    _activityLogService,
+                    userId,
+                    card.BoardId,
+                    card.ColumnId,
+                    cardId,
+                    card.Title,
+                    changes
+                );
+            }
 
             var updatedCard = await GetCardAsync(cardId);
             await _boardNotificationService.BroadcastCardUpdated(card.BoardId, card.ColumnId, updatedCard, userId);
@@ -175,15 +213,21 @@ namespace ProjectManagement.Services
             if (destinationColumn == null || destinationColumn.BoardId != card.BoardId)
                 return null;
 
+            var fromColumn = await _context.Columns.FirstOrDefaultAsync(c => c.Id == card.ColumnId);
+            var toColumn = destinationColumn;
+
             string oldColumnId = card.ColumnId;
 
             // Calculate new rank based on position
-            var cardsInDestColumn = destinationColumn.Cards.OrderBy(c => c.Rank).ToList();
+            var cardsInDestColumn = toColumn.Cards
+                .Where(c => c.Id != cardId) // loại card hiện tại nếu cùng column
+                .OrderBy(c => c.Rank)
+                .ToList();
+
             string newRank;
 
             if (moveCardDto.NewIndex >= cardsInDestColumn.Count)
             {
-                // Insert at end
                 var lastCard = cardsInDestColumn.LastOrDefault();
                 newRank = lastCard != null
                     ? LexoRank.Parse(lastCard.Rank).GenNext().ToString()
@@ -191,7 +235,6 @@ namespace ProjectManagement.Services
             }
             else if (moveCardDto.NewIndex == 0)
             {
-                // Insert at beginning
                 var firstCard = cardsInDestColumn.FirstOrDefault();
                 newRank = firstCard != null
                     ? LexoRank.Parse(firstCard.Rank).GenPrev().ToString()
@@ -199,13 +242,11 @@ namespace ProjectManagement.Services
             }
             else
             {
-                // Insert between two cards
                 var prevCard = cardsInDestColumn[moveCardDto.NewIndex - 1];
                 var nextCard = cardsInDestColumn[moveCardDto.NewIndex];
                 var prevRank = LexoRank.Parse(prevCard.Rank);
                 var nextRank = LexoRank.Parse(nextCard.Rank);
-                var betweenRank = prevRank.Between(nextRank);
-                newRank = betweenRank.ToString();
+                newRank = prevRank.Between(nextRank).ToString();
             }
 
             card.Rank = newRank;
@@ -213,6 +254,18 @@ namespace ProjectManagement.Services
             card.LastModified = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            await ActivityLogger.LogCardMovedAsync(
+                _activityLogService,
+                userId,
+                card.BoardId,
+                cardId,
+                card.Title,
+                oldColumnId,
+                fromColumn?.Title ?? "",
+                moveCardDto.ToColumnId,
+                toColumn?.Title ?? ""
+            );
 
             var dto = _mapper.Map<CardDto>(card);
             await _boardNotificationService.BroadcastCardMoved(dto.BoardId, oldColumnId,
@@ -300,6 +353,16 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
             var dto = _mapper.Map<CardDto>(card);
+            
+            await ActivityLogger.LogMemberAssignedAsync(
+                _activityLogService,
+                userId,
+                dto.BoardId,
+                dto.ColumnId,
+                cardId,
+                card.Title,
+                user.UserName
+            );
 
             await _boardNotificationService.BroadcastCardAssigned(
                 card.BoardId,

@@ -4,6 +4,15 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import SubjectIcon from '@mui/icons-material/Subject';
+import CommentIcon from '@mui/icons-material/Comment';
+import HistoryIcon from '@mui/icons-material/History';
+import GroupIcon from '@mui/icons-material/Group';
+import LabelIcon from '@mui/icons-material/Label';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ArchiveIcon from '@mui/icons-material/Archive';
 import {
   Avatar,
   Box,
@@ -15,14 +24,24 @@ import {
   Menu,
   MenuItem,
   Paper,
-  Stack,
   TextField,
   Typography,
   FormControl,
   InputLabel,
   Select,
   CircularProgress,
-  Alert
+  Alert,
+  Divider,
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Collapse,
+  useTheme,
+  useMediaQuery,
+  Tooltip,
+  Stack
 } from "@mui/material";
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import ReactQuill from 'react-quill-new';
@@ -33,16 +52,117 @@ import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
 import { apiService } from '~/services/api';
 import { useBoardStore } from '~/stores/boardStore';
 import { CommentSection, AttachmentSection } from './CommentAttachmentSections';
+import { formatDistanceToNow } from 'date-fns';
+import { useSignalR } from '~/hooks/useSignalR';
+
+// Activity Icons Helper
+const getActivityIcon = (action) => {
+  const iconProps = { fontSize: 'small', sx: { mr: 1 } };
+  
+  const icons = {
+    created: <AddPhotoAlternateIcon {...iconProps} color="success" />,
+    updated: <EditIcon {...iconProps} color="info" />,
+    deleted: <DeleteIcon {...iconProps} color="error" />,
+    moved: <DriveFileMoveIcon {...iconProps} color="warning" />,
+    commented: <CommentIcon {...iconProps} color="primary" />,
+    attached: <AttachmentIcon {...iconProps} color="secondary" />,
+    assigned: <GroupIcon {...iconProps} color="success" />,
+    unassigned: <GroupIcon {...iconProps} color="warning" />
+  };
+  
+  return icons[action] || <EditIcon {...iconProps} />;
+};
+
+// Activity Item Component
+const ActivityItem = ({ activity }) => (
+  <ListItem 
+    alignItems="flex-start" 
+    sx={{ 
+      py: 1.5, 
+      px: 0,
+      '&:hover': { bgcolor: 'action.hover' }
+    }}
+  >
+    <ListItemAvatar>
+      <Avatar 
+        src={activity.user?.avatar} 
+        sx={{ width: 32, height: 32 }}
+      >
+        {activity.user?.userName?.[0]?.toUpperCase()}
+      </Avatar>
+    </ListItemAvatar>
+    <ListItemText
+      primary={
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {getActivityIcon(activity.action)}
+          <Typography variant="body2" component="span" fontWeight={600}>
+            {activity.user?.userName}
+          </Typography>
+          <Typography variant="body2" component="span" color="text.secondary">
+            {activity.description}
+          </Typography>
+        </Box>
+      }
+      secondary={
+        <Box sx={{ mt: 0.5 }}>
+          <Typography variant="caption" color="text.secondary">
+            {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
+          </Typography>
+          {activity.metadata?.fromColumnTitle && activity.metadata?.toColumnTitle && (
+            <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip 
+                label={activity.metadata.fromColumnTitle} 
+                size="small" 
+                variant="outlined"
+                sx={{ height: 20, fontSize: '0.7rem' }}
+              />
+              <Typography variant="caption">→</Typography>
+              <Chip 
+                label={activity.metadata.toColumnTitle} 
+                size="small" 
+                variant="outlined"
+                sx={{ height: 20, fontSize: '0.7rem' }}
+              />
+            </Box>
+          )}
+        </Box>
+      }
+    />
+  </ListItem>
+);
+
+// Sidebar Action Button Component
+const SidebarButton = ({ icon, label, onClick, disabled = false }) => (
+  <Button
+    fullWidth
+    startIcon={icon}
+    onClick={onClick}
+    disabled={disabled}
+    sx={{
+      justifyContent: 'flex-start',
+      py: 1,
+      px: 2,
+      color: 'text.secondary',
+      bgcolor: 'action.hover',
+      '&:hover': {
+        bgcolor: 'action.selected'
+      }
+    }}
+  >
+    {label}
+  </Button>
+);
 
 const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription }) => {
-  // ========================================
-  // CRITICAL FIX: Always get fresh card from store
-  // ========================================
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
+
+  // Store & SignalR
   const storeCard = useBoardStore(
     useCallback(
       (s) => {
         if (!initialCard?.id) return null;
-
         const cols = s.board?.columns ?? [];
         for (const col of cols) {
           const found = col.cards?.find(c => c.id === initialCard.id);
@@ -54,12 +174,13 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     )
   );
 
-  // Use store card if available, fallback to initial
   const currentCard = storeCard ?? initialCard;
+  const boardId = useBoardStore(s => s.board?.id);
+  
+  // SignalR connection
+  const { isConnected } = useSignalR(boardId);
 
-  // ========================================
   // Store functions
-  // ========================================
   const storeAssign = useBoardStore((s) => s.assignCardMember);
   const storeUnassign = useBoardStore((s) => s.unassignCardMember);
   const boardMembers = useBoardStore((s) => s.board?.members ?? [], shallow);
@@ -67,16 +188,17 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const columns = useBoardStore((s) => s.board?.columns ?? []);
   const moveCard = useBoardStore((s) => s.moveCard);
 
-  // ========================================
   // Local state
-  // ========================================
   const [editTitleMode, setEditTitleMode] = useState(false);
   const [tempTitle, setTempTitle] = useState('');
   const [editing, setEditing] = useState(false);
   const [description, setDescription] = useState('');
   const [moving, setMoving] = useState(false);
-  // Comments
-  // Comments handled by CommentSection component
+  
+  // Activity state
+  const [activities, setActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+  const [showAllActivities, setShowAllActivities] = useState(false);
 
   // Member UI
   const [memberMenuAnchor, setMemberMenuAnchor] = useState(null);
@@ -84,48 +206,82 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const [searchResults, setSearchResults] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
-  // Cover menu
+  // Cover & Move menu
   const [unsplashAnchor, setUnsplashAnchor] = useState(null);
-  // Move menu anchor (context menu)
   const [moveMenuAnchor, setMoveMenuAnchor] = useState(null);
+  const [actionsMenuAnchor, setActionsMenuAnchor] = useState(null);
 
-  // ========================================
-  // Detect if card moved to different column
-  // ========================================
+  // Card moved warning
   const cardMovedWarning = useMemo(() => {
     if (!initialCard || !currentCard) return null;
     if (initialCard.columnId !== currentCard.columnId) {
-      return 'Card đã được di chuyển sang column khác. Dialog sẽ đóng khi bạn lưu.';
+      return 'Card has been moved to another column. Dialog will close when you save.';
     }
     return null;
   }, [initialCard, currentCard]);
 
-  // ========================================
-  // Auto-close if card deleted from store
-  // ========================================
+  // Load activities
+  const loadActivities = useCallback(async () => {
+    if (!boardId || !currentCard?.id) return;
+    
+    setLoadingActivities(true);
+    try {
+      const data = await apiService.getCardActivities(boardId, currentCard.id, 0, 50);
+      setActivities(data || []);
+    } catch (err) {
+      console.error('Failed to load activities:', err);
+    } finally {
+      setLoadingActivities(false);
+    }
+  }, [boardId, currentCard?.id]);
+
+  // Load activities on mount
+  useEffect(() => {
+    if (open && boardId && currentCard?.id) {
+      loadActivities();
+    }
+  }, [open, boardId, currentCard?.id, loadActivities]);
+
+  // Listen for real-time activity updates via SignalR
+  useEffect(() => {
+    if (!open || !isConnected || !currentCard?.id) return;
+
+    const handleActivityLogged = (data) => {
+      // Check if this activity is for current card
+      if (data.activity?.cardId === currentCard.id) {
+        setActivities(prev => [data.activity, ...prev]);
+      }
+    };
+
+    // Subscribe to SignalR event
+    const signalRService = window.signalRService;
+    if (signalRService) {
+      signalRService.onActivityLogged(handleActivityLogged);
+    }
+
+    return () => {
+      // Cleanup if needed (depending on your signalR implementation)
+    };
+  }, [open, isConnected, currentCard?.id]);
+
+  // Auto-close if card deleted
   useEffect(() => {
     if (open && initialCard?.id && !storeCard) {
-      console.warn('Card không còn tồn tại trong store, đóng dialog');
-      toast.info('Card đã bị xóa');
+      toast.info('Card has been deleted');
       onClose();
     }
   }, [open, initialCard?.id, storeCard, onClose]);
 
-  // ========================================
   // Sync local state with store card
-  // ========================================
   useEffect(() => {
     if (!currentCard) return;
-
     setTempTitle(currentCard.title ?? '');
     setDescription(currentCard.description ?? '');
     setEditTitleMode(false);
     setEditing(false);
   }, [currentCard]);
 
-  // ========================================
   // ReactQuill config
-  // ========================================
   const modules = useMemo(() => ({
     toolbar: [
       [{ header: [1, 2, false] }],
@@ -136,12 +292,10 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     ]
   }), []);
 
-  // ========================================
   // Save handlers
-  // ========================================
   const handleSaveTitle = async () => {
     if (!tempTitle.trim()) {
-      toast.error('Tiêu đề không được để trống');
+      toast.error('Title cannot be empty');
       return;
     }
 
@@ -153,15 +307,14 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         title: tempTitle
       });
       setEditTitleMode(false);
-      toast.success('Đã cập nhật tiêu đề');
+      toast.success('Title updated');
 
-      // Close if card moved
       if (cardMovedWarning) {
         setTimeout(onClose, 500);
       }
     } catch (err) {
       console.error('handleSaveTitle error:', err);
-      toast.error('Không thể cập nhật tiêu đề');
+      toast.error('Failed to update title');
     }
   };
 
@@ -181,47 +334,34 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
       }
 
       setEditing(false);
-      toast.success('Đã cập nhật mô tả');
+      toast.success('Description updated');
 
-      // Close if card moved
       if (cardMovedWarning) {
         setTimeout(onClose, 500);
       }
     } catch (err) {
       console.error('handleSaveDescription error:', err);
-      toast.error('Không thể cập nhật mô tả');
+      toast.error('Failed to update description');
     }
   };
 
-  // ========================================
   // Cover handlers
-  // ========================================
-  const openAddCoverMenu = (e) => {
-    setUnsplashAnchor(e.currentTarget);
-  };
-
-  const closeUnsplashMenu = () => {
-    setUnsplashAnchor(null);
-  };
+  const openAddCoverMenu = (e) => setUnsplashAnchor(e.currentTarget);
+  const closeUnsplashMenu = () => setUnsplashAnchor(null);
 
   const handleSelectUnsplashImage = async (image) => {
     const url = image?.full ?? image?.thumb;
     if (!currentCard || !url) return;
 
     try {
-      const success = await updateCard(currentCard.columnId, currentCard.id, {
+      await updateCard(currentCard.columnId, currentCard.id, {
         ...currentCard,
         cover: url
       });
-
-      if (success) {
-        toast.success('Đã cập nhật cover từ Unsplash');
-      } else {
-        toast.error('Không thể cập nhật cover');
-      }
+      toast.success('Cover updated');
     } catch (err) {
       console.error('handleSelectUnsplashImage error:', err);
-      toast.error('Không thể cập nhật cover');
+      toast.error('Failed to update cover');
     } finally {
       closeUnsplashMenu();
     }
@@ -229,47 +369,23 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
   const handleDeleteCover = async () => {
     if (!currentCard) return;
-
     try {
-      const success = await updateCard(currentCard.columnId, currentCard.id, {
+      await updateCard(currentCard.columnId, currentCard.id, {
         ...currentCard,
         cover: null
       });
-
-      if (success) {
-        toast.success('Đã xoá cover');
-      } else {
-        toast.error('Không thể xoá cover');
-      }
+      toast.success('Cover removed');
     } catch (err) {
       console.error('handleDeleteCover error:', err);
-      toast.error('Không thể xoá cover');
+      toast.error('Failed to remove cover');
     }
   };
 
-  // ========================================
   // Member helpers
-  // ========================================
-  const getUserIdFrom = (item) =>
-    item?.user?.id ?? item?.userId ?? item?.id ?? null;
-
-  const getUserEmailFrom = (item) =>
-    item?.user?.email ?? item?.email ?? item?.userEmail ?? null;
-
-  const getDisplayNameFrom = (item) =>
-    item?.user?.userName ??
-    item?.user?.fullName ??
-    item?.fullName ??
-    item?.userName ??
-    item?.name ??
-    'Unknown';
-
-  const getAvatarFrom = (item) =>
-    item?.user?.avatar ??
-    item?.avatar ??
-    item?.avatarUrl ??
-    item?.user?.avatarUrl ??
-    null;
+  const getUserIdFrom = (item) => item?.user?.id ?? item?.userId ?? item?.id ?? null;
+  const getUserEmailFrom = (item) => item?.user?.email ?? item?.email ?? item?.userEmail ?? null;
+  const getDisplayNameFrom = (item) => item?.user?.userName ?? item?.userName ?? item?.name ?? 'Unknown';
+  const getAvatarFrom = (item) => item?.user?.avatar ?? item?.avatar ?? null;
 
   const isUserAssignedToCard = (cardObj, userIdOrEmail) => {
     if (!cardObj?.members) return false;
@@ -282,38 +398,32 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
   const assignHandler = async (selectedItem) => {
     if (!currentCard) return;
-
     const email = getUserEmailFrom(selectedItem);
     const userId = getUserIdFrom(selectedItem);
 
     if (isUserAssignedToCard(currentCard, email ?? userId)) {
-      toast.info('Người này đã có trong card');
+      toast.info('User already assigned');
       return;
     }
 
-    if (typeof storeAssign === 'function') {
-      try {
-        await storeAssign(currentCard.columnId, currentCard.id, email);
-      } catch (err) {
-        console.error('assign error:', err);
-        toast.error('Gán thành viên thất bại');
-      }
+    try {
+      await storeAssign(currentCard.columnId, currentCard.id, email);
+    } catch (err) {
+      console.error('assign error:', err);
+      toast.error('Failed to assign member');
     }
   };
 
   const unassignHandler = async (member) => {
     if (!currentCard) return;
-
     const memberId = member?.id ?? getUserIdFrom(member);
     if (!memberId) return;
 
-    if (typeof storeUnassign === 'function') {
-      try {
-        await storeUnassign(currentCard.columnId, currentCard.id, memberId);
-      } catch (err) {
-        console.error('unassign error:', err);
-        toast.error('Gỡ thành viên thất bại');
-      }
+    try {
+      await storeUnassign(currentCard.columnId, currentCard.id, memberId);
+    } catch (err) {
+      console.error('unassign error:', err);
+      toast.error('Failed to remove member');
     }
   };
 
@@ -329,9 +439,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     setSearchResults([]);
   };
 
-  // ========================================
   // Search members
-  // ========================================
   useEffect(() => {
     if (!memberMenuAnchor) return;
 
@@ -340,7 +448,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
     const timer = setTimeout(async () => {
       if (!mounted) return;
-
       setLoadingMembers(true);
 
       try {
@@ -352,8 +459,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         const localMatches = boardMembers.filter(m => {
           const name = (getDisplayNameFrom(m) || '').toLowerCase();
           const email = (getUserEmailFrom(m) || '').toLowerCase();
-          const role = (m?.role || '').toLowerCase();
-          return name.includes(q) || email.includes(q) || role.includes(q);
+          return name.includes(q) || email.includes(q);
         });
 
         const results = [...localMatches];
@@ -390,357 +496,635 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     };
   }, [searchQuery, boardMembers, memberMenuAnchor]);
 
-  // ========================================
-  // Render
-  // ========================================
+  // Move card handler
+  const handleMoveCard = async (toColumnId) => {
+    setMoveMenuAnchor(null);
+    if (!toColumnId || toColumnId === currentCard.columnId) return;
+    
+    setMoving(true);
+    try {
+      const dest = columns.find(c => c.id === toColumnId);
+      const newIndex = (dest?.cards?.length) ?? 0;
+      await moveCard(currentCard.columnId, toColumnId, currentCard.id, newIndex);
+      toast.success('Card moved');
+      if (cardMovedWarning) setTimeout(onClose, 500);
+    } catch (err) {
+      console.error('moveCard error:', err);
+      toast.error('Failed to move card');
+    } finally {
+      setMoving(false);
+    }
+  };
+
   if (!currentCard) return null;
 
+  // Render sidebar (desktop only)
+  const renderSidebar = () => (
+    <Box sx={{ width: 200, flexShrink: 0 }}>
+      <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ px: 2, py: 1, display: 'block' }}>
+        ADD TO CARD
+      </Typography>
+      
+      <Stack spacing={1} sx={{ px: 1 }}>
+        <SidebarButton
+          icon={<GroupIcon fontSize="small" />}
+          label="Members"
+          onClick={handleOpenMemberMenu}
+        />
+        
+        <SidebarButton
+          icon={<LabelIcon fontSize="small" />}
+          label="Labels"
+          onClick={() => toast.info('Labels feature coming soon')}
+        />
+        
+        <SidebarButton
+          icon={<CheckBoxIcon fontSize="small" />}
+          label="Checklist"
+          onClick={() => toast.info('Checklist feature coming soon')}
+        />
+        
+        <SidebarButton
+          icon={<AttachmentIcon fontSize="small" />}
+          label="Attachment"
+          onClick={() => document.getElementById('attachment-upload')?.click()}
+        />
+        
+        <SidebarButton
+          icon={<AddPhotoAlternateIcon fontSize="small" />}
+          label="Cover"
+          onClick={openAddCoverMenu}
+        />
+      </Stack>
+
+      <Divider sx={{ my: 2 }} />
+
+      <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ px: 2, py: 1, display: 'block' }}>
+        ACTIONS
+      </Typography>
+      
+      <Stack spacing={1} sx={{ px: 1 }}>
+        <SidebarButton
+          icon={<DriveFileMoveIcon fontSize="small" />}
+          label="Move"
+          onClick={(e) => setMoveMenuAnchor(e.currentTarget)}
+          disabled={moving}
+        />
+        
+        <SidebarButton
+          icon={<ContentCopyIcon fontSize="small" />}
+          label="Copy"
+          onClick={() => toast.info('Copy feature coming soon')}
+        />
+        
+        <SidebarButton
+          icon={<ArchiveIcon fontSize="small" />}
+          label="Archive"
+          onClick={() => toast.info('Archive feature coming soon')}
+        />
+      </Stack>
+    </Box>
+  );
+
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullWidth
-      maxWidth="md"
-      PaperProps={{ sx: { height: '75vh' } }}
-      data-no-dnd='true'
-    >
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
-          {editTitleMode ? (
-            <TextField
-              sx={{
-                p: 1,
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                textOverflow: 'ellipsis',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-                flex: 1
-              }}
-              autoFocus
-              fullWidth
-              size="medium"
-              value={tempTitle}
-              onChange={(e) => setTempTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveTitle();
-                if (e.key === 'Escape') setEditTitleMode(false);
-              }}
-              onBlur={() => setEditTitleMode(false)}
-              variant="standard"
-              slotProps={{
-                input: { sx: { fontWeight: 'bold', padding: 0 } }
-              }}
-            />
-          ) : (
-            <Typography
-              sx={{
-                p: 1,
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                textOverflow: 'ellipsis',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-                flex: 1
-              }}
-              variant='h6'
-              onClick={() => setEditTitleMode(true)}
-              title="Click để chỉnh sửa tiêu đề"
-            >
-              {currentCard.title}
-            </Typography>
-          )}
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          {/* Move column fallback (Button + Menu context menu) */}
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            {/* Button that opens a Menu listing columns */}
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={(e) => setMoveMenuAnchor(e.currentTarget)}
-              disabled={moving}
-            >
-              Move to column
-            </Button>
-
-            <Menu
-              anchorEl={moveMenuAnchor}
-              open={Boolean(moveMenuAnchor)}
-              onClose={() => setMoveMenuAnchor(null)}
-              PaperProps={{ sx: { minWidth: 240 } }}
-            >
-              {columns.map(col => (
-                <MenuItem
-                  key={col.id}
-                  onClick={async () => {
-                    const toColumnId = col.id;
-                    setMoveMenuAnchor(null);
-                    if (!toColumnId || toColumnId === currentCard.columnId) return;
-                    setMoving(true);
-                    try {
-                      const dest = columns.find(c => c.id === toColumnId);
-                      const newIndex = (dest?.cards?.length) ?? 0;
-                      await moveCard(currentCard.columnId, toColumnId, currentCard.id, newIndex);
-                      toast.success('Card moved');
-                      if (cardMovedWarning) setTimeout(onClose, 500);
-                    } catch (err) {
-                      console.error('moveCard error:', err);
-                      toast.error('Failed to move card');
-                    } finally {
-                      setMoving(false);
-                    }
-                  }}
-                >
-                  {col.title || col.name || col.id}
-                </MenuItem>
-              ))}
-            </Menu>
-
-            {moving && <CircularProgress size={20} />}
+    <>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth="lg"
+        fullScreen={isMobile}
+        PaperProps={{ 
+          sx: { 
+            height: isMobile ? '100%' : '90vh',
+            maxHeight: isMobile ? '100%' : '90vh'
+          } 
+        }}
+        data-no-dnd='true'
+      >
+        {/* Header */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          p: 2,
+          borderBottom: 1,
+          borderColor: 'divider'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+            <SubjectIcon sx={{ mr: 1, color: 'text.secondary' }} />
+            {editTitleMode ? (
+              <TextField
+                autoFocus
+                fullWidth
+                size="medium"
+                value={tempTitle}
+                onChange={(e) => setTempTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveTitle();
+                  if (e.key === 'Escape') setEditTitleMode(false);
+                }}
+                onBlur={() => setEditTitleMode(false)}
+                variant="standard"
+                slotProps={{
+                  input: { sx: { fontSize: '1.25rem', fontWeight: 600 } }
+                }}
+              />
+            ) : (
+              <Typography
+                variant="h6"
+                onClick={() => setEditTitleMode(true)}
+                sx={{
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  '&:hover': { bgcolor: 'action.hover' },
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1
+                }}
+              >
+                {currentCard.title}
+              </Typography>
+            )}
           </Box>
-
-          <Button
-            startIcon={<AddPhotoAlternateIcon />}
-            variant="outlined"
-            size="small"
-            onClick={openAddCoverMenu}
-          >
-            Thêm cover
-          </Button>
 
           <IconButton onClick={onClose} size="small">
             <CloseIcon />
           </IconButton>
         </Box>
 
-        <UnsplashMenu
-          anchorEl={unsplashAnchor}
-          onClose={closeUnsplashMenu}
-          onSelect={handleSelectUnsplashImage}
-          apiService={apiService}
-          width={520}
-          maxHeight={520}
-        />
-      </Box>
+        <DialogContent sx={{ p: 0, display: 'flex', overflow: 'hidden' }}>
+          {/* Warning if card moved */}
+          {cardMovedWarning && (
+            <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ m: 2 }}>
+              {cardMovedWarning}
+            </Alert>
+          )}
 
-      <DialogContent sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* Warning if card moved */}
-        {cardMovedWarning && (
-          <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ m: 1 }}>
-            {cardMovedWarning}
-          </Alert>
-        )}
-
-        {/* Cover section */}
-        <Box
-          sx={{
-            flex: '0 0 20%',
-            position: 'relative',
-            '&:hover .cover-overlay': { opacity: 1 }
-          }}
-        >
-          {currentCard.cover ? (
-            <>
-              <CardMedia
-                component="img"
-                src={currentCard.cover}
-                alt="cover"
-                sx={{ height: '200px', width: '100%', objectFit: 'cover' }}
-              />
+          {/* Main Content Area */}
+          <Box sx={{ 
+            flex: 1, 
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Cover Image */}
+            {currentCard.cover && (
               <Box
-                className="cover-overlay"
                 sx={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  opacity: 0,
-                  transition: 'opacity 0.18s',
+                  position: 'relative',
+                  height: 200,
+                  '&:hover .cover-actions': { opacity: 1 }
                 }}
               >
-                <IconButton
-                  size="small"
-                  onClick={handleDeleteCover}
-                  sx={{ bgcolor: 'rgba(255,255,255,0.7)' }}
+                <CardMedia
+                  component="img"
+                  src={currentCard.cover}
+                  alt="cover"
+                  sx={{ 
+                    height: '100%', 
+                    width: '100%', 
+                    objectFit: 'cover' 
+                  }}
+                />
+                <Box
+                  className="cover-actions"
+                  sx={{
+                    position: 'absolute',
+                    bottom: 8,
+                    right: 8,
+                    display: 'flex',
+                    gap: 1,
+                    opacity: 0,
+                    transition: 'opacity 0.2s'
+                  }}
                 >
-                  <DeleteIcon />
-                </IconButton>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={<EditIcon />}
+                    onClick={openAddCoverMenu}
+                  >
+                    Change
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={handleDeleteCover}
+                  >
+                    Remove
+                  </Button>
+                </Box>
               </Box>
-            </>
-          ) : (
-            <Box sx={{
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Typography color="text.secondary">No cover</Typography>
+            )}
+
+            {/* Content Container */}
+            <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+              {/* Left: Main Content */}
+              <Box sx={{ 
+                flex: 1, 
+                p: 3, 
+                overflow: 'auto',
+                minWidth: 0
+              }}>
+                {/* Column Info */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    in list{' '}
+                    <Typography 
+                      component="span" 
+                      variant="caption" 
+                      sx={{ 
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        '&:hover': { color: 'primary.main' }
+                      }}
+                    >
+                      {columns.find(c => c.id === currentCard.columnId)?.title}
+                    </Typography>
+                  </Typography>
+                </Box>
+
+                {/* Members Section */}
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <GroupIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Members
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                    {currentCard.members?.map(m => {
+                      const displayName = getDisplayNameFrom(m);
+                      const uid = getUserIdFrom(m);
+                      return (
+                        <Tooltip key={uid} title={`${displayName} - Click to remove`}>
+                          <Avatar
+                            src={getAvatarFrom(m)}
+                            sx={{ 
+                              width: 32, 
+                              height: 32, 
+                              cursor: 'pointer',
+                              '&:hover': { opacity: 0.7 }
+                            }}
+                            onClick={() => {
+                              if (window.confirm(`Remove ${displayName}?`)) {
+                                unassignHandler(m);
+                              }
+                            }}
+                          >
+                            {displayName?.[0]?.toUpperCase() ?? '?'}
+                          </Avatar>
+                        </Tooltip>
+                      );
+                    })}
+                    
+                    <IconButton
+                      size="small"
+                      onClick={handleOpenMemberMenu}
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        bgcolor: 'action.hover',
+                        '&:hover': { bgcolor: 'action.selected' }
+                      }}
+                    >
+                      <GroupIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Box>
+
+                {/* Description */}
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <SubjectIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        Description
+                      </Typography>
+                    </Box>
+                    {!editing && (
+                      <Button
+                        size="small"
+                        startIcon={<EditIcon />}
+                        onClick={() => setEditing(true)}
+                      >
+                        {description ? 'Edit' : 'Add'}
+                      </Button>
+                    )}
+                  </Box>
+
+                  {editing ? (
+                    <Box>
+                      <ReactQuill
+                        theme="snow"
+                        value={description}
+                        onChange={setDescription}
+                        modules={modules}
+                        style={{ minHeight: 120 }}
+                      />
+                      <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={handleSaveDescription}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => {
+                            setEditing(false);
+                            setDescription(currentCard.description ?? '');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </Box>
+                    </Box>
+                  ) : (
+                    <Box
+                      sx={{
+                        minHeight: 60,
+                        p: 2,
+                        bgcolor: 'action.hover',
+                        borderRadius: 1,
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'action.selected' }
+                      }}
+                      onClick={() => setEditing(true)}
+                    >
+                      {description ? (
+                        <div dangerouslySetInnerHTML={{ __html: description }} />
+                      ) : (
+                        <Typography color="text.secondary">
+                          Add a more detailed description...
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Attachments */}
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <AttachmentIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Attachments
+                    </Typography>
+                  </Box>
+                  <AttachmentSection card={currentCard} />
+                </Box>
+
+                {/* Comments */}
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <CommentIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Activity
+                    </Typography>
+                  </Box>
+                  <CommentSection card={currentCard} />
+                </Box>
+
+                {/* Activity Log */}
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <HistoryIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Activity History
+                    </Typography>
+                  </Box>
+
+                  {loadingActivities ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                      <CircularProgress size={24} />
+                    </Box>
+                  ) : activities.length === 0 ? (
+                    <Box sx={{ 
+                      p: 3, 
+                      textAlign: 'center', 
+                      bgcolor: 'action.hover',
+                      borderRadius: 1
+                    }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No activity yet
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <>
+                      <List sx={{ p: 0 }}>
+                        {activities
+                          .slice(0, showAllActivities ? activities.length : 5)
+                          .map((activity) => (
+                            <ActivityItem key={activity.id} activity={activity} />
+                          ))}
+                      </List>
+
+                      {activities.length > 5 && (
+                        <Button
+                          fullWidth
+                          size="small"
+                          onClick={() => setShowAllActivities(!showAllActivities)}
+                          sx={{ mt: 1 }}
+                        >
+                          {showAllActivities 
+                            ? 'Show Less' 
+                            : `Show ${activities.length - 5} More Activities`
+                          }
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </Box>
+              </Box>
+
+              {/* Right: Sidebar (Desktop only) */}
+              {!isMobile && !isTablet && renderSidebar()}
             </Box>
+          </Box>
+        </DialogContent>
+
+        {/* Mobile Action Bar */}
+        {isMobile && (
+          <Box sx={{ 
+            p: 2, 
+            borderTop: 1, 
+            borderColor: 'divider',
+            display: 'flex',
+            gap: 1,
+            flexWrap: 'wrap'
+          }}>
+            <Button
+              size="small"
+              startIcon={<GroupIcon />}
+              onClick={handleOpenMemberMenu}
+              variant="outlined"
+            >
+              Members
+            </Button>
+            <Button
+              size="small"
+              startIcon={<AddPhotoAlternateIcon />}
+              onClick={openAddCoverMenu}
+              variant="outlined"
+            >
+              Cover
+            </Button>
+            <Button
+              size="small"
+              startIcon={<DriveFileMoveIcon />}
+              onClick={(e) => setMoveMenuAnchor(e.currentTarget)}
+              variant="outlined"
+              disabled={moving}
+            >
+              Move
+            </Button>
+            <IconButton
+              size="small"
+              onClick={(e) => setActionsMenuAnchor(e.currentTarget)}
+            >
+              <EditIcon />
+            </IconButton>
+          </Box>
+        )}
+      </Dialog>
+
+      {/* Member Menu */}
+      <Menu
+        anchorEl={memberMenuAnchor}
+        open={Boolean(memberMenuAnchor)}
+        onClose={handleCloseMemberMenu}
+        PaperProps={{ sx: { width: 320, maxHeight: 400 } }}
+      >
+        <Box sx={{ p: 2 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Add Member
+          </Typography>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search members..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            autoFocus
+          />
+        </Box>
+
+        <Divider />
+
+        <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
+          {loadingMembers ? (
+            <Box sx={{ p: 2, textAlign: 'center' }}>
+              <CircularProgress size={20} />
+            </Box>
+          ) : searchResults.length === 0 ? (
+            <Box sx={{ p: 2, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                No members found
+              </Typography>
+            </Box>
+          ) : (
+            searchResults.map((item) => {
+              const uid = getUserIdFrom(item);
+              const displayName = getDisplayNameFrom(item);
+              const avatar = getAvatarFrom(item);
+              const isAssigned = isUserAssignedToCard(currentCard, uid);
+
+              return (
+                <MenuItem
+                  key={uid}
+                  onClick={async () => {
+                    if (!isAssigned) {
+                      await assignHandler(item);
+                    }
+                    handleCloseMemberMenu();
+                  }}
+                  disabled={isAssigned}
+                >
+                  <Avatar src={avatar} sx={{ width: 32, height: 32, mr: 2 }}>
+                    {displayName?.[0]?.toUpperCase()}
+                  </Avatar>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2">{displayName}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {getUserEmailFrom(item)}
+                    </Typography>
+                  </Box>
+                  {isAssigned && (
+                    <Chip label="Member" size="small" color="primary" />
+                  )}
+                </MenuItem>
+              );
+            })
           )}
         </Box>
+      </Menu>
 
-        {/* Content section */}
-        <Box sx={{ flex: '1 1 80%', p: 2, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Actions */}
-
-          {/* Attachments Section (centralized) */}
-          <AttachmentSection card={currentCard} />
-
-          {/* Comments Section */}
-          <CommentSection card={currentCard} />
-
-          {/* Members */}
-          <Paper sx={{ p: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="subtitle1">Thành viên</Typography>
-              <Button size="small" onClick={handleOpenMemberMenu}>Thêm</Button>
-            </Box>
-            <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
-              {currentCard.members?.length ? (
-                currentCard.members.map(m => {
-                  const displayName = getDisplayNameFrom(m);
-                  const uid = getUserIdFrom(m);
-                  return (
-                    <Avatar
-                      key={uid ?? m.id ?? Math.random().toString(36).slice(2)}
-                      alt={displayName}
-                      sx={{ width: 32, height: 32, cursor: 'pointer' }}
-                      onClick={() => {
-                        if (window.confirm(`Gỡ ${displayName} khỏi card?`)) {
-                          unassignHandler(m);
-                        }
-                      }}
-                    >
-                      {displayName?.[0]?.toUpperCase() ?? '?'}
-                    </Avatar>
-                  );
-                })
-              ) : (
-                <Typography color="text.secondary">Chưa có thành viên</Typography>
-              )}
-            </Box>
-          </Paper>
-
-          {/* Member menu */}
-          <Menu
-            anchorEl={memberMenuAnchor}
-            open={Boolean(memberMenuAnchor)}
-            onClose={handleCloseMemberMenu}
-            PaperProps={{ sx: { width: 320, maxHeight: 300, p: 1, overflow: 'hidden' } }}
-          >
-            <Box sx={{ p: 1 }}>
-              <input
-                type="text"
-                placeholder="Tìm kiếm thành viên"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px 8px',
-                  borderRadius: 6,
-                  border: '1px solid #ccc',
-                  outline: 'none'
-                }}
-              />
-            </Box>
-
-            <Box sx={{ maxHeight: 220, overflowY: 'auto' }}>
-              {loadingMembers ? (
-                <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-                  Đang tải...
-                </Typography>
-              ) : searchResults.length === 0 ? (
-                <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-                  Không có kết quả
-                </Typography>
-              ) : (
-                searchResults.map((item) => {
-                  const uid = getUserIdFrom(item);
-                  const displayName = getDisplayNameFrom(item);
-                  const avatar = getAvatarFrom(item);
-                  return (
-                    <MenuItem
-                      key={uid ?? Math.random().toString(36).slice(2)}
-                      onClick={async () => {
-                        await assignHandler(item);
-                        handleCloseMemberMenu();
-                      }}
-                      sx={{ gap: 1 }}
-                    >
-                      <Avatar src={avatar} sx={{ width: 28, height: 28, mr: 1 }}>
-                        {displayName?.[0]?.toUpperCase() ?? '?'}
-                      </Avatar>
-                      <Typography noWrap>{displayName}</Typography>
-                    </MenuItem>
-                  );
-                })
-              )}
-            </Box>
-          </Menu>
-
-          {/* Description */}
-          <Paper sx={{ p: 1, flex: '1 1 auto', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="subtitle1">Mô tả</Typography>
-              {!editing && (
-                <Button
-                  size="small"
-                  startIcon={<EditIcon />}
-                  onClick={() => setEditing(true)}
-                >
-                  {description ? 'Chỉnh sửa' : 'Thêm'}
-                </Button>
-              )}
-            </Box>
-
-            <Box sx={{ mt: 1, flex: '1 1 auto', overflow: 'auto' }}>
-              {editing ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  <Box sx={{ flex: '1 1 auto' }}>
-                    <ReactQuill
-                      theme="snow"
-                      value={description}
-                      onChange={setDescription}
-                      modules={modules}
-                    />
-                  </Box>
-
-                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={handleSaveDescription}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => {
-                        setEditing(false);
-                        setDescription(currentCard.description ?? '');
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </Box>
-                </Box>
-              ) : (
-                <Box sx={{ minHeight: 120 }}>
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: description || '<i style="color:#999">Không có mô tả</i>'
-                    }}
-                  />
-                </Box>
-              )}
-            </Box>
-          </Paper>
+      {/* Move Menu */}
+      <Menu
+        anchorEl={moveMenuAnchor}
+        open={Boolean(moveMenuAnchor)}
+        onClose={() => setMoveMenuAnchor(null)}
+        PaperProps={{ sx: { minWidth: 250 } }}
+      >
+        <Box sx={{ p: 2 }}>
+          <Typography variant="subtitle2">Move Card</Typography>
         </Box>
-      </DialogContent>
-    </Dialog>
+        <Divider />
+        {columns.map((col) => (
+          <MenuItem
+            key={col.id}
+            onClick={() => handleMoveCard(col.id)}
+            disabled={col.id === currentCard.columnId || moving}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              <Typography flex={1}>{col.title}</Typography>
+              {col.id === currentCard.columnId && (
+                <Chip label="Current" size="small" />
+              )}
+            </Box>
+          </MenuItem>
+        ))}
+      </Menu>
+
+      {/* Mobile Actions Menu */}
+      <Menu
+        anchorEl={actionsMenuAnchor}
+        open={Boolean(actionsMenuAnchor)}
+        onClose={() => setActionsMenuAnchor(null)}
+      >
+        <MenuItem onClick={() => {
+          setActionsMenuAnchor(null);
+          toast.info('Copy feature coming soon');
+        }}>
+          <ContentCopyIcon fontSize="small" sx={{ mr: 1 }} />
+          Copy
+        </MenuItem>
+        <MenuItem onClick={() => {
+          setActionsMenuAnchor(null);
+          toast.info('Archive feature coming soon');
+        }}>
+          <ArchiveIcon fontSize="small" sx={{ mr: 1 }} />
+          Archive
+        </MenuItem>
+      </Menu>
+
+      {/* Unsplash Menu */}
+      <UnsplashMenu
+        anchorEl={unsplashAnchor}
+        onClose={closeUnsplashMenu}
+        onSelect={handleSelectUnsplashImage}
+        apiService={apiService}
+        width={520}
+        maxHeight={520}
+      />
+    </>
   );
 };
 

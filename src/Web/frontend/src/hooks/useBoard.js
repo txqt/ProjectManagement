@@ -55,6 +55,8 @@ export const useBoard = (boardId) => {
   const handleJoinRequestCreated = useBoardStore((state) => state.handleJoinRequestCreated);
   const handleJoinRequestResponded = useBoardStore((state) => state.handleJoinRequestResponded);
 
+  const handleActivityLogged = useBoardStore((state) => state.handleActivityLogged);
+
   // Set boardId khi thay đổi
   useEffect(() => {
     if (boardId) {
@@ -138,6 +140,8 @@ export const useBoard = (boardId) => {
     signalRService.onJoinRequestCreated?.(handleJoinRequestCreated);
     signalRService.onJoinRequestResponded?.(handleJoinRequestResponded);
 
+    signalRService.onActivityLogged(handleActivityLogged);
+
     // Cleanup function
     return () => {
       // Best-effort cleanup
@@ -170,6 +174,8 @@ export const useBoard = (boardId) => {
       signalRService.offJoinRequestCreated?.(handleJoinRequestCreated);
       signalRService.offJoinRequestResponded?.(handleJoinRequestResponded);
 
+      signalRService.offActivityLogged?.(handleActivityLogged);
+
       // Try generic off method
       if (typeof signalRService.off === 'function') {
         try {
@@ -192,6 +198,7 @@ export const useBoard = (boardId) => {
           signalRService.off('attachmentDeleted', handleAttachmentDeleted);
           signalRService.off('joinRequestCreated', handleJoinRequestCreated);
           signalRService.off('joinRequestResponded', handleJoinRequestResponded);
+          signalRService.off('activityLogged', handleActivityLogged);
         } catch (error) {
           console.warn('Error removing SignalR listeners:', error);
         }
@@ -217,7 +224,8 @@ export const useBoard = (boardId) => {
     handleAttachmentAdded,
     handleAttachmentDeleted,
     handleJoinRequestCreated,
-    handleJoinRequestResponded
+    handleJoinRequestResponded,
+    handleActivityLogged
   ]);
 
 

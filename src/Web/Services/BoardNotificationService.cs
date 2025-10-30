@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using ProjectManagement.Hubs;
+using ProjectManagement.Models.DTOs.Activity;
 using ProjectManagement.Models.DTOs.Attachment;
 using ProjectManagement.Models.DTOs.BoardJoinRequest;
 using ProjectManagement.Models.DTOs.Card;
@@ -227,6 +228,13 @@ namespace ProjectManagement.Services
             await _hub.Clients
                 .User(userId)
                 .SendAsync("JoinRequestResponded", new { boardId, requestId, status });
+        }
+        
+        public async Task BroadcastActivityLogged(string boardId, ActivityLogDto activityLogDto)
+        {
+            await _hub.Clients
+                .Group($"board-{activityLogDto.BoardId}")
+                .SendAsync("ActivityLogged", new { boardId = activityLogDto.BoardId, activity = activityLogDto });
         }
     }
 }

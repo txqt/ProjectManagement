@@ -1,4 +1,5 @@
 ﻿using ProjectManagement.Models.Domain.Entities;
+using ProjectManagement.Models.DTOs.Activity;
 using ProjectManagement.Models.DTOs.Attachment;
 using ProjectManagement.Models.DTOs.BoardJoinRequest;
 using ProjectManagement.Models.DTOs.Card;
@@ -39,5 +40,8 @@ namespace ProjectManagement.Services.Interfaces
 
         Task BroadcastJoinRequestCreated(string boardId, BoardJoinRequestDto request);
         Task BroadcastJoinRequestResponded(string boardId, string requestId, string status, string userId);
+        
+        // Activity logs
+        Task BroadcastActivityLogged(string boardId, ActivityLogDto activityLogDto);
     }
 }

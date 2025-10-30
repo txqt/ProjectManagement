@@ -24,6 +24,7 @@ namespace Infrastructure
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<BoardShareToken> BoardShareTokens { get; set; }
         public DbSet<BoardJoinRequest> BoardJoinRequests { get; set; }
+        public DbSet<ActivityLog> ActivityLogs { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

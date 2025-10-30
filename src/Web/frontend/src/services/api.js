@@ -484,6 +484,24 @@ class ApiService {
   async getRecentSearches() {
     return this.request('/search/recent');
   }
+
+  async getCardActivities(boardId, cardId, skip = 0, take = 50) {
+    const params = new URLSearchParams({
+      skip: String(skip),
+      take: String(take)
+    });
+    return this.request(`/boards/${boardId}/activities/cards/${cardId}?${params.toString()}`);
+  }
+
+  async getBoardActivities(boardId, filter) {
+    const params = new URLSearchParams();
+    if (filter.userId) params.append('userId', filter.userId);
+    if (filter.entityType) params.append('entityType', filter.entityType);
+    if (filter.action) params.append('action', filter.action);
+    params.append('skip', String(filter.skip || 0));
+    params.append('take', String(filter.take || 50));
+    return this.request(`/boards/${boardId}/activities?${params.toString()}`);
+  }
 }
 
 export const apiService = new ApiService();

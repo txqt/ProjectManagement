@@ -132,6 +132,12 @@ builder.Services.AddScoped<IUnsplashCacheService, UnsplashRedisCacheService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 
+// Activity Log Service
+builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
+
+// Background service to clean old activities (optional)
+builder.Services.AddHostedService<ActivityLogCleanupService>();
+
 // Add Background Services
 builder.Services.AddHostedService<NotificationCleanupService>();
 

@@ -1099,4 +1099,16 @@ export const useBoardStore = create((set, get) => ({
             console.error('handleJoinRequestResponded error', err);
         }
     },
+
+    handleActivityLogged: (data) => {
+        try {
+            const boardId = data?.boardId || data?.board?.id;
+
+            // nếu không cùng board thì bỏ qua
+            if (!boardId || boardId !== get().boardId) return;
+
+        } catch (err) {
+            console.error('handleActivityLogged error', err);
+        }
+    }
 }));
