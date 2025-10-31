@@ -528,8 +528,6 @@ $RECYCLE.BIN/
 *.swp
 .azure
 
-Migrations/
-
 # Default ignored files
 /shelf/
 /workspace.xml
