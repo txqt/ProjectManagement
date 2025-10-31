@@ -24,27 +24,37 @@ namespace ProjectManagement.Services
         {
             _logger.LogInformation("Activity Log Cleanup Service started");
 
-            while (!stoppingToken.IsCancellationRequested)
+            try
             {
-                try
+                while (!stoppingToken.IsCancellationRequested)
                 {
-                    await Task.Delay(_interval, stoppingToken);
+                    try
+                    {
+                        await Task.Delay(_interval, stoppingToken);
 
-                    using var scope = _serviceProvider.CreateScope();
-                    var activityLogService = scope.ServiceProvider
-                        .GetRequiredService<IActivityLogService>();
+                        using var scope = _serviceProvider.CreateScope();
+                        var activityLogService = scope.ServiceProvider
+                            .GetRequiredService<IActivityLogService>();
 
-                    _logger.LogInformation("Starting activity log cleanup...");
-                    await activityLogService.DeleteOldActivitiesAsync(_daysToKeep);
-                    _logger.LogInformation("Activity log cleanup completed");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error during activity log cleanup");
+                        _logger.LogInformation("Starting activity log cleanup...");
+                        await activityLogService.DeleteOldActivitiesAsync(_daysToKeep);
+                        _logger.LogInformation("Activity log cleanup completed");
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // Container stopping, không cần log lỗi
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error during activity log cleanup");
+                    }
                 }
             }
-
-            _logger.LogInformation("Activity Log Cleanup Service stopped");
+            finally
+            {
+                _logger.LogInformation("Activity Log Cleanup Service stopped");
+            }
         }
+
     }
 }

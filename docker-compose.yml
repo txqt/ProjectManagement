@@ -65,11 +65,11 @@ services:
     volumes:
       - ./src/Web/wwwroot/uploads:/app/wwwroot/uploads
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null --timeout=5 http://127.0.0.1:80/health || exit 1"]
+      start_period: 120s
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
     networks:
       - app_network
 
