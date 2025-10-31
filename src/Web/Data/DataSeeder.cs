@@ -102,7 +102,7 @@ namespace ProjectManagement.Data
                 new { Email = "admin@test.com", UserName = "admin", Password = "Test123!", Role = "Admin" },
                 new { Email = "alice@test.com", UserName = "alice", Password = "Test123!", Role = "User" },
                 new { Email = "bob@test.com", UserName = "bob", Password = "Test123!", Role = "User" },
-                new { Email = "viewer@test.com", UserName = "viewer", Password = "Test123!", Role = "Viewer" }
+                new { Email = "viewer@test.com", UserName = "viewer", Password = "Test123!", Role = "User" }
             };
 
             var createdUsers = new List<(ApplicationUser User, string Role)>();
@@ -124,8 +124,20 @@ namespace ProjectManagement.Data
                     var result = await userManager.CreateAsync(user, userData.Password);
                     if (result.Succeeded)
                     {
-                        await userManager.AddToRoleAsync(user, userData.Role);
-                        createdUsers.Add((user, userData.Role));
+                        try
+                        {
+                            var roleExists = await userManager.IsInRoleAsync(user, userData.Role);
+                            if (!roleExists)
+                            {
+                                await userManager.AddToRoleAsync(user, userData.Role);
+                            }
+                            createdUsers.Add((user, userData.Role));
+                        }
+                        catch (Exception ex)
+                        {
+                            var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+                            logger.LogWarning(ex, $"Skipping role assignment for user '{userData.Email}' — role '{userData.Role}' not found.");
+                        }
                     }
                 }
                 else

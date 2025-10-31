@@ -15,17 +15,8 @@ else {
     Write-Host "Docker or docker-compose not found. Assuming local Postgres/Redis are already running."
 }
 
-# Ask user whether to run EF migrations
-$runMigrations = Read-Host "Do you want to run 'dotnet ef database update'? (y/n)"
-if ($runMigrations -eq "y" -or $runMigrations -eq "Y") {
-    Write-Host "Running EF migrations..."
-    Push-Location "$PSScriptRoot/../src/Web"
-    dotnet ef database update
-    Pop-Location
-}
-else {
-    Write-Host "Skipping EF migrations."
-}
+# Since Program.cs handles auto-migration, no manual EF update is needed
+Write-Host "`n[Info] Skipping manual 'dotnet ef database update' (handled automatically in backend startup).`n"
 
 Write-Host "Starting backend (dotnet run) and frontend (pnpm dev) in separate terminals..."
 
@@ -41,4 +32,4 @@ if (Test-Path $redisScript) {
     Start-Process powershell -ArgumentList '-NoExit','-Command',"& '$redisScript'"
 }
 
-Write-Host "Dev environment launched."
+Write-Host "`n✅ Dev environment launched successfully."
