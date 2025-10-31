@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Infrastructure;
+using ProjectManagement.Data;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Comment;

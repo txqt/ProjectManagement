@@ -15,11 +15,13 @@ namespace ProjectManagement.Services
     {
         private readonly IHubContext<BoardHub> _hub;
         private readonly BoardPresenceTracker _boardPresenceTracker;
+        private readonly ICacheService _cache;
 
-        public BoardNotificationService(IHubContext<BoardHub> hub, BoardPresenceTracker boardPresenceTracker)
+        public BoardNotificationService(IHubContext<BoardHub> hub, BoardPresenceTracker boardPresenceTracker, ICacheService cache)
         {
             _hub = hub;
             _boardPresenceTracker = boardPresenceTracker;
+            _cache = cache;
         }
 
         private static string GroupName(string boardId) => $"board-{boardId}";
@@ -213,6 +215,9 @@ namespace ProjectManagement.Services
 
         public async Task BroadcastJoinRequestCreated(string boardId, BoardJoinRequestDto request)
         {
+            var cacheKey = $"board_join_requests:{boardId}:all";
+            await _cache.RemoveAsync(cacheKey);
+
             await _hub.Clients
                 .Group(GroupName(boardId))
                 .SendAsync("JoinRequestCreated", new { boardId, request });

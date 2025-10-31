@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Infrastructure;
+using ProjectManagement.Data;
 using LexoAlgorithm;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Helpers;

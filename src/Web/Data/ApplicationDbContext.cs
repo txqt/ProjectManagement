@@ -4,7 +4,7 @@ using ProjectManagement.Models.Domain.Entities;
 using System.Reflection.Emit;
 using System.Text.Json;
 
-namespace Infrastructure
+namespace ProjectManagement.Data
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {

@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Infrastructure;
+using ProjectManagement.Data;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Attachment;
@@ -13,14 +13,16 @@ namespace ProjectManagement.Services
         private readonly IMapper _mapper;
         private readonly IWebHostEnvironment _env;
         private readonly IBoardNotificationService _boardNotificationService;
+        private readonly ICacheService _cache;
 
         public AttachmentService(ApplicationDbContext context, IMapper mapper, IWebHostEnvironment env,
-            IBoardNotificationService boardNotificationService)
+            IBoardNotificationService boardNotificationService, ICacheService cache)
         {
             _context = context;
             _mapper = mapper;
             _env = env;
             _boardNotificationService = boardNotificationService;
+            _cache = cache;
         }
 
         public async Task<AttachmentDto> UploadAsync(string boardId, string cardId, IFormFile file, string userId)
@@ -66,12 +68,19 @@ namespace ProjectManagement.Services
 
         public async Task<IEnumerable<AttachmentDto>> GetAttachmentsAsync(string cardId)
         {
+            var cacheKey = $"attachments:{cardId}";
+            var cached = await _cache.GetAsync<IEnumerable<AttachmentDto>>(cacheKey);
+            if (cached != null)
+                return cached;
+
             var attachments = await _context.Attachments
                 .Where(a => a.CardId == cardId)
                 .OrderBy(a => a.CreatedAt)
                 .ToListAsync();
 
-            return _mapper.Map<IEnumerable<AttachmentDto>>(attachments);
+            var result = _mapper.Map<IEnumerable<AttachmentDto>>(attachments);
+            await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(30));
+            return result;
         }
 
         public async Task<AttachmentDto> CreateAttachmentAsync(string cardId, CreateAttachmentDto createAttachmentDto,

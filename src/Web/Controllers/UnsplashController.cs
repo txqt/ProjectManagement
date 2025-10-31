@@ -13,14 +13,14 @@ namespace ProjectManagement.Controllers
     [RateLimit(RequestsPerMinute = 10, RequestsPerHour = 100)]
     public class UnsplashController : ControllerBase
     {
-        private readonly IUnsplashCacheService _cacheService;
+        private readonly ICacheService _cacheService;
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _config;
-        private static readonly Regex AllowedQueryPattern = 
+        private static readonly Regex AllowedQueryPattern =
             new Regex(@"^[a-zA-Z0-9\s\-]+$", RegexOptions.Compiled);
 
         public UnsplashController(
-            IUnsplashCacheService cacheService,
+            ICacheService cacheService,
             HttpClient httpClient,
             IConfiguration config)
         {
@@ -49,8 +49,14 @@ namespace ProjectManagement.Controllers
             if (page < 1 || page > 20)
                 return BadRequest("Invalid page number (1-20)");
 
-            var cached = await _cacheService.GetCachedImagesAsync($"{query}-{page}");
-            if (cached != null) return Ok(cached);
+            string cacheKey = $"unsplash_{query.ToLower()}_{page}";
+            var cached = await _cacheService.GetAsync<List<UnsplashImageDto>>(cacheKey);
+
+            if (cached != null)
+            {
+                Console.WriteLine($"✅ Cache hit for {cacheKey}");
+                return Ok(cached);
+            }
 
             var key = _config["Unsplash:AccessKey"];
             var url = $"https://api.unsplash.com/search/photos" +
@@ -71,8 +77,9 @@ namespace ProjectManagement.Controllers
                     Full = i.Urls.Regular
                 }).ToList();
 
-                await _cacheService.SetCachedImagesAsync($"{query}-{page}", images);
+                await _cacheService.SetAsync(cacheKey, images, TimeSpan.FromHours(24));
 
+                Console.WriteLine($"📝 Cache set for {cacheKey}");
                 return Ok(images);
             }
             catch (Exception ex)

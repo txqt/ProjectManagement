@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Infrastructure;
+using ProjectManagement.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Models.Domain.Entities;
@@ -16,22 +16,25 @@ namespace ProjectManagement.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly INotificationService _notificationService;
         private readonly ILogger<BoardInviteService> _logger;
+        private readonly ICacheService _cache;
 
         public BoardInviteService(
             ApplicationDbContext context,
             IMapper mapper,
             UserManager<ApplicationUser> userManager,
             INotificationService notificationService,
-            ILogger<BoardInviteService> logger)
+            ILogger<BoardInviteService> logger, ICacheService cache)
         {
             _context = context;
             _mapper = mapper;
             _userManager = userManager;
             _notificationService = notificationService;
             _logger = logger;
+            _cache = cache;
         }
 
-        public async Task<BoardInviteDto> CreateInviteAsync(string boardId, CreateBoardInviteDto createInviteDto, string inviterId)
+        public async Task<BoardInviteDto> CreateInviteAsync(string boardId, CreateBoardInviteDto createInviteDto,
+            string inviterId)
         {
             var board = await _context.Boards
                 .Include(b => b.Members)
@@ -50,7 +53,7 @@ namespace ProjectManagement.Services
             if (existingUser != null)
             {
                 var isMember = board.OwnerId == existingUser.Id ||
-                              board.Members.Any(m => m.UserId == existingUser.Id);
+                               board.Members.Any(m => m.UserId == existingUser.Id);
                 if (isMember)
                     throw new InvalidOperationException("User is already a member of this board");
             }
@@ -58,8 +61,8 @@ namespace ProjectManagement.Services
             // Check if there's already a pending invite
             var existingInvite = await _context.BoardInvites
                 .FirstOrDefaultAsync(i => i.BoardId == boardId &&
-                                        i.InviteeEmail == createInviteDto.InviteeEmail &&
-                                        i.Status == InviteStatus.Pending);
+                                          i.InviteeEmail == createInviteDto.InviteeEmail &&
+                                          i.Status == InviteStatus.Pending);
 
             if (existingInvite != null)
                 throw new InvalidOperationException("A pending invite already exists for this email");
@@ -101,15 +104,21 @@ namespace ProjectManagement.Services
             return _mapper.Map<BoardInviteDto>(createdInvite);
         }
 
-        public async Task<IEnumerable<BoardInviteDto>> GetBoardInvitesAsync(string boardId, string userId, string? status)
+        public async Task<IEnumerable<BoardInviteDto>> GetBoardInvitesAsync(string boardId, string userId,
+            string? status)
         {
+            var cacheKey = $"board_invites:{boardId}:{status ?? "all"}";
+            var cached = await _cache.GetAsync<IEnumerable<BoardInviteDto>>(cacheKey);
+            if (cached != null)
+                return cached;
+
             var board = await _context.Boards
                 .Include(b => b.Members)
                 .FirstOrDefaultAsync(b => b.Id == boardId);
 
             if (board == null)
                 throw new ArgumentException("Board not found");
-            
+
             var query = _context.BoardInvites
                 .Include(i => i.Inviter)
                 .Where(i => i.BoardId == boardId);
@@ -123,7 +132,9 @@ namespace ProjectManagement.Services
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
-            return _mapper.Map<IEnumerable<BoardInviteDto>>(invites);
+            var result = _mapper.Map<IEnumerable<BoardInviteDto>>(invites);
+            await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(30));
+            return result;
         }
 
         public async Task<IEnumerable<BoardInviteDto>> GetUserInvitesAsync(string userId, string? status = null)
@@ -150,7 +161,8 @@ namespace ProjectManagement.Services
             return _mapper.Map<IEnumerable<BoardInviteDto>>(invites);
         }
 
-        public async Task<InviteResponseDto> RespondToInviteAsync(string inviteId, RespondToInviteDto responseDto, string userId)
+        public async Task<InviteResponseDto> RespondToInviteAsync(string inviteId, RespondToInviteDto responseDto,
+            string userId)
         {
             var invite = await _context.BoardInvites
                 .Include(i => i.Board)
@@ -162,7 +174,10 @@ namespace ProjectManagement.Services
 
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null || (invite.InviteeEmail != user.Email && invite.InviteeId != userId))
-                return new InviteResponseDto { Success = false, Message = "You are not authorized to respond to this invite" };
+                return new InviteResponseDto
+                {
+                    Success = false, Message = "You are not authorized to respond to this invite"
+                };
 
             if (invite.Status != InviteStatus.Pending)
                 return new InviteResponseDto { Success = false, Message = "This invite has already been responded to" };

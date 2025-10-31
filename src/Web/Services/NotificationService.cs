@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Infrastructure;
+using ProjectManagement.Data;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Notification;
@@ -14,17 +14,19 @@ namespace ProjectManagement.Services
         private readonly IMapper _mapper;
         private readonly ILogger<NotificationService> _logger;
         private readonly IBoardNotificationService _boardNotificationService;
+        private readonly ICacheService  _cache;
 
         public NotificationService(
             ApplicationDbContext context,
             IMapper mapper,
             ILogger<NotificationService> logger,
-            IBoardNotificationService boardNotificationService)
+            IBoardNotificationService boardNotificationService, ICacheService cache)
         {
             _context = context;
             _mapper = mapper;
             _logger = logger;
             _boardNotificationService = boardNotificationService;
+            _cache = cache;
         }
 
         public async Task<NotificationDto> CreateNotificationAsync(CreateNotificationDto createNotificationDto)
@@ -59,13 +61,15 @@ namespace ProjectManagement.Services
 
         public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(string userId, int skip = 0, int take = 20, bool? unreadOnly = null)
         {
-            var query = _context.Notifications
-                .Where(n => n.UserId == userId);
+            string cacheKey = $"notifications:{userId}:{skip}:{take}:{unreadOnly}";
+            var cached = await _cache.GetAsync<List<NotificationDto>>(cacheKey);
+            if (cached != null)
+                return cached;
+
+            var query = _context.Notifications.Where(n => n.UserId == userId);
 
             if (unreadOnly.HasValue && unreadOnly.Value)
-            {
                 query = query.Where(n => !n.IsRead);
-            }
 
             var notifications = await query
                 .OrderByDescending(n => n.CreatedAt)
@@ -77,7 +81,6 @@ namespace ProjectManagement.Services
 
             var dtos = _mapper.Map<IEnumerable<NotificationDto>>(notifications).ToList();
 
-            // Add additional display data
             foreach (var dto in dtos)
             {
                 var notification = notifications.First(n => n.Id == dto.Id);
@@ -87,25 +90,30 @@ namespace ProjectManagement.Services
                     dto.CardTitle = notification.Card.Title;
             }
 
+            await _cache.SetAsync(cacheKey, dtos);
             return dtos;
         }
 
         public async Task<NotificationSummaryDto> GetNotificationSummaryAsync(string userId)
         {
-            var totalCount = await _context.Notifications
-                .CountAsync(n => n.UserId == userId);
+            string cacheKey = $"notification_summary:{userId}";
+            var cached = await _cache.GetAsync<NotificationSummaryDto>(cacheKey);
+            if (cached != null)
+                return cached;
 
-            var unreadCount = await _context.Notifications
-                .CountAsync(n => n.UserId == userId && !n.IsRead);
-
+            var totalCount = await _context.Notifications.CountAsync(n => n.UserId == userId);
+            var unreadCount = await _context.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead);
             var recentNotifications = await GetUserNotificationsAsync(userId, 0, 5);
 
-            return new NotificationSummaryDto
+            var summary = new NotificationSummaryDto
             {
                 TotalCount = totalCount,
                 UnreadCount = unreadCount,
                 Recent = recentNotifications.ToList()
             };
+
+            await _cache.SetAsync(cacheKey, summary);
+            return summary;
         }
 
         public async Task<bool> MarkAsReadAsync(string notificationId, string userId)

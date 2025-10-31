@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Infrastructure;
+using ProjectManagement.Data;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -15,14 +15,16 @@ namespace ProjectManagement.Services
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly IBoardNotificationService _boardNotificationService;
+        private readonly ICacheService _cache;
 
         public ActivityLogService(
             ApplicationDbContext context,
-            IMapper mapper, IBoardNotificationService boardNotificationService)
+            IMapper mapper, IBoardNotificationService boardNotificationService, ICacheService cache)
         {
             _context = context;
             _mapper = mapper;
             _boardNotificationService = boardNotificationService;
+            _cache = cache;
         }
 
         public async Task<ActivityLogDto> LogActivityAsync(string userId, CreateActivityLogDto dto)
@@ -142,6 +144,14 @@ namespace ProjectManagement.Services
 
         public async Task<ActivitySummaryDto> GetActivitySummaryAsync(string boardId, int days = 7)
         {
+            var cacheKey = $"ActivitySummary:{boardId}:{days}";
+            var cached = await _cache.GetAsync<ActivitySummaryDto>(cacheKey);
+            if (cached != null)
+            {
+                Console.WriteLine($"✅ Cache hit for {cacheKey}");
+                return cached;
+            }
+
             var fromDate = DateTime.UtcNow.AddDays(-days);
             var today = DateTime.UtcNow.Date;
             var weekAgo = DateTime.UtcNow.AddDays(-7).Date;
@@ -166,6 +176,9 @@ namespace ProjectManagement.Services
                     activities.OrderByDescending(a => a.CreatedAt).Take(20).ToList()
                 )
             };
+
+            await _cache.SetAsync(cacheKey, summary, TimeSpan.FromMinutes(10));
+            Console.WriteLine($"📝 Cache set for {cacheKey}");
 
             return summary;
         }

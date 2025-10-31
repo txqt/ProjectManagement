@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Infrastructure;
+using ProjectManagement.Data;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Search;
 

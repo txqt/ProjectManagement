@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Infrastructure;
+using ProjectManagement.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Authorization;
@@ -15,19 +15,25 @@ namespace ProjectManagement.Services
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ICacheService _cache;
 
         public BoardService(
             ApplicationDbContext context,
             IMapper mapper,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager, ICacheService cache)
         {
             _context = context;
             _mapper = mapper;
             _userManager = userManager;
+            _cache = cache;
         }
 
         public async Task<IEnumerable<BoardDto>> GetUserBoardsAsync(string userId)
         {
+            var cacheKey = $"user_boards:{userId}";
+            var cached = await _cache.GetAsync<IEnumerable<BoardDto>>(cacheKey);
+            if (cached != null) return cached;
+
             var boards = await _context.Boards
                 .Include(b => b.Owner)
                 .Include(b => b.Members)
@@ -47,11 +53,18 @@ namespace ProjectManagement.Services
                 .AsSplitQuery()
                 .ToListAsync();
 
-            return _mapper.Map<IEnumerable<BoardDto>>(boards);
+            var result = _mapper.Map<IEnumerable<BoardDto>>(boards);
+            await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
+
+            return result;
         }
 
         public async Task<BoardDto?> GetBoardAsync(string boardId, string userId)
         {
+            var cacheKey = $"board:{boardId}";
+            var cached = await _cache.GetAsync<BoardDto>(cacheKey);
+            if (cached != null) return cached;
+            
             var board = await _context.Boards
                 .Include(b => b.Owner)
                 .Include(b => b.Members)
@@ -73,8 +86,10 @@ namespace ProjectManagement.Services
             if (board == null)
                 return null;
 
-            return BoardResponseHelper.FormatBoardResponse(board, _mapper);
-            ;
+            var result = BoardResponseHelper.FormatBoardResponse(board, _mapper);
+            await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
+
+            return result;
         }
 
         public async Task<BoardDto> CreateBoardAsync(CreateBoardDto createBoardDto, string userId)
@@ -298,7 +313,7 @@ namespace ProjectManagement.Services
 
             return true;
         }
-        
+
         public async Task TransferOwnershipAsync(string boardId, string newOwnerId, string currentUserId)
         {
             var board = await _context.Boards

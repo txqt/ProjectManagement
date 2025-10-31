@@ -1,4 +1,4 @@
-﻿using Infrastructure;
+﻿using ProjectManagement.Data;
 using Microsoft.AspNetCore.Identity;
 using ProjectManagement.Authorization;
 using ProjectManagement.Models.Domain.Entities;

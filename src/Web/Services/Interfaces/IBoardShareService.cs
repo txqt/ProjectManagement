@@ -1,11 +1,12 @@
 ﻿using ProjectManagement.Models.DTOs.Board;
+using ProjectManagement.Models.DTOs.BoardShare;
 
 namespace ProjectManagement.Services.Interfaces
 {
     public interface IBoardShareService
     {
-        Task<string> GenerateShareTokenAsync(string boardId, string userId);
-        Task<BoardDto?> ValidateShareTokenAsync(string token);
-        Task<bool> RevokeShareTokenAsync(string boardId, string userId);
+        Task<ShareTokenResponseDto?> GetActiveShareTokenAsync(string boardId);
+        Task<ShareTokenResponseDto> GenerateShareTokenAsync(string boardId);
+        Task<JoinBoardResponseDto> JoinBoardViaTokenAsync(string userId, JoinViaTokenDto dto);
     }
 }

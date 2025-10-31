@@ -1,4 +1,4 @@
-using Infrastructure;
+using ProjectManagement.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -113,7 +113,7 @@ builder.Services.AddSingleton<BoardPresenceTracker>();
 builder.Services.AddScoped<IBoardNotificationService, BoardNotificationService>();
 builder.Services.AddScoped<IBoardInviteService, BoardInviteService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<LexoRankMigrationService>();
+// builder.Services.AddScoped<LexoRankMigrationService>();
 builder.Services.AddScoped<IBoardJoinRequestService, BoardJoinRequestService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
@@ -125,8 +125,6 @@ builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = builder.Configuration.GetConnectionString("Redis");
 });
-
-builder.Services.AddScoped<IUnsplashCacheService, UnsplashRedisCacheService>();
 
 // Attachment & Comment services
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
@@ -145,6 +143,8 @@ builder.Services.Configure<RateLimitConfig>(
     builder.Configuration.GetSection("RateLimit"));
 
 builder.Services.AddSingleton<IRateLimiterService, RedisRateLimiterService>();
+
+builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
