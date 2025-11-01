@@ -1,9 +1,6 @@
 # Project Management - Backend
 
 A comprehensive project management API built with ASP.NET Core 9, inspired by Trello. Features include real-time collaboration, role-based permissions, board management, and activity tracking.
-# Project Management - Backend
-
-A comprehensive project management API built with ASP.NET Core 9, inspired by Trello. Features include real-time collaboration, role-based permissions, board management, and activity tracking.
 
 ## 🚀 Features
 
