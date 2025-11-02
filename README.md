@@ -59,7 +59,7 @@ A comprehensive project management API built with **ASP.NET Core 9**, inspired b
 
 * [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 * [PostgreSQL 15+](https://www.postgresql.org/download/)
-* [Redis 7+](https://redis.io/download) *(optional for development)*
+* [Redis 7+](https://redis.io/download)
 * [Docker & Docker Compose](https://www.docker.com/get-started)
 
 ## 🔧 Local Development Setup
@@ -107,7 +107,7 @@ CREATE DATABASE ProjectManagement;
 \q
 ```
 
-### 4. Setup Redis (Optional)
+### 4. Setup Redis
 
 **Windows:**
 
