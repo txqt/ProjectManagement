@@ -3,6 +3,8 @@ using ProjectManagement.Models.DTOs.Attachment;
 using ProjectManagement.Models.DTOs.Board;
 using ProjectManagement.Models.DTOs.Column;
 using ProjectManagement.Models.DTOs.Comment;
+using ProjectManagement.Models.DTOs.Label;
+using ProjectManagement.Models.DTOs.Checklist;
 
 namespace ProjectManagement.Models.DTOs.Card
 {
@@ -21,5 +23,7 @@ namespace ProjectManagement.Models.DTOs.Card
         public virtual ICollection<CardMemberDto> Members { get; set; } = new List<CardMemberDto>();
         public virtual ICollection<CommentDto> Comments { get; set; } = new List<CommentDto>();
         public virtual ICollection<AttachmentDto> Attachments { get; set; } = new List<AttachmentDto>();
+        public List<LabelDto> Labels { get; set; } = new();
+        public List<ChecklistDto> Checklists { get; set; } = new();
     }
 }

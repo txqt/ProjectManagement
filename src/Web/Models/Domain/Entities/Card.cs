@@ -28,5 +28,7 @@ namespace ProjectManagement.Models.Domain.Entities
         public virtual ICollection<CardMember> Members { get; set; } = new List<CardMember>();
         public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
         public virtual ICollection<Attachment> Attachments { get; set; } = new List<Attachment>();
+        public virtual ICollection<CardLabel> Labels { get; set; } = new List<CardLabel>();
+        public virtual ICollection<Checklist> Checklists { get; set; } = new List<Checklist>();
     }
 }

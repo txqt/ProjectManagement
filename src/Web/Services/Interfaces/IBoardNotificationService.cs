@@ -3,8 +3,10 @@ using ProjectManagement.Models.DTOs.Activity;
 using ProjectManagement.Models.DTOs.Attachment;
 using ProjectManagement.Models.DTOs.BoardJoinRequest;
 using ProjectManagement.Models.DTOs.Card;
+using ProjectManagement.Models.DTOs.Checklist;
 using ProjectManagement.Models.DTOs.Column;
 using ProjectManagement.Models.DTOs.Comment;
+using ProjectManagement.Models.DTOs.Label;
 using ProjectManagement.Models.DTOs.Notification;
 
 namespace ProjectManagement.Services.Interfaces
@@ -43,5 +45,21 @@ namespace ProjectManagement.Services.Interfaces
         
         // Activity logs
         Task BroadcastActivityLogged(string boardId, ActivityLogDto activityLogDto);
+        
+        // Label events
+        Task BroadcastLabelCreated(string boardId, LabelDto label, string userId);
+        Task BroadcastLabelUpdated(string boardId, LabelDto label, string userId);
+        Task BroadcastLabelDeleted(string boardId, string labelId, string userId);
+        Task BroadcastCardLabelAdded(string boardId, string columnId, string cardId, string labelId, string userId);
+        Task BroadcastCardLabelRemoved(string boardId, string columnId, string cardId, string labelId, string userId);
+
+        // Checklist events
+        Task BroadcastChecklistCreated(string boardId, string columnId, string cardId, ChecklistDto checklist, string userId);
+        Task BroadcastChecklistUpdated(string boardId, string columnId, string cardId, ChecklistDto checklist, string userId);
+        Task BroadcastChecklistDeleted(string boardId, string columnId, string cardId, string checklistId, string userId);
+        Task BroadcastChecklistItemCreated(string boardId, string columnId, string cardId, string checklistId, ChecklistItemDto item, string userId);
+        Task BroadcastChecklistItemUpdated(string boardId, string columnId, string cardId, string checklistId, ChecklistItemDto item, string userId);
+        Task BroadcastChecklistItemToggled(string boardId, string columnId, string cardId, string checklistId, ChecklistItemDto item, string userId);
+        Task BroadcastChecklistItemDeleted(string boardId, string columnId, string cardId, string checklistId, string itemId, string userId);
     }
 }

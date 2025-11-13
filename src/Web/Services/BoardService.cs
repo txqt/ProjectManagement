@@ -64,22 +64,31 @@ namespace ProjectManagement.Services
             var cacheKey = $"board:{boardId}";
             var cached = await _cache.GetAsync<BoardDto>(cacheKey);
             if (cached != null) return cached;
-            
+
             var board = await _context.Boards
                 .Include(b => b.Owner)
                 .Include(b => b.Members)
                 .ThenInclude(m => m.User)
                 .Include(b => b.Columns)
-                .ThenInclude(c => c.Cards)
-                .ThenInclude(card => card.Members)
-                .ThenInclude(cm => cm.User)
+                    .ThenInclude(c => c.Cards)
+                    .ThenInclude(card => card.Members)
+                    .ThenInclude(cm => cm.User)
                 .Include(b => b.Columns)
-                .ThenInclude(c => c.Cards)
-                .ThenInclude(card => card.Comments)
-                .ThenInclude(comment => comment.User)
+                    .ThenInclude(c => c.Cards)
+                    .ThenInclude(card => card.Comments)
+                    .ThenInclude(comment => comment.User)
                 .Include(b => b.Columns)
-                .ThenInclude(c => c.Cards)
-                .ThenInclude(card => card.Attachments)
+                    .ThenInclude(c => c.Cards)
+                    .ThenInclude(card => card.Attachments)
+                .Include(b => b.Columns)
+                    .ThenInclude(c => c.Cards)
+                    .ThenInclude(card => card.Labels)
+                    .ThenInclude(cl => cl.Label) // CardLabel -> Label
+                .Include(b => b.Columns)
+                    .ThenInclude(c => c.Cards)
+                    .ThenInclude(card => card.Checklists)
+                    .ThenInclude(checklist => checklist.Items)
+                    // .ThenInclude(item => item.CompletedByUser) // Optional: user who completed
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(b => b.Id == boardId);
 

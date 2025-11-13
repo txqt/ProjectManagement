@@ -11,6 +11,8 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { useBoardStore } from '~/stores/boardStore';
 import { usePermissionAttribute } from '~/hooks/usePermissionAttribute';
+import { Box, Chip } from '@mui/material';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
 
 // OPTIMIZATION: Card chỉ render khi data thực sự thay đổi
 const Card = memo(({ card, onOpen, isDragging, isPending }) => {
@@ -22,7 +24,7 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
     return col?.cards?.find(c => c.id === card.id) ?? null;
   });
   const currentCard = storeCard ?? card;
-  
+
   const shouldShowCardAction = () => {
     return (
       !!currentCard?.members?.length ||
@@ -38,6 +40,29 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
     e.stopPropagation();
     if (typeof onOpen === 'function') onOpen(currentCard);
   };
+
+  const calculateChecklistProgress = () => {
+    if (!currentCard?.checklists || currentCard.checklists.length === 0) return null;
+
+    let totalItems = 0;
+    let completedItems = 0;
+
+    currentCard.checklists.forEach(checklist => {
+      const items = checklist.items || [];
+      totalItems += items.length;
+      completedItems += items.filter(i => i.isCompleted).length;
+    });
+
+    if (totalItems === 0) return null;
+
+    return {
+      completed: completedItems,
+      total: totalItems,
+      percentage: Math.round((completedItems / totalItems) * 100),
+    };
+  };
+
+  const checklistProgress = calculateChecklistProgress();
 
   return (
     <MuiCard
@@ -59,6 +84,43 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
           fetchPriority="high"
           decoding="async"
           image={currentCard?.cover} />}
+
+      {/* Labels */}
+      {currentCard.labels && currentCard.labels.length > 0 && (
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', p: 1 }}>
+          {currentCard.labels.slice(0, 3).map((label) => (
+            <Chip
+              key={label.id}
+              label={label.title}
+              size="small"
+              sx={{
+                bgcolor: label.color,
+                color: '#fff',
+                height: 20,
+                fontSize: '0.7rem',
+                fontWeight: 500,
+                '& .MuiChip-label': {
+                  px: 1,
+                },
+              }}
+            />
+          ))}
+          {card.labels.length > 3 && (
+            <Chip
+              label={`+${card.labels.length - 3}`}
+              size="small"
+              sx={{
+                height: 20,
+                fontSize: '0.7rem',
+                bgcolor: 'action.selected',
+                '& .MuiChip-label': {
+                  px: 1,
+                },
+              }}
+            />
+          )}
+        </Box>
+      )}
 
       <CardContent sx={{ p: 1.5, '&:last-child': { p: 1.5 } }}>
         <Typography noWrap>{currentCard?.title}</Typography>
@@ -82,6 +144,21 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
             <Button size='small' startIcon={<AttachmentIcon />}>
               {currentCard?.attachments?.length}
             </Button>
+          )}
+          {checklistProgress && (
+            <Chip
+              icon={<CheckBoxIcon />}
+              label={`${checklistProgress.completed}/${checklistProgress.total}`}
+              size="small"
+              sx={{
+                height: 24,
+                bgcolor: checklistProgress.percentage === 100 ? 'success.main' : 'action.selected',
+                color: checklistProgress.percentage === 100 ? '#fff' : 'text.primary',
+                '& .MuiChip-icon': {
+                  color: checklistProgress.percentage === 100 ? '#fff' : 'text.secondary',
+                },
+              }}
+            />
           )}
         </CardActions>
       )}

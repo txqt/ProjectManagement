@@ -146,6 +146,9 @@ builder.Services.AddSingleton<IRateLimiterService, RedisRateLimiterService>();
 
 builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
+builder.Services.AddScoped<ILabelService, LabelService>();
+builder.Services.AddScoped<IChecklistService, ChecklistService>();
+
 // Add CORS
 builder.Services.AddCors(options =>
 {

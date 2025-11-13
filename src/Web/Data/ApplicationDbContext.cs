@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Models.Domain.Entities;
 using System.Reflection.Emit;
 using System.Text.Json;
+using Label = ProjectManagement.Models.Domain.Entities.Label;
 
 namespace ProjectManagement.Data
 {
@@ -25,6 +26,10 @@ namespace ProjectManagement.Data
         public DbSet<BoardShareToken> BoardShareTokens { get; set; }
         public DbSet<BoardJoinRequest> BoardJoinRequests { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
+        public DbSet<Label> Labels { get; set; }
+        public DbSet<CardLabel> CardLabels { get; set; }
+        public DbSet<Checklist> Checklists { get; set; }
+        public DbSet<ChecklistItem> ChecklistItems { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -219,6 +224,72 @@ namespace ProjectManagement.Data
                     .WithMany()
                     .HasForeignKey(e => e.BoardId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+            
+            // Label configuration
+            builder.Entity<Label>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Color).IsRequired().HasMaxLength(20);
+
+                entity.HasOne(e => e.Board)
+                    .WithMany()
+                    .HasForeignKey(e => e.BoardId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.BoardId);
+            });
+
+// CardLabel configuration
+            builder.Entity<CardLabel>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(e => e.Card)
+                    .WithMany(c => c.Labels)
+                    .HasForeignKey(e => e.CardId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Label)
+                    .WithMany(l => l.CardLabels)
+                    .HasForeignKey(e => e.LabelId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.CardId, e.LabelId }).IsUnique();
+            });
+
+// Checklist configuration
+            builder.Entity<Checklist>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+
+                entity.HasOne(e => e.Card)
+                    .WithMany(c => c.Checklists)
+                    .HasForeignKey(e => e.CardId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.CardId);
+            });
+
+// ChecklistItem configuration
+            builder.Entity<ChecklistItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+
+                entity.HasOne(e => e.Checklist)
+                    .WithMany(c => c.Items)
+                    .HasForeignKey(e => e.ChecklistId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.CompletedByUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.CompletedBy)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.ChecklistId);
             });
         }
     }

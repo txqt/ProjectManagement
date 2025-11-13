@@ -8,6 +8,8 @@ using ProjectManagement.Models.DTOs.Column;
 using ProjectManagement.Models.DTOs.Comment;
 using ProjectManagement.Models.DTOs.Notification;
 using ProjectManagement.Services.Interfaces;
+using ProjectManagement.Models.DTOs.Label;
+using ProjectManagement.Models.DTOs.Checklist;
 
 namespace ProjectManagement.Services
 {
@@ -17,7 +19,8 @@ namespace ProjectManagement.Services
         private readonly BoardPresenceTracker _boardPresenceTracker;
         private readonly ICacheService _cache;
 
-        public BoardNotificationService(IHubContext<BoardHub> hub, BoardPresenceTracker boardPresenceTracker, ICacheService cache)
+        public BoardNotificationService(IHubContext<BoardHub> hub, BoardPresenceTracker boardPresenceTracker,
+            ICacheService cache)
         {
             _hub = hub;
             _boardPresenceTracker = boardPresenceTracker;
@@ -234,12 +237,134 @@ namespace ProjectManagement.Services
                 .User(userId)
                 .SendAsync("JoinRequestResponded", new { boardId, requestId, status });
         }
-        
+
         public async Task BroadcastActivityLogged(string boardId, ActivityLogDto activityLogDto)
         {
             await _hub.Clients
                 .Group($"board-{activityLogDto.BoardId}")
                 .SendAsync("ActivityLogged", new { boardId = activityLogDto.BoardId, activity = activityLogDto });
         }
+
+        // Label implementations
+        public Task BroadcastLabelCreated(string boardId, LabelDto label, string userId) =>
+            _hub.Clients.Group(GroupName(boardId)).SendAsync("LabelCreated", new { boardId, label, userId });
+
+        public Task BroadcastLabelUpdated(string boardId, LabelDto label, string userId) =>
+            _hub.Clients.Group(GroupName(boardId)).SendAsync("LabelUpdated", new { boardId, label, userId });
+
+        public Task BroadcastLabelDeleted(string boardId, string labelId, string userId) =>
+            _hub.Clients.Group(GroupName(boardId)).SendAsync("LabelDeleted", new { boardId, labelId, userId });
+
+        public Task BroadcastCardLabelAdded(string boardId, string columnId, string cardId, string labelId,
+            string userId) =>
+            _hub.Clients.Group(GroupName(boardId)).SendAsync("CardLabelAdded", new
+            {
+                boardId,
+                columnId,
+                cardId,
+                labelId,
+                userId
+            });
+
+        public Task BroadcastCardLabelRemoved(string boardId, string columnId, string cardId, string labelId,
+            string userId) =>
+            _hub.Clients.Group(GroupName(boardId))
+                .SendAsync("CardLabelRemoved", new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    labelId,
+                    userId
+                });
+
+        // Checklist implementations
+        public Task BroadcastChecklistCreated(string boardId, string columnId, string cardId, ChecklistDto checklist,
+            string userId) =>
+            _hub.Clients.Group(GroupName(boardId))
+                .SendAsync("ChecklistCreated", new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    checklist,
+                    userId
+                });
+
+        public Task BroadcastChecklistUpdated(string boardId, string columnId, string cardId, ChecklistDto checklist,
+            string userId) =>
+            _hub.Clients.Group(GroupName(boardId))
+                .SendAsync("ChecklistUpdated", new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    checklist,
+                    userId
+                });
+
+        public Task BroadcastChecklistDeleted(string boardId, string columnId, string cardId, string checklistId,
+            string userId) =>
+            _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistDeleted",
+                new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    checklistId,
+                    userId
+                });
+
+        public Task BroadcastChecklistItemCreated(string boardId, string columnId, string cardId, string checklistId,
+            ChecklistItemDto item, string userId) =>
+            _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemCreated",
+                new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    checklistId,
+                    item,
+                    userId
+                });
+
+        public Task BroadcastChecklistItemUpdated(string boardId, string columnId, string cardId, string checklistId,
+            ChecklistItemDto item, string userId) =>
+            _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemUpdated",
+                new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    checklistId,
+                    item,
+                    userId
+                });
+
+        public Task BroadcastChecklistItemToggled(string boardId, string columnId, string cardId, string checklistId,
+            ChecklistItemDto checklistItemDto, string userId) =>
+            _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemToggled",
+                new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    checklistId,
+                    checklistItemDto,
+                    userId
+                });
+
+        public Task BroadcastChecklistItemDeleted(string boardId, string columnId, string cardId, string checklistId,
+            string itemId, string userId) =>
+            _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemDeleted",
+                new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    checklistId,
+                    itemId,
+                    userId
+                });
     }
 }

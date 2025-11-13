@@ -44,6 +44,9 @@ import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
 import { apiService } from '~/services/api';
 import { useBoardStore } from '~/stores/boardStore';
 import { AttachmentSection, CommentSection } from './CommentAttachmentSections';
+import ChecklistSection from '~/components/Checklist/ChecklistSection';
+import LabelChip from '~/components/Label/LabelChip';
+import LabelSelector from '~/components/Label/LabelSelector';
 
 // Sidebar Action Button Component
 const SidebarButton = ({ icon, label, onClick, disabled = false }) => (
@@ -120,6 +123,23 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
   const openActivityDialog = () => setActivityDialogOpen(true);
   const closeActivityDialog = () => setActivityDialogOpen(false);
+
+  const [labelSelectorOpen, setLabelSelectorOpen] = useState(false);
+   // Label & Checklist functions
+  const boardLabels = useBoardStore((s) => s.boardLabels ?? []);
+  const createLabel = useBoardStore((s) => s.createLabel);
+  const updateLabel = useBoardStore((s) => s.updateLabel);
+  const deleteLabel = useBoardStore((s) => s.deleteLabel);
+  const addLabelToCard = useBoardStore((s) => s.addLabelToCard);
+  const removeLabelFromCard = useBoardStore((s) => s.removeLabelFromCard);
+  
+  const createChecklist = useBoardStore((s) => s.createChecklist);
+  const updateChecklist = useBoardStore((s) => s.updateChecklist);
+  const deleteChecklist = useBoardStore((s) => s.deleteChecklist);
+  const createChecklistItem = useBoardStore((s) => s.createChecklistItem);
+  const updateChecklistItem = useBoardStore((s) => s.updateChecklistItem);
+  const toggleChecklistItem = useBoardStore((s) => s.toggleChecklistItem);
+  const deleteChecklistItem = useBoardStore((s) => s.deleteChecklistItem);
 
   // Card moved warning
   const cardMovedWarning = useMemo(() => {
@@ -382,6 +402,88 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     }
   };
 
+  // Label handlers
+  const handleToggleLabel = async (label) => {
+    if (!currentCard) return;
+
+    const isAssigned = currentCard.labels?.some(l => l.id === label.id);
+
+    try {
+      if (isAssigned) {
+        await removeLabelFromCard(currentCard.columnId, currentCard.id, label.id);
+        toast.success('Label removed');
+      } else {
+        await addLabelToCard(currentCard.columnId, currentCard.id, label.id);
+        toast.success('Label added');
+      }
+    } catch (err) {
+      console.error('Failed to toggle label:', err);
+      toast.error('Failed to update label');
+    }
+  };
+
+  // Checklist handlers
+  const handleCreateChecklist = async (data) => {
+    if (!currentCard) return;
+    await createChecklist(currentCard.columnId, currentCard.id, data);
+  };
+
+  const handleUpdateChecklist = async (checklistId, data) => {
+    if (!currentCard) return;
+    await updateChecklist(currentCard.columnId, currentCard.id, checklistId, data);
+  };
+
+  const handleDeleteChecklist = async (checklistId) => {
+    if (!currentCard) return;
+    await deleteChecklist(currentCard.columnId, currentCard.id, checklistId);
+  };
+
+  const handleCreateChecklistItem = async (checklistId, data) => {
+    if (!currentCard) return;
+    await createChecklistItem(currentCard.columnId, currentCard.id, checklistId, data);
+  };
+
+  const handleUpdateChecklistItem = async (itemId, data) => {
+    if (!currentCard) return;
+
+    // Find checklist that contains this item
+    const checklist = currentCard.checklists?.find(cl =>
+      cl.items?.some(item => item.id === itemId)
+    );
+
+    if (!checklist) return;
+
+    await updateChecklistItem(currentCard.columnId, currentCard.id, checklist.id, itemId, data);
+  };
+
+  const handleToggleChecklistItem = async (itemId) => {
+    if (!currentCard) return;
+
+    // Find checklist that contains this item
+    const checklist = currentCard.checklists?.find(cl =>
+      cl.items?.some(item => item.id === itemId)
+    );
+
+    if (!checklist) return;
+
+    await toggleChecklistItem(currentCard.columnId, currentCard.id, checklist.id, itemId);
+  };
+
+  const handleDeleteChecklistItem = async (itemId) => {
+    if (!currentCard) return;
+
+    // Find checklist that contains this item
+    const checklist = currentCard.checklists?.find(cl =>
+      cl.items?.some(item => item.id === itemId)
+    );
+
+    if (!checklist) return;
+
+    if (!window.confirm('Delete this item?')) return;
+
+    await deleteChecklistItem(currentCard.columnId, currentCard.id, checklist.id, itemId);
+  };
+
   if (!currentCard) return null;
 
   // Render sidebar (desktop only)
@@ -390,7 +492,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
       <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ px: 2, py: 1, display: 'block' }}>
         ADD TO CARD
       </Typography>
-
       <Stack spacing={1} sx={{ px: 1 }}>
         <SidebarButton
           icon={<GroupIcon fontSize="small" />}
@@ -401,13 +502,24 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         <SidebarButton
           icon={<LabelIcon fontSize="small" />}
           label="Labels"
-          onClick={() => toast.info('Labels feature coming soon')}
+          onClick={() => setLabelSelectorOpen(true)}
         />
 
         <SidebarButton
           icon={<CheckBoxIcon fontSize="small" />}
           label="Checklist"
-          onClick={() => toast.info('Checklist feature coming soon')}
+          onClick={() => {
+            // Scroll to checklist section and trigger add
+            const checklistSection = document.querySelector('[data-checklist-section]');
+            if (checklistSection) {
+              checklistSection.scrollIntoView({ behavior: 'smooth' });
+              // Trigger add checklist via a small delay
+              setTimeout(() => {
+                const addButton = checklistSection.querySelector('button[data-add-checklist]');
+                if (addButton) addButton.click();
+              }, 300);
+            }
+          }}
         />
 
         <SidebarButton
@@ -415,7 +527,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
           label="Cover"
           onClick={openAddCoverMenu}
         />
-
       </Stack>
 
       <Divider sx={{ my: 2 }} />
@@ -669,6 +780,40 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                   </Box>
                 </Box>
 
+                {/* Labels Section */}
+                {currentCard.labels && currentCard.labels.length > 0 && (
+                  <Box sx={{ mb: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <LabelIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        Labels
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {currentCard.labels.map((label) => (
+                        <LabelChip
+                          key={label.id}
+                          label={label}
+                          onDelete={() => removeLabelFromCard(currentCard.columnId, currentCard.id, label.id)}
+                        />
+                      ))}
+                      <IconButton
+                        size="small"
+                        onClick={() => setLabelSelectorOpen(true)}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          bgcolor: 'action.hover',
+                          '&:hover': { bgcolor: 'action.selected' },
+                        }}
+                      >
+                        <LabelIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                )}
+
                 {/* Description */}
                 <Box sx={{ mb: 3 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -752,6 +897,26 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                   <AttachmentSection card={currentCard} />
                 </Box>
 
+                {/* Checklists */}
+                <Box sx={{ mb: 3 }} data-checklist-section>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <CheckBoxIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Checklists
+                    </Typography>
+                  </Box>
+                  <ChecklistSection
+                    card={currentCard}
+                    onCreateChecklist={handleCreateChecklist}
+                    onUpdateChecklist={handleUpdateChecklist}
+                    onDeleteChecklist={handleDeleteChecklist}
+                    onCreateItem={handleCreateChecklistItem}
+                    onUpdateItem={handleUpdateChecklistItem}
+                    onToggleItem={handleToggleChecklistItem}
+                    onDeleteItem={handleDeleteChecklistItem}
+                  />
+                </Box>
+
                 {/* Comments */}
                 <Box sx={{ mb: 3 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -803,6 +968,27 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
               variant="outlined"
             >
               Members
+            </Button>
+            <Button
+              size="small"
+              startIcon={<LabelIcon />}
+              onClick={() => setLabelSelectorOpen(true)}
+              variant="outlined"
+            >
+              Labels
+            </Button>
+            <Button
+              size="small"
+              startIcon={<CheckBoxIcon />}
+              onClick={() => {
+                const checklistSection = document.querySelector('[data-checklist-section]');
+                if (checklistSection) {
+                  checklistSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              variant="outlined"
+            >
+              Checklist
             </Button>
             <Button
               size="small"
@@ -963,6 +1149,18 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         apiService={apiService}
         width={520}
         maxHeight={520}
+      />
+
+      {/* Label Selector Dialog */}
+      <LabelSelector
+        open={labelSelectorOpen}
+        onClose={() => setLabelSelectorOpen(false)}
+        labels={boardLabels || []}
+        selectedLabels={currentCard?.labels || []}
+        onToggleLabel={handleToggleLabel}
+        onCreateLabel={createLabel}
+        onUpdateLabel={updateLabel}
+        onDeleteLabel={deleteLabel}
       />
     </>
   );

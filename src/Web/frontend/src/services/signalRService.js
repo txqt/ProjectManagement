@@ -383,6 +383,105 @@ class SignalRService {
   offActivityLogged() {
     this._removeListener('ActivityLogged');
   }
+
+  // Label listeners
+  onLabelCreated(callback) {
+    this._addListener('LabelCreated', callback);
+  }
+
+  onLabelUpdated(callback) {
+    this._addListener('LabelUpdated', callback);
+  }
+
+  onLabelDeleted(callback) {
+    this._addListener('LabelDeleted', callback);
+  }
+
+  onCardLabelAdded(callback) {
+    this._addListener('CardLabelAdded', callback);
+  }
+
+  onCardLabelRemoved(callback) {
+    this._addListener('CardLabelRemoved', callback);
+  }
+
+  // Checklist listeners
+  onChecklistCreated(callback) {
+    this._addListener('ChecklistCreated', callback);
+  }
+
+  onChecklistUpdated(callback) {
+    this._addListener('ChecklistUpdated', callback);
+  }
+
+  onChecklistDeleted(callback) {
+    this._addListener('ChecklistDeleted', callback);
+  }
+
+  onChecklistItemCreated(callback) {
+    this._addListener('ChecklistItemCreated', callback);
+  }
+
+  onChecklistItemUpdated(callback) {
+    this._addListener('ChecklistItemUpdated', callback);
+  }
+
+  onChecklistItemToggled(callback) {
+    this._addListener('ChecklistItemToggled', callback);
+  }
+
+  onChecklistItemDeleted(callback) {
+    this._addListener('ChecklistItemDeleted', callback);
+  }
+
+  // Remove listeners
+  offLabelCreated(callback) {
+    this._removeListener('LabelCreated', callback);
+  }
+
+  offLabelUpdated(callback) {
+    this._removeListener('LabelUpdated', callback);
+  }
+
+  offLabelDeleted(callback) {
+    this._removeListener('LabelDeleted', callback);
+  }
+
+  offCardLabelAdded(callback) {
+    this._removeListener('CardLabelAdded', callback);
+  }
+
+  offCardLabelRemoved(callback) {
+    this._removeListener('CardLabelRemoved', callback);
+  }
+
+  offChecklistCreated(callback) {
+    this._removeListener('ChecklistCreated', callback);
+  }
+
+  offChecklistUpdated(callback) {
+    this._removeListener('ChecklistUpdated', callback);
+  }
+
+  offChecklistDeleted(callback) {
+    this._removeListener('ChecklistDeleted', callback);
+  }
+
+  offChecklistItemCreated(callback) {
+    this._removeListener('ChecklistItemCreated', callback);
+  }
+
+  offChecklistItemUpdated(callback) {
+    this._removeListener('ChecklistItemUpdated', callback);
+  }
+
+  offChecklistItemToggled(callback) {
+    this._removeListener('ChecklistItemToggled', callback);
+  }
+
+  offChecklistItemDeleted(callback) {
+    this._removeListener('ChecklistItemDeleted', callback);
+  }
 }
 
 export const signalRService = new SignalRService();

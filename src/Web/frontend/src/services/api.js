@@ -502,6 +502,90 @@ class ApiService {
     params.append('take', String(filter.take || 50));
     return this.request(`/boards/${boardId}/activities?${params.toString()}`);
   }
+
+  // Label methods
+  async getBoardLabels(boardId) {
+    return this.request(`/boards/${boardId}/labels`);
+  }
+
+  async createLabel(boardId, labelData) {
+    return this.request(`/boards/${boardId}/labels`, {
+      method: 'POST',
+      body: JSON.stringify(labelData),
+    });
+  }
+
+  async updateLabel(boardId, labelId, updateData) {
+    return this.request(`/boards/${boardId}/labels/${labelId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+  }
+
+  async deleteLabel(boardId, labelId) {
+    return this.request(`/boards/${boardId}/labels/${labelId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async addLabelToCard(boardId, cardId, labelId, columnId) {
+    return this.request(`/boards/${boardId}/labels/cards/${cardId}/labels/${labelId}?columnId=${columnId}`, {
+      method: 'POST',
+    });
+  }
+
+  async removeLabelFromCard(boardId, cardId, labelId, columnId) {
+    return this.request(`/boards/${boardId}/labels/cards/${cardId}/labels/${labelId}?columnId=${columnId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Checklist methods
+  async createChecklist(boardId, columnId, cardId, checklistData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/checklists`, {
+      method: 'POST',
+      body: JSON.stringify(checklistData),
+    });
+  }
+
+  async updateChecklist(boardId, columnId, cardId, checklistId, updateData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/checklists/${checklistId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+  }
+
+  async deleteChecklist(boardId, columnId, cardId, checklistId) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/checklists/${checklistId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async createChecklistItem(boardId, columnId, cardId, checklistId, itemData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/checklists/${checklistId}/items`, {
+      method: 'POST',
+      body: JSON.stringify(itemData),
+    });
+  }
+
+  async updateChecklistItem(boardId, columnId, cardId, checklistId, itemId, updateData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/checklists/${checklistId}/items/${itemId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+  }
+
+  async toggleChecklistItem(boardId, columnId, cardId, checklistId, itemId) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/checklists/${checklistId}/items/${itemId}/toggle`, {
+      method: 'POST',
+    });
+  }
+
+  async deleteChecklistItem(boardId, columnId, cardId, checklistId, itemId) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/checklists/${checklistId}/items/${itemId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const apiService = new ApiService();

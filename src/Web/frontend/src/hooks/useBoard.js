@@ -57,6 +57,37 @@ export const useBoard = (boardId) => {
 
   const handleActivityLogged = useBoardStore((state) => state.handleActivityLogged);
 
+  const boardLabels = useBoardStore((state) => state.boardLabels);
+  const loadBoardLabels = useBoardStore((state) => state.loadBoardLabels);
+  const createLabel = useBoardStore((state) => state.createLabel);
+  const updateLabel = useBoardStore((state) => state.updateLabel);
+  const deleteLabel = useBoardStore((state) => state.deleteLabel);
+  const addLabelToCard = useBoardStore((state) => state.addLabelToCard);
+  const removeLabelFromCard = useBoardStore((state) => state.removeLabelFromCard);
+
+  const createChecklist = useBoardStore((state) => state.createChecklist);
+  const updateChecklist = useBoardStore((state) => state.updateChecklist);
+  const deleteChecklist = useBoardStore((state) => state.deleteChecklist);
+  const createChecklistItem = useBoardStore((state) => state.createChecklistItem);
+  const updateChecklistItem = useBoardStore((state) => state.updateChecklistItem);
+  const toggleChecklistItem = useBoardStore((state) => state.toggleChecklistItem);
+  const deleteChecklistItem = useBoardStore((state) => state.deleteChecklistItem);
+
+  // SignalR handlers
+  const handleLabelCreated = useBoardStore((state) => state.handleLabelCreated);
+  const handleLabelUpdated = useBoardStore((state) => state.handleLabelUpdated);
+  const handleLabelDeleted = useBoardStore((state) => state.handleLabelDeleted);
+  const handleCardLabelAdded = useBoardStore((state) => state.handleCardLabelAdded);
+  const handleCardLabelRemoved = useBoardStore((state) => state.handleCardLabelRemoved);
+
+  const handleChecklistCreated = useBoardStore((state) => state.handleChecklistCreated);
+  const handleChecklistUpdated = useBoardStore((state) => state.handleChecklistUpdated);
+  const handleChecklistDeleted = useBoardStore((state) => state.handleChecklistDeleted);
+  const handleChecklistItemCreated = useBoardStore((state) => state.handleChecklistItemCreated);
+  const handleChecklistItemUpdated = useBoardStore((state) => state.handleChecklistItemUpdated);
+  const handleChecklistItemToggled = useBoardStore((state) => state.handleChecklistItemToggled);
+  const handleChecklistItemDeleted = useBoardStore((state) => state.handleChecklistItemDeleted);
+
   // Set boardId khi thay đổi
   useEffect(() => {
     if (boardId) {
@@ -70,6 +101,12 @@ export const useBoard = (boardId) => {
       loadBoard(boardId);
     }
   }, [boardId, loadBoard]);
+
+  useEffect(() => {
+    if (boardId) {
+      loadBoardLabels(boardId);
+    }
+  }, [boardId, loadBoardLabels]);
 
   // Sync current user từ SignalR
   useEffect(() => {
@@ -142,6 +179,22 @@ export const useBoard = (boardId) => {
 
     signalRService.onActivityLogged(handleActivityLogged);
 
+    // Label events
+    signalRService.onLabelCreated?.(handleLabelCreated);
+    signalRService.onLabelUpdated?.(handleLabelUpdated);
+    signalRService.onLabelDeleted?.(handleLabelDeleted);
+    signalRService.onCardLabelAdded?.(handleCardLabelAdded);
+    signalRService.onCardLabelRemoved?.(handleCardLabelRemoved);
+
+    // Checklist events
+    signalRService.onChecklistCreated?.(handleChecklistCreated);
+    signalRService.onChecklistUpdated?.(handleChecklistUpdated);
+    signalRService.onChecklistDeleted?.(handleChecklistDeleted);
+    signalRService.onChecklistItemCreated?.(handleChecklistItemCreated);
+    signalRService.onChecklistItemUpdated?.(handleChecklistItemUpdated);
+    signalRService.onChecklistItemToggled?.(handleChecklistItemToggled);
+    signalRService.onChecklistItemDeleted?.(handleChecklistItemDeleted);
+
     // Cleanup function
     return () => {
       // Best-effort cleanup
@@ -175,6 +228,19 @@ export const useBoard = (boardId) => {
       signalRService.offJoinRequestResponded?.(handleJoinRequestResponded);
 
       signalRService.offActivityLogged?.(handleActivityLogged);
+      signalRService.offLabelCreated?.(handleLabelCreated);
+      signalRService.offLabelUpdated?.(handleLabelUpdated);
+      signalRService.offLabelDeleted?.(handleLabelDeleted);
+      signalRService.offCardLabelAdded?.(handleCardLabelAdded);
+      signalRService.offCardLabelRemoved?.(handleCardLabelRemoved);
+
+      signalRService.offChecklistCreated?.(handleChecklistCreated);
+      signalRService.offChecklistUpdated?.(handleChecklistUpdated);
+      signalRService.offChecklistDeleted?.(handleChecklistDeleted);
+      signalRService.offChecklistItemCreated?.(handleChecklistItemCreated);
+      signalRService.offChecklistItemUpdated?.(handleChecklistItemUpdated);
+      signalRService.offChecklistItemToggled?.(handleChecklistItemToggled);
+      signalRService.offChecklistItemDeleted?.(handleChecklistItemDeleted);
 
       // Try generic off method
       if (typeof signalRService.off === 'function') {
@@ -199,6 +265,19 @@ export const useBoard = (boardId) => {
           signalRService.off('joinRequestCreated', handleJoinRequestCreated);
           signalRService.off('joinRequestResponded', handleJoinRequestResponded);
           signalRService.off('activityLogged', handleActivityLogged);
+          signalRService.off('labelCreated', handleLabelCreated);
+          signalRService.off('labelUpdated', handleLabelUpdated);
+          signalRService.off('labelDeleted', handleLabelDeleted);
+          signalRService.off('cardLabelAdded', handleCardLabelAdded);
+          signalRService.off('cardLabelRemoved', handleCardLabelRemoved);
+
+          signalRService.off('checklistCreated', handleChecklistCreated);
+          signalRService.off('checklistUpdated', handleChecklistUpdated);
+          signalRService.off('checklistDeleted', handleChecklistDeleted);
+          signalRService.off('checklistItemCreated', handleChecklistItemCreated);
+          signalRService.off('checklistItemUpdated', handleChecklistItemUpdated);
+          signalRService.off('checklistItemToggled', handleChecklistItemToggled);
+          signalRService.off('checklistItemDeleted', handleChecklistItemDeleted);
         } catch (error) {
           console.warn('Error removing SignalR listeners:', error);
         }
@@ -225,7 +304,19 @@ export const useBoard = (boardId) => {
     handleAttachmentDeleted,
     handleJoinRequestCreated,
     handleJoinRequestResponded,
-    handleActivityLogged
+    handleActivityLogged,
+    handleLabelCreated,
+    handleLabelUpdated,
+    handleLabelDeleted,
+    handleCardLabelAdded,
+    handleCardLabelRemoved,
+    handleChecklistCreated,
+    handleChecklistUpdated,
+    handleChecklistDeleted,
+    handleChecklistItemCreated,
+    handleChecklistItemUpdated,
+    handleChecklistItemToggled,
+    handleChecklistItemDeleted
   ]);
 
 
@@ -237,6 +328,7 @@ export const useBoard = (boardId) => {
     isConnected,
     pendingTempIds,
     currentUser,
+    boardLabels,
 
     // Actions
     loadBoard: () => loadBoard(boardId),
@@ -251,6 +343,20 @@ export const useBoard = (boardId) => {
     reorderCards,
     assignCardMember,
     unassignCardMember,
+    loadBoardLabels: () => loadBoardLabels(boardId),
+    createLabel,
+    updateLabel,
+    deleteLabel,
+    addLabelToCard,
+    removeLabelFromCard,
+
+    createChecklist,
+    updateChecklist,
+    deleteChecklist,
+    createChecklistItem,
+    updateChecklistItem,
+    toggleChecklistItem,
+    deleteChecklistItem,
   };
 };
 

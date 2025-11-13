@@ -45,6 +45,8 @@ namespace ProjectManagement.Services
                 .Include(c => c.Comments)
                 .ThenInclude(comment => comment.User)
                 .Include(c => c.Attachments)
+                .Include(c=>c.Checklists)
+                .ThenInclude(cl => cl.Items)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
