@@ -411,12 +411,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         />
 
         <SidebarButton
-          icon={<AttachmentIcon fontSize="small" />}
-          label="Attachment"
-          onClick={() => document.getElementById('attachment-upload')?.click()}
-        />
-
-        <SidebarButton
           icon={<AddPhotoAlternateIcon fontSize="small" />}
           label="Cover"
           onClick={openAddCoverMenu}
@@ -954,6 +948,10 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         }}>
           <ArchiveIcon fontSize="small" sx={{ mr: 1 }} />
           Archive
+        </MenuItem>
+        <MenuItem onClick={() => openActivityDialog()}>
+          <HistoryIcon fontSize="small" sx={{ mr: 1 }} />
+          Activity Logs
         </MenuItem>
       </Menu>
 
