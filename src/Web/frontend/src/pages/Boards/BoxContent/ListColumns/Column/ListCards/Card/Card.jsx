@@ -14,7 +14,6 @@ import { usePermissionAttribute } from '~/hooks/usePermissionAttribute';
 import { Box, Chip } from '@mui/material';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 
-// OPTIMIZATION: Card chỉ render khi data thực sự thay đổi
 const Card = memo(({ card, onOpen, isDragging, isPending }) => {
   const dndAttr = usePermissionAttribute('cards.move', card.boardId);
   const storeCard = useBoardStore(s => {
@@ -29,7 +28,8 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
     return (
       !!currentCard?.members?.length ||
       !!currentCard?.comments?.length ||
-      !!currentCard?.attachments?.length
+      !!currentCard?.attachments?.length ||
+      (currentCard?.checklists && currentCard.checklists.length > 0)
     );
   };
 
@@ -86,7 +86,7 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
           image={currentCard?.cover} />}
 
       {/* Labels */}
-      {currentCard.labels && currentCard.labels.length > 0 && (
+      {currentCard?.labels && currentCard?.labels?.length > 0 && (
         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', p: 1 }}>
           {currentCard.labels.slice(0, 3).map((label) => (
             <Chip
@@ -105,9 +105,9 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
               }}
             />
           ))}
-          {card.labels.length > 3 && (
+          {(currentCard.labels?.length ?? 0) > 3 && (
             <Chip
-              label={`+${card.labels.length - 3}`}
+              label={`+${currentCard.labels.length - 3}`}
               size="small"
               sx={{
                 height: 20,
@@ -164,27 +164,29 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
       )}
     </MuiCard>
   );
-}, (prevProps, nextProps) => {
-  // OPTIMIZATION: Custom comparison - chỉ re-render khi cần thiết
+}, (prev, next) => {
+  const p = prev.card
+  const n = next.card
 
-  // So sánh card data
-  if (prevProps.card?.id !== nextProps.card?.id) return false
-  if (prevProps.card?.title !== nextProps.card?.title) return false
-  if (prevProps.card?.cover !== nextProps.card?.cover) return false
-  if (prevProps.card?.rank !== nextProps.card?.rank) return false
+  if (p?.id !== n?.id) return false
+  if (p?.title !== n?.title) return false
+  if (p?.cover !== n?.cover) return false
+  if (p?.rank !== n?.rank) return false
 
-  // So sánh counts (không cần deep compare arrays)
-  if (prevProps.card?.members?.length !== nextProps.card?.members?.length) return false
-  if (prevProps.card?.comments?.length !== nextProps.card?.comments?.length) return false
-  if (prevProps.card?.attachments?.length !== nextProps.card?.attachments?.length) return false
+  // count compare
+  if (p?.members?.length !== n?.members?.length) return false
+  if (p?.comments?.length !== n?.comments?.length) return false
+  if (p?.attachments?.length !== n?.attachments?.length) return false
 
-  // So sánh states
-  if (prevProps.isDragging !== nextProps.isDragging) return false
-  if (prevProps.isPending !== nextProps.isPending) return false
+  // new: labels & checklists
+  if (p?.labels?.length !== n?.labels?.length) return false
+  if (p?.checklists?.length !== n?.checklists?.length) return false
 
-  // Không so sánh onOpen vì nó stable (useCallback trong parent)
+  // states
+  if (prev.isDragging !== next.isDragging) return false
+  if (prev.isPending !== next.isPending) return false
 
-  return true // Không cần re-render
+  return true
 });
 
 Card.displayName = 'Card'

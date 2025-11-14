@@ -118,6 +118,8 @@ namespace ProjectManagement.Services
                 .Include(b => b.Members)
                 .ThenInclude(m => m.User)
                 .FirstOrDefaultAsync(b => b.Id == board.Id);
+            
+            await InvalidateUserBoardsCache(userId);
 
             return _mapper.Map<BoardDto>(createdBoard);
         }
@@ -132,6 +134,9 @@ namespace ProjectManagement.Services
             board.LastModified = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            
+            await InvalidateBoardCache(boardId);
+            await InvalidateUserBoardsCache(userId);
 
             var updatedBoard = await GetBoardAsync(boardId, userId);
             return updatedBoard;
@@ -212,6 +217,10 @@ namespace ProjectManagement.Services
             var createdMember = await _context.BoardMembers
                 .Include(bm => bm.User)
                 .FirstOrDefaultAsync(bm => bm.Id == member.Id);
+            
+            await InvalidateBoardCache(boardId);
+            await InvalidateUserBoardsCache(currentUserId);
+            await InvalidateUserBoardsCache(user.Id);
 
             return _mapper.Map<BoardMemberDto>(createdMember);
         }
@@ -258,9 +267,15 @@ namespace ProjectManagement.Services
 
             if (!canRemove)
                 throw new UnauthorizedAccessException(reason);
+                    
+            var targetUserId = targetMember.UserId;
 
             _context.BoardMembers.Remove(targetMember);
             await _context.SaveChangesAsync();
+                
+            await InvalidateBoardCache(boardId);
+            await InvalidateUserBoardsCache(currentUserId);
+            await InvalidateUserBoardsCache(targetUserId);
 
             return true;
         }
@@ -370,6 +385,16 @@ namespace ProjectManagement.Services
             board.LastModified = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+        }
+        
+        private async Task InvalidateUserBoardsCache(string userId)
+        {
+            await _cache.RemoveAsync($"user_boards:{userId}");
+        }
+
+        private async Task InvalidateBoardCache(string boardId)
+        {
+            await _cache.RemoveAsync($"board:{boardId}");
         }
     }
 }

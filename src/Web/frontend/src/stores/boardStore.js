@@ -597,62 +597,86 @@ export const useBoardStore = create((set, get) => ({
 
     handleCardsReordered: (data) => {
         if (data.columnId && Array.isArray(data.orderedCards)) {
-            set(state => ({
-                board: {
-                    ...state.board,
-                    columns: state.board.columns.map(col =>
-                        col.id === data.columnId ? { ...col, cards: data.orderedCards } : col
-                    )
-                }
-            }));
+            set(state => {
+                const targetColumn = state.board.columns.find(c => c.id === data.columnId);
+                if (!targetColumn) return state;
+
+                // Tạo map từ ID -> card hiện tại (giữ full data)
+                const existingCardsMap = new Map();
+                targetColumn.cards.forEach(card => {
+                    existingCardsMap.set(card.id, card);
+                });
+
+                // Merge: giữ data cũ, chỉ update rank từ server
+                const mergedCards = data.orderedCards.map(serverCard => {
+                    const existingCard = existingCardsMap.get(serverCard.id);
+
+                    if (existingCard) {
+                        // Giữ toàn bộ nested data từ local, chỉ update rank
+                        return {
+                            ...existingCard,
+                            rank: serverCard.rank,
+                            // Update các field khác nếu server gửi
+                            title: serverCard.title ?? existingCard.title,
+                            description: serverCard.description ?? existingCard.description,
+                            cover: serverCard.cover ?? existingCard.cover,
+                        };
+                    }
+
+                    // Nếu là card mới từ server
+                    return serverCard;
+                });
+
+                return {
+                    board: {
+                        ...state.board,
+                        columns: state.board.columns.map(col =>
+                            col.id === data.columnId
+                                ? { ...col, cards: mergedCards }
+                                : col
+                        )
+                    }
+                };
+            });
         }
-
-        // if (data.columnId && Array.isArray(data.cardIds)) {
-        //     set(state => {
-        //         const idToColumn = {};
-        //         state.board.columns.forEach(c => { idToColumn[c.id] = c; });
-
-        //         return {
-        //             board: {
-        //                 ...state.board,
-        //                 columns: state.board.columns.map(col => {
-        //                     if (col.id !== data.columnId) return col;
-        //                     const idToCard = col.cards.reduce((m, c) => { m[c.id] = c; return m; }, {});
-        //                     const newCards = data.cardIds.map(id => idToCard[id]).filter(Boolean);
-        //                     const rest = col.cards.filter(c => !data.cardIds.includes(c.id));
-        //                     return { ...col, cards: [...newCards, ...rest] };
-        //                 })
-        //             }
-        //         };
-        //     });
-        // }
     },
 
     handleCardMoved: (data) => {
         set(state => {
-            const card = state.board.columns
-                .find(c => c.id === data.fromColumnId)
-                ?.cards.find(c => c.id === data.cardId);
-
-            if (!card) return state;
-
             const sourceCol = state.board.columns.find(c => c.id === data.fromColumnId);
             const destCol = state.board.columns.find(c => c.id === data.toColumnId);
 
             if (!sourceCol || !destCol) return state;
 
+            // Tìm card với FULL DATA từ source column
+            const movedCard = sourceCol.cards.find(c => c.id === data.cardId);
+            if (!movedCard) return state;
+
             return {
                 board: {
                     ...state.board,
                     columns: state.board.columns.map(col => {
+                        // Remove từ source
                         if (col.id === data.fromColumnId) {
-                            return { ...col, cards: col.cards.filter(c => c.id !== data.cardId) };
+                            return {
+                                ...col,
+                                cards: col.cards.filter(c => c.id !== data.cardId)
+                            };
                         }
+
+                        // Add vào destination với FULL DATA
                         if (col.id === data.toColumnId) {
                             const updatedCards = [...col.cards];
-                            updatedCards.splice(data.newIndex, 0, { ...card, columnId: data.toColumnId });
+                            const cardToInsert = {
+                                ...movedCard,
+                                columnId: data.toColumnId,
+                                rank: data.newRank ?? movedCard.rank
+                            };
+
+                            updatedCards.splice(data.newIndex, 0, cardToInsert);
                             return { ...col, cards: updatedCards };
                         }
+
                         return col;
                     })
                 }

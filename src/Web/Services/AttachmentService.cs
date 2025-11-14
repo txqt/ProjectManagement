@@ -113,6 +113,9 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
             var attachmentDto = _mapper.Map<AttachmentDto>(attachment);
+            
+            await _cache.RemoveAsync($"attachments:{cardId}");
+            await _cache.RemoveAsync($"board:{card.BoardId}");
 
             await _boardNotificationService.BroadcastAttachmentAdded(
                 card.BoardId,
@@ -140,6 +143,9 @@ namespace ProjectManagement.Services
 
             _context.Attachments.Remove(attachment);
             await _context.SaveChangesAsync();
+            
+            await _cache.RemoveAsync($"attachments:{cardId}");
+            await _cache.RemoveAsync($"board:{boardId}");
 
             await _boardNotificationService.BroadcastAttachmentDeleted(
                 boardId,

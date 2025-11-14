@@ -78,6 +78,8 @@ namespace ProjectManagement.Services
             var dto = _mapper.Map<ChecklistDto>(checklist);
             var card = checklist.Card;
             
+            await InvalidateBoardCache(card.BoardId);
+            
             await _boardNotificationService.BroadcastChecklistUpdated(card.BoardId, card.ColumnId, card.Id, dto, userId);
 
             return dto;
@@ -101,6 +103,8 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
             var card = checklist.Card;
+            
+            await InvalidateBoardCache(card.BoardId);
             
             await _boardNotificationService.BroadcastChecklistDeleted(card.BoardId, card.ColumnId, card.Id, checklistId, userId);
 
@@ -174,6 +178,8 @@ namespace ProjectManagement.Services
 
             var dto = _mapper.Map<ChecklistItemDto>(item);
             var card =  item.Checklist.Card;
+            
+            await InvalidateBoardCache(card.BoardId);
             
             await _boardNotificationService.BroadcastChecklistItemUpdated(card.BoardId, card.Id, card.Id, item.ChecklistId, dto, userId);
 
