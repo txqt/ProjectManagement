@@ -6,6 +6,7 @@ using ProjectManagement.Authorization;
 using ProjectManagement.Helpers;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Board;
+using ProjectManagement.Models.DTOs.Common;
 using ProjectManagement.Services.Interfaces;
 
 namespace ProjectManagement.Services
@@ -28,33 +29,86 @@ namespace ProjectManagement.Services
             _cache = cache;
         }
 
-        public async Task<IEnumerable<BoardDto>> GetUserBoardsAsync(string userId)
+        public async Task<PaginatedResult<BoardDto>> GetUserBoardsAsync(
+            string userId,
+            PaginationParams paginationParams,
+            string? search = null,
+            string? sortBy = null,
+            string? sortOrder = null)
         {
-            var cacheKey = $"user_boards:{userId}";
-            var cached = await _cache.GetAsync<IEnumerable<BoardDto>>(cacheKey);
+            var cacheKey =
+                $"user_boards:{userId}:page_{paginationParams.Page}:size_{paginationParams.PageSize}:search_{search}:sort_{sortBy}_{sortOrder}";
+            var cached = await _cache.GetAsync<PaginatedResult<BoardDto>>(cacheKey);
             if (cached != null) return cached;
 
-            var boards = await _context.Boards
+            // Base query
+            var query = _context.Boards
                 .Include(b => b.Owner)
                 .Include(b => b.Members)
                 .ThenInclude(m => m.User)
-                .Include(b => b.Columns)
-                .ThenInclude(c => c.Cards)
-                .ThenInclude(card => card.Members)
-                .ThenInclude(cm => cm.User)
-                .Include(b => b.Columns)
-                .ThenInclude(c => c.Cards)
-                .ThenInclude(card => card.Comments)
-                .ThenInclude(comment => comment.User)
-                .Include(b => b.Columns)
-                .ThenInclude(c => c.Cards)
-                .ThenInclude(card => card.Attachments)
-                .Where(b => b.OwnerId == userId || b.Members.Any(m => m.UserId == userId))
+                .Where(b => b.OwnerId == userId || b.Members.Any(m => m.UserId == userId));
+
+            // Search filter
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var searchLower = search.ToLower();
+                query = query.Where(b =>
+                    b.Title.ToLower().Contains(searchLower) ||
+                    (b.Description != null && b.Description.ToLower().Contains(searchLower)));
+            }
+
+            // Get total count before pagination
+            var totalCount = await query.CountAsync();
+
+            // Sorting
+            query = (sortBy?.ToLower(), sortOrder?.ToLower()) switch
+            {
+                ("title", "asc") => query.OrderBy(b => b.Title),
+                ("title", "desc") => query.OrderByDescending(b => b.Title),
+                ("createdat", "asc") => query.OrderBy(b => b.CreatedAt),
+                ("createdat", "desc") => query.OrderByDescending(b => b.CreatedAt),
+                ("lastmodified", "asc") => query.OrderBy(b => b.LastModified),
+                _ => query.OrderByDescending(b => b.LastModified) // default
+            };
+
+            // Pagination
+            var boards = await query
+                .Skip((paginationParams.Page - 1) * paginationParams.PageSize)
+                .Take(paginationParams.PageSize)
                 .AsSplitQuery()
                 .ToListAsync();
 
-            var result = _mapper.Map<IEnumerable<BoardDto>>(boards);
-            await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
+            // For each board, load related data
+            var boardDtos = new List<BoardDto>();
+            foreach (var board in boards)
+            {
+                // Load columns with cards and nested data
+                await _context.Entry(board)
+                    .Collection(b => b.Columns)
+                    .Query()
+                    .Include(c => c.Cards)
+                    .ThenInclude(card => card.Members)
+                    .ThenInclude(cm => cm.User)
+                    .Include(c => c.Cards)
+                    .ThenInclude(card => card.Comments)
+                    .ThenInclude(comment => comment.User)
+                    .Include(c => c.Cards)
+                    .ThenInclude(card => card.Attachments)
+                    .LoadAsync();
+
+                boardDtos.Add(_mapper.Map<BoardDto>(board));
+            }
+
+            var result = new PaginatedResult<BoardDto>
+            {
+                Items = boardDtos,
+                Page = paginationParams.Page,
+                PageSize = paginationParams.PageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)paginationParams.PageSize)
+            };
+
+            await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5));
 
             return result;
         }
@@ -70,25 +124,25 @@ namespace ProjectManagement.Services
                 .Include(b => b.Members)
                 .ThenInclude(m => m.User)
                 .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
-                    .ThenInclude(card => card.Members)
-                    .ThenInclude(cm => cm.User)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Members)
+                .ThenInclude(cm => cm.User)
                 .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
-                    .ThenInclude(card => card.Comments)
-                    .ThenInclude(comment => comment.User)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Comments)
+                .ThenInclude(comment => comment.User)
                 .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
-                    .ThenInclude(card => card.Attachments)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Attachments)
                 .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
-                    .ThenInclude(card => card.Labels)
-                    .ThenInclude(cl => cl.Label) // CardLabel -> Label
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Labels)
+                .ThenInclude(cl => cl.Label) // CardLabel -> Label
                 .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
-                    .ThenInclude(card => card.Checklists)
-                    .ThenInclude(checklist => checklist.Items)
-                    // .ThenInclude(item => item.CompletedByUser) // Optional: user who completed
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Checklists)
+                .ThenInclude(checklist => checklist.Items)
+                // .ThenInclude(item => item.CompletedByUser) // Optional: user who completed
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(b => b.Id == boardId);
 
@@ -118,7 +172,7 @@ namespace ProjectManagement.Services
                 .Include(b => b.Members)
                 .ThenInclude(m => m.User)
                 .FirstOrDefaultAsync(b => b.Id == board.Id);
-            
+
             await InvalidateUserBoardsCache(userId);
 
             return _mapper.Map<BoardDto>(createdBoard);
@@ -134,7 +188,7 @@ namespace ProjectManagement.Services
             board.LastModified = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            
+
             await InvalidateBoardCache(boardId);
             await InvalidateUserBoardsCache(userId);
 
@@ -217,7 +271,7 @@ namespace ProjectManagement.Services
             var createdMember = await _context.BoardMembers
                 .Include(bm => bm.User)
                 .FirstOrDefaultAsync(bm => bm.Id == member.Id);
-            
+
             await InvalidateBoardCache(boardId);
             await InvalidateUserBoardsCache(currentUserId);
             await InvalidateUserBoardsCache(user.Id);
@@ -267,12 +321,12 @@ namespace ProjectManagement.Services
 
             if (!canRemove)
                 throw new UnauthorizedAccessException(reason);
-                    
+
             var targetUserId = targetMember.UserId;
 
             _context.BoardMembers.Remove(targetMember);
             await _context.SaveChangesAsync();
-                
+
             await InvalidateBoardCache(boardId);
             await InvalidateUserBoardsCache(currentUserId);
             await InvalidateUserBoardsCache(targetUserId);
@@ -386,7 +440,7 @@ namespace ProjectManagement.Services
 
             await _context.SaveChangesAsync();
         }
-        
+
         private async Task InvalidateUserBoardsCache(string userId)
         {
             await _cache.RemoveAsync($"user_boards:{userId}");

@@ -6,6 +6,7 @@ using ProjectManagement.Attributes;
 using ProjectManagement.Authorization;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Board;
+using ProjectManagement.Models.DTOs.Common;
 using ProjectManagement.Services.Interfaces;
 
 namespace ProjectManagement.Controllers
@@ -26,15 +27,31 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpGet]
-        //[RequirePermission(Permissions.Boards.View)]
-        public async Task<ActionResult<IEnumerable<BoardDto>>> GetUserBoards()
+        public async Task<ActionResult<PaginatedResult<BoardDto>>> GetUserBoards(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12,
+            [FromQuery] string? search = null,
+            [FromQuery] string? sortBy = "lastModified",
+            [FromQuery] string? sortOrder = "desc")
         {
             var userId = _userManager.GetUserId(User);
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            var boards = await _boardService.GetUserBoardsAsync(userId);
-            return Ok(boards);
+            var paginationParams = new PaginationParams
+            {
+                Page = page,
+                PageSize = pageSize
+            };
+
+            var result = await _boardService.GetUserBoardsAsync(
+                userId, 
+                paginationParams, 
+                search, 
+                sortBy, 
+                sortOrder);
+            
+            return Ok(result);
         }
 
         [HttpGet("{boardId}")]

@@ -17,21 +17,6 @@ function Board() {
     // Get state and actions directly from store
     const board = useBoardStore((state) => state.board);
     const error = useBoardStore((state) => state.error);
-    const pendingTempIds = useBoardStore((state) => state.pendingTempIds);
-    
-    const createColumn = useBoardStore((state) => state.createColumn);
-    const updateColumn = useBoardStore((state) => state.updateColumn);
-    const deleteColumn = useBoardStore((state) => state.deleteColumn);
-    const reorderColumns = useBoardStore((state) => state.reorderColumns);
-    
-    const createCard = useBoardStore((state) => state.createCard);
-    const updateCard = useBoardStore((state) => state.updateCard);
-    const deleteCard = useBoardStore((state) => state.deleteCard);
-    const reorderCards = useBoardStore((state) => state.reorderCards);
-    const moveCard = useBoardStore((state) => state.moveCard);
-    
-    const assignCardMember = useBoardStore((state) => state.assignCardMember);
-    const unassignCardMember = useBoardStore((state) => state.unassignCardMember);
 
     // Show errors
     useEffect(() => {

@@ -92,8 +92,19 @@ class ApiService {
   }
 
   // Board endpoints
-  async getBoards() {
-    return this.request('/boards');
+  async getBoards(page = 1, pageSize = 12, search = null, sortBy = 'lastModified', sortOrder = 'desc') {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+      sortBy: sortBy,
+      sortOrder: sortOrder
+    });
+
+    if (search && search.trim()) {
+      params.append('search', search.trim());
+    }
+
+    return this.request(`/boards?${params.toString()}`);
   }
 
   async getBoard(boardId) {

@@ -1,10 +1,16 @@
 ﻿using ProjectManagement.Models.DTOs.Board;
+using ProjectManagement.Models.DTOs.Common;
 
 namespace ProjectManagement.Services.Interfaces
 {
     public interface IBoardService
     {
-        Task<IEnumerable<BoardDto>> GetUserBoardsAsync(string userId);
+        Task<PaginatedResult<BoardDto>> GetUserBoardsAsync(
+            string userId, 
+            PaginationParams paginationParams,
+            string? search = null,
+            string? sortBy = null,
+            string? sortOrder = null);
         Task<BoardDto?> GetBoardAsync(string boardId, string userId);
         Task<BoardDto> CreateBoardAsync(CreateBoardDto createBoardDto, string userId);
         Task<BoardDto?> UpdateBoardAsync(string boardId, UpdateBoardDto updateBoardDto, string userId);
