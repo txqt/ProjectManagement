@@ -105,6 +105,7 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
 // Add Application Services
+builder.Services.AddScoped<IBoardShareService, BoardShareService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IBoardService, BoardService>();
 builder.Services.AddScoped<IColumnService, ColumnService>();
