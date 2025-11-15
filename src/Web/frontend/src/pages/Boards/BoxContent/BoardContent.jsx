@@ -20,11 +20,21 @@ import Card from './ListColumns/Column/ListCards/Card/Card';
 import { cloneDeep } from 'lodash';
 import { ACTIVE_DRAG_ITEM_TYPE } from '~/utils/constants';
 import { createPortal } from 'react-dom';
+import { useBoardStore } from '~/stores/boardStore';
 
-function BoardContent({ board, ...props }) {
-    const { createColumn, updateColumn, createCard, updateCard,
-        deleteColumn, reorderColumns, reorderCards, moveCard, deleteCard,
-        pendingTempIds, assignCardMember, unassignCardMember } = props;
+function BoardContent({ board }) {
+    const moveCard = useBoardStore(state => state.moveCard)
+    const reorderColumns = useBoardStore(state => state.reorderColumns)
+    const reorderCards = useBoardStore(state => state.reorderCards)
+    const createColumn = useBoardStore(state => state.createColumn)
+    const updateCard = useBoardStore(state => state.updateCard)
+    const updateColumn = useBoardStore(state => state.updateColumn)
+    const createCard = useBoardStore(state => state.createCard)
+    const deleteColumn = useBoardStore(state => state.deleteColumn)
+    const deleteCard = useBoardStore(state => state.deleteCard)
+    const assignCardMember = useBoardStore(state => state.assignCardMember)
+    const unassignCardMember = useBoardStore(state => state.unassignCardMember)
+    const pendingTempIds = useBoardStore(state => state.pendingTempIds)
 
     const mouseSensor = useSensor(MouseSensor, {
         activationConstraint: { distance: 5 }
