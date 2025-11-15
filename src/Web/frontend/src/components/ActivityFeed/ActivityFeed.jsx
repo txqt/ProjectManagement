@@ -36,7 +36,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { apiService } from '~/services/api';
 
 // Activity icon mapping
-const getActivityIcon = (action, entityType) => {
+const getActivityIcon = (action) => {
   const iconProps = { fontSize: 'small' };
   
   if (action === 'created') return <AddBoxIcon {...iconProps} color="success" />;

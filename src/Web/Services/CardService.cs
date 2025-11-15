@@ -149,6 +149,11 @@ namespace ProjectManagement.Services
             _mapper.Map(updateCardDto, card);
             card.LastModified = DateTime.UtcNow;
 
+            if(updateCardDto.Cover == null)
+            {
+                card.Cover = null;
+            }
+
             var changes = new Dictionary<string, object>();
             if (updateCardDto.Title != null && updateCardDto.Title != card.Title)
             {

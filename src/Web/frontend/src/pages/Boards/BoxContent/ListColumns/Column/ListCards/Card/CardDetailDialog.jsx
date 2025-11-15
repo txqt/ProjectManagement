@@ -43,10 +43,12 @@ import ActivityFeed from '~/components/ActivityFeed/ActivityFeed';
 import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
 import { apiService } from '~/services/api';
 import { useBoardStore } from '~/stores/boardStore';
-import { AttachmentSection, CommentSection } from './CommentAttachmentSections';
+import CommentSection from '~/components/CardDetails/CommentSection';
+import AttachmentSection from '~/components/CardDetails/AttachmentSection';
 import ChecklistSection from '~/components/Checklist/ChecklistSection';
 import LabelChip from '~/components/Label/LabelChip';
 import LabelSelector from '~/components/Label/LabelSelector';
+import CheckIcon from '@mui/icons-material/Check';
 
 // Sidebar Action Button Component
 const SidebarButton = ({ icon, label, onClick, disabled = false }) => (
@@ -132,14 +134,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const deleteLabel = useBoardStore((s) => s.deleteLabel);
   const addLabelToCard = useBoardStore((s) => s.addLabelToCard);
   const removeLabelFromCard = useBoardStore((s) => s.removeLabelFromCard);
-  
-  const createChecklist = useBoardStore((s) => s.createChecklist);
-  const updateChecklist = useBoardStore((s) => s.updateChecklist);
-  const deleteChecklist = useBoardStore((s) => s.deleteChecklist);
-  const createChecklistItem = useBoardStore((s) => s.createChecklistItem);
-  const updateChecklistItem = useBoardStore((s) => s.updateChecklistItem);
-  const toggleChecklistItem = useBoardStore((s) => s.toggleChecklistItem);
-  const deleteChecklistItem = useBoardStore((s) => s.deleteChecklistItem);
 
   // Card moved warning
   const cardMovedWarning = useMemo(() => {
@@ -422,68 +416,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     }
   };
 
-  // Checklist handlers
-  const handleCreateChecklist = async (data) => {
-    if (!currentCard) return;
-    await createChecklist(currentCard.columnId, currentCard.id, data);
-  };
-
-  const handleUpdateChecklist = async (checklistId, data) => {
-    if (!currentCard) return;
-    await updateChecklist(currentCard.columnId, currentCard.id, checklistId, data);
-  };
-
-  const handleDeleteChecklist = async (checklistId) => {
-    if (!currentCard) return;
-    await deleteChecklist(currentCard.columnId, currentCard.id, checklistId);
-  };
-
-  const handleCreateChecklistItem = async (checklistId, data) => {
-    if (!currentCard) return;
-    await createChecklistItem(currentCard.columnId, currentCard.id, checklistId, data);
-  };
-
-  const handleUpdateChecklistItem = async (itemId, data) => {
-    if (!currentCard) return;
-
-    // Find checklist that contains this item
-    const checklist = currentCard.checklists?.find(cl =>
-      cl.items?.some(item => item.id === itemId)
-    );
-
-    if (!checklist) return;
-
-    await updateChecklistItem(currentCard.columnId, currentCard.id, checklist.id, itemId, data);
-  };
-
-  const handleToggleChecklistItem = async (itemId) => {
-    if (!currentCard) return;
-
-    // Find checklist that contains this item
-    const checklist = currentCard.checklists?.find(cl =>
-      cl.items?.some(item => item.id === itemId)
-    );
-
-    if (!checklist) return;
-
-    await toggleChecklistItem(currentCard.columnId, currentCard.id, checklist.id, itemId);
-  };
-
-  const handleDeleteChecklistItem = async (itemId) => {
-    if (!currentCard) return;
-
-    // Find checklist that contains this item
-    const checklist = currentCard.checklists?.find(cl =>
-      cl.items?.some(item => item.id === itemId)
-    );
-
-    if (!checklist) return;
-
-    if (!window.confirm('Delete this item?')) return;
-
-    await deleteChecklistItem(currentCard.columnId, currentCard.id, checklist.id, itemId);
-  };
-
   if (!currentCard) return null;
 
   // Render sidebar (desktop only)
@@ -506,7 +438,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         />
 
         <SidebarButton
-          icon={<CheckBoxIcon fontSize="small" />}
+          icon={<CheckIcon fontSize="small" />}
           label="Checklist"
           onClick={() => {
             // Scroll to checklist section and trigger add
@@ -900,21 +832,12 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                 {/* Checklists */}
                 <Box sx={{ mb: 3 }} data-checklist-section>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <CheckBoxIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                    <CheckIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
                     <Typography variant="subtitle2" fontWeight={600}>
                       Checklists
                     </Typography>
                   </Box>
-                  <ChecklistSection
-                    card={currentCard}
-                    onCreateChecklist={handleCreateChecklist}
-                    onUpdateChecklist={handleUpdateChecklist}
-                    onDeleteChecklist={handleDeleteChecklist}
-                    onCreateItem={handleCreateChecklistItem}
-                    onUpdateItem={handleUpdateChecklistItem}
-                    onToggleItem={handleToggleChecklistItem}
-                    onDeleteItem={handleDeleteChecklistItem}
-                  />
+                  <ChecklistSection card={currentCard} />
                 </Box>
 
                 {/* Comments */}
