@@ -1,4 +1,8 @@
-﻿using AutoMapper;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using AutoMapper;
 using ProjectManagement.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +22,6 @@ namespace ProjectManagement.Services
         private readonly INotificationService _notificationService;
         private readonly ILogger<BoardJoinRequestService> _logger;
         private readonly IBoardNotificationService _boardNotificationService;
-        private readonly ICacheService _cache;
 
         public BoardJoinRequestService(
             ApplicationDbContext context,
@@ -26,8 +29,7 @@ namespace ProjectManagement.Services
             UserManager<ApplicationUser> userManager,
             INotificationService notificationService,
             ILogger<BoardJoinRequestService> logger,
-            IBoardNotificationService boardNotificationService,
-            ICacheService cache)
+            IBoardNotificationService boardNotificationService)
         {
             _context = context;
             _mapper = mapper;
@@ -35,10 +37,10 @@ namespace ProjectManagement.Services
             _notificationService = notificationService;
             _logger = logger;
             _boardNotificationService = boardNotificationService;
-            _cache = cache;
         }
 
-        public async Task<BoardJoinRequestDto> CreateJoinRequestAsync(string boardId, CreateBoardJoinRequestDto dto, string userId)
+        public async Task<BoardJoinRequestDto> CreateJoinRequestAsync(string boardId, CreateBoardJoinRequestDto dto,
+            string userId)
         {
             var board = await _context.Boards
                 .Include(b => b.Members)
@@ -52,7 +54,8 @@ namespace ProjectManagement.Services
                 throw new InvalidOperationException("You are already a member of this board");
 
             var existingRequest = await _context.BoardJoinRequests
-                .FirstOrDefaultAsync(r => r.BoardId == boardId && r.UserId == userId && r.Status == JoinRequestStatus.Pending);
+                .FirstOrDefaultAsync(r =>
+                    r.BoardId == boardId && r.UserId == userId && r.Status == JoinRequestStatus.Pending);
 
             if (existingRequest != null)
                 throw new InvalidOperationException("You already have a pending join request for this board");
@@ -70,13 +73,10 @@ namespace ProjectManagement.Services
             _context.BoardJoinRequests.Add(request);
             await _context.SaveChangesAsync();
 
-            // Xóa cache liên quan
-            await _cache.RemoveAsync($"board_join_requests:{boardId}:all");
-            await _cache.RemoveAsync($"user_join_requests:{userId}:all");
-
             // Notify board owner and admins
             var adminIds = board.Members
-                .Where(m => m.Role == "admin" || m.Role == "owner")
+                .Where(m => string.Equals(m.Role, "admin", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(m.Role, "owner", StringComparison.OrdinalIgnoreCase))
                 .Select(m => m.UserId)
                 .ToList();
 
@@ -106,15 +106,13 @@ namespace ProjectManagement.Services
             var requestDto = _mapper.Map<BoardJoinRequestDto>(createdRequest);
             await _boardNotificationService.BroadcastJoinRequestCreated(boardId, requestDto);
 
-            return requestDto;
+            return requestDto!;
         }
 
-        public async Task<IEnumerable<BoardJoinRequestDto>> GetBoardJoinRequestsAsync(string boardId, string userId, string? status = null)
+        public async Task<IEnumerable<BoardJoinRequestDto>> GetBoardJoinRequestsAsync(string boardId, string userId,
+            string? status = null)
         {
-            var cacheKey = $"board_join_requests:{boardId}:{status ?? "all"}";
-            var cached = await _cache.GetAsync<IEnumerable<BoardJoinRequestDto>>(cacheKey);
-            if (cached != null)
-                return cached;
+            var normalizedStatus = (status ?? "all").ToLowerInvariant();
 
             var board = await _context.Boards
                 .Include(b => b.Members)
@@ -124,53 +122,58 @@ namespace ProjectManagement.Services
                 throw new ArgumentException("Board not found");
 
             var canView = board.OwnerId == userId ||
-                         board.Members.Any(m => m.UserId == userId && (m.Role == "admin" || m.Role == "owner"));
+                          board.Members.Any(m => m.UserId == userId &&
+                                                 (string.Equals(m.Role, "admin", StringComparison.OrdinalIgnoreCase) ||
+                                                  string.Equals(m.Role, "owner", StringComparison.OrdinalIgnoreCase)));
 
             if (!canView)
                 throw new UnauthorizedAccessException("You don't have permission to view join requests");
 
             var query = _context.BoardJoinRequests
+                .AsNoTracking()
                 .Include(r => r.User)
                 .Include(r => r.Responder)
                 .Where(r => r.BoardId == boardId);
 
-            if (!string.IsNullOrEmpty(status))
-                query = query.Where(r => r.Status == status);
+            if (!string.IsNullOrEmpty(status) && normalizedStatus != "all")
+            {
+                query = query.Where(r => r.Status.ToLower() == normalizedStatus);
+            }
 
             var requests = await query.OrderByDescending(r => r.CreatedAt).ToListAsync();
             var result = _mapper.Map<IEnumerable<BoardJoinRequestDto>>(requests);
 
-            await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(30));
             return result;
         }
 
-        public async Task<IEnumerable<BoardJoinRequestDto>> GetUserJoinRequestsAsync(string userId, string? status = null)
+        public async Task<IEnumerable<BoardJoinRequestDto>> GetUserJoinRequestsAsync(string userId,
+            string? status = null)
         {
-            var cacheKey = $"user_join_requests:{userId}:{status ?? "all"}";
-            var cached = await _cache.GetAsync<IEnumerable<BoardJoinRequestDto>>(cacheKey);
-            if (cached != null)
-                return cached;
+            var normalizedStatus = (status ?? "all").ToLowerInvariant();
 
             var query = _context.BoardJoinRequests
+                .AsNoTracking()
                 .Include(r => r.Board)
                 .Include(r => r.Responder)
                 .Where(r => r.UserId == userId);
 
-            if (!string.IsNullOrEmpty(status))
-                query = query.Where(r => r.Status == status);
+            if (!string.IsNullOrEmpty(status) && normalizedStatus != "all")
+            {
+                query = query.Where(r => r.Status.ToLower() == normalizedStatus);
+            }
 
             var requests = await query.OrderByDescending(r => r.CreatedAt).ToListAsync();
             var result = _mapper.Map<IEnumerable<BoardJoinRequestDto>>(requests);
 
-            await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(30));
             return result;
         }
 
-        public async Task<JoinRequestResponseDto> RespondToJoinRequestAsync(string requestId, RespondToJoinRequestDto dto, string responderId)
+        public async Task<JoinRequestResponseDto> RespondToJoinRequestAsync(string requestId,
+            RespondToJoinRequestDto dto, string responderId)
         {
             var request = await _context.BoardJoinRequests
                 .Include(r => r.Board)
-                    .ThenInclude(b => b.Members)
+                .ThenInclude(b => b.Members)
                 .Include(r => r.User)
                 .FirstOrDefaultAsync(r => r.Id == requestId);
 
@@ -178,15 +181,24 @@ namespace ProjectManagement.Services
                 return new JoinRequestResponseDto { Success = false, Message = "Join request not found" };
 
             var canRespond = request.Board.OwnerId == responderId ||
-                             request.Board.Members.Any(m => m.UserId == responderId && (m.Role == "admin" || m.Role == "owner"));
+                             request.Board.Members.Any(m =>
+                                 m.UserId == responderId &&
+                                 (string.Equals(m.Role, "admin", StringComparison.OrdinalIgnoreCase) ||
+                                  string.Equals(m.Role, "owner", StringComparison.OrdinalIgnoreCase)));
 
             if (!canRespond)
-                return new JoinRequestResponseDto { Success = false, Message = "You don't have permission to respond to this request" };
+                return new JoinRequestResponseDto
+                {
+                    Success = false, Message = "You don't have permission to respond to this request"
+                };
 
             if (request.Status != JoinRequestStatus.Pending)
-                return new JoinRequestResponseDto { Success = false, Message = "This request has already been responded to" };
+                return new JoinRequestResponseDto
+                {
+                    Success = false, Message = "This request has already been responded to"
+                };
 
-            var response = dto.Response.ToLower();
+            var response = dto.Response?.ToLowerInvariant();
 
             if (response == "approve")
             {
@@ -210,22 +222,20 @@ namespace ProjectManagement.Services
 
                 await _context.SaveChangesAsync();
 
-                // Xóa cache liên quan
-                await _cache.RemoveAsync($"board_join_requests:{request.BoardId}:all");
-                await _cache.RemoveAsync($"user_join_requests:{request.UserId}:all");
-
                 var responder = await _userManager.FindByIdAsync(responderId);
                 await _notificationService.CreateNotificationAsync(new CreateNotificationDto
                 {
                     UserId = request.UserId,
                     Type = "join_request_approved",
                     Title = "Join request approved",
-                    Message = $"Your request to join \"{request.Board.Title}\" has been approved by {responder?.UserName}",
+                    Message =
+                        $"Your request to join \"{request.Board.Title}\" has been approved by {responder?.UserName}",
                     ActionUrl = $"/boards/{request.BoardId}",
                     BoardId = request.BoardId
                 });
 
-                await _boardNotificationService.BroadcastJoinRequestResponded(request.BoardId, requestId, request.Status, request.UserId);
+                await _boardNotificationService.BroadcastJoinRequestResponded(request.BoardId, requestId,
+                    request.Status, request.UserId);
                 return new JoinRequestResponseDto { Success = true, Message = "Join request approved successfully" };
             }
             else if (response == "reject")
@@ -235,10 +245,6 @@ namespace ProjectManagement.Services
                 request.RespondedBy = responderId;
 
                 await _context.SaveChangesAsync();
-
-                // Xóa cache liên quan
-                await _cache.RemoveAsync($"board_join_requests:{request.BoardId}:all");
-                await _cache.RemoveAsync($"user_join_requests:{request.UserId}:all");
 
                 var responder = await _userManager.FindByIdAsync(responderId);
                 await _notificationService.CreateNotificationAsync(new CreateNotificationDto
@@ -250,7 +256,8 @@ namespace ProjectManagement.Services
                     BoardId = request.BoardId
                 });
 
-                await _boardNotificationService.BroadcastJoinRequestResponded(request.BoardId, requestId, request.Status, request.UserId);
+                await _boardNotificationService.BroadcastJoinRequestResponded(request.BoardId, requestId,
+                    request.Status, request.UserId);
                 return new JoinRequestResponseDto { Success = true, Message = "Join request rejected" };
             }
 
@@ -269,9 +276,6 @@ namespace ProjectManagement.Services
 
             _context.BoardJoinRequests.Remove(request);
             await _context.SaveChangesAsync();
-
-            await _cache.RemoveAsync($"board_join_requests:{request.BoardId}:all");
-            await _cache.RemoveAsync($"user_join_requests:{userId}:all");
 
             return true;
         }
