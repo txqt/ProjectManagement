@@ -279,8 +279,8 @@ namespace ProjectManagement.Data
                 }
             }
 
-            var migrationService = serviceProvider.GetRequiredService<LexoRankMigrationService>();
-            await migrationService.MigrateToLexoRankAsync();
+            // var migrationService = serviceProvider.GetRequiredService<LexoRankMigrationService>();
+            // await migrationService.MigrateToLexoRankAsync();
         }
     }
 }
