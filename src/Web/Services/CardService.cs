@@ -49,6 +49,8 @@ namespace ProjectManagement.Services
                 .Include(c => c.Attachments)
                 .Include(c=>c.Checklists)
                 .ThenInclude(cl => cl.Items)
+                .Include(c=>c.Labels)
+                .ThenInclude(cl => cl.Label)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
@@ -422,7 +424,7 @@ namespace ProjectManagement.Services
                 .Include(cm => cm.User)
                 .Include(cm => cm.Card)
                 .ThenInclude(c => c.Column)
-                .FirstOrDefaultAsync(cm => cm.Id == memberId && cm.CardId == cardId);
+                .FirstOrDefaultAsync(cm => cm.UserId == memberId && cm.CardId == cardId);
 
             if (cardMember == null)
                 return false;

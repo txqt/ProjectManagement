@@ -1,6 +1,7 @@
 // UnsplashMenu.jsx
 import React, { useEffect, useState } from 'react';
 import { Box, Button, Menu, Typography } from '@mui/material';
+import { toast } from 'react-toastify';
 
 /**
  * UnsplashMenu
@@ -81,8 +82,8 @@ export default function UnsplashMenu({
         <Typography variant="subtitle1">Chọn cover</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {/* these buttons are intentionally small/simple so parent can still offer upload/url actions */}
-          <Button size="small" onClick={() => { /* placeholder - parent can use its own handler */ }}>Upload</Button>
-          <Button size="small" onClick={() => { /* placeholder - parent can use its own handler */ }}>URL</Button>
+          <Button size="small" onClick={() => { toast.info('Upload feature not implemented yet'); }}>Upload</Button>
+          <Button size="small" onClick={() => { toast.info('URL feature not implemented yet'); }}>URL</Button>
           {view === 'gallery' ? (
             <Button size="small" onClick={() => setView('search')}>Tìm ảnh</Button>
           ) : (

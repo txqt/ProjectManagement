@@ -1,6 +1,6 @@
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import ArchiveIcon from '@mui/icons-material/Archive';
-import AttachmentIcon from '@mui/icons-material/Attachment';
+import CheckIcon from '@mui/icons-material/Check';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import CloseIcon from '@mui/icons-material/Close';
 import CommentIcon from '@mui/icons-material/Comment';
@@ -27,9 +27,9 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Paper,
   Stack,
   TextField,
-  Tooltip,
   Typography,
   useMediaQuery,
   useTheme
@@ -40,15 +40,15 @@ import 'react-quill-new/dist/quill.snow.css';
 import { toast } from 'react-toastify';
 import { shallow } from 'zustand/shallow';
 import ActivityFeed from '~/components/ActivityFeed/ActivityFeed';
+import AttachmentSection from '~/components/CardDetails/AttachmentSection';
+import ChecklistSection from '~/components/CardDetails/Checklist/ChecklistSection';
+import CommentSection from '~/components/CardDetails/CommentSection';
+import LabelsSection from '~/components/CardDetails/LabelsSection';
+import MemberSection from '~/components/CardDetails/MemberSection';
+import LabelSelector from '~/components/Label/LabelSelector';
 import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
 import { apiService } from '~/services/api';
 import { useBoardStore } from '~/stores/boardStore';
-import CommentSection from '~/components/CardDetails/CommentSection';
-import AttachmentSection from '~/components/CardDetails/AttachmentSection';
-import ChecklistSection from '~/components/Checklist/ChecklistSection';
-import LabelChip from '~/components/Label/LabelChip';
-import LabelSelector from '~/components/Label/LabelSelector';
-import CheckIcon from '@mui/icons-material/Check';
 
 // Sidebar Action Button Component
 const SidebarButton = ({ icon, label, onClick, disabled = false }) => (
@@ -97,7 +97,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
   // Store functions
   const storeAssign = useBoardStore((s) => s.assignCardMember);
-  const storeUnassign = useBoardStore((s) => s.unassignCardMember);
   const boardMembers = useBoardStore((s) => s.board?.members ?? [], shallow);
   const updateCard = useBoardStore((s) => s.updateCard);
   const columns = useBoardStore((s) => s.board?.columns ?? []);
@@ -291,19 +290,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
     } catch (err) {
       console.error('assign error:', err);
       toast.error('Failed to assign member');
-    }
-  };
-
-  const unassignHandler = async (member) => {
-    if (!currentCard) return;
-    const memberId = member?.id ?? getUserIdFrom(member);
-    if (!memberId) return;
-
-    try {
-      await storeUnassign(currentCard.columnId, currentCard.id, memberId);
-    } catch (err) {
-      console.error('unassign error:', err);
-      toast.error('Failed to remove member');
     }
   };
 
@@ -663,88 +649,10 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                 </Box>
 
                 {/* Members Section */}
-                <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <GroupIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      Members
-                    </Typography>
-                  </Box>
-
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                    {currentCard.members?.map(m => {
-                      const displayName = getDisplayNameFrom(m);
-                      const uid = getUserIdFrom(m);
-                      return (
-                        <Tooltip key={uid} title={`${displayName} - Click to remove`}>
-                          <Avatar
-                            src={getAvatarFrom(m)}
-                            sx={{
-                              width: 32,
-                              height: 32,
-                              cursor: 'pointer',
-                              '&:hover': { opacity: 0.7 }
-                            }}
-                            onClick={() => {
-                              if (window.confirm(`Remove ${displayName}?`)) {
-                                unassignHandler(m);
-                              }
-                            }}
-                          >
-                            {displayName?.[0]?.toUpperCase() ?? '?'}
-                          </Avatar>
-                        </Tooltip>
-                      );
-                    })}
-
-                    <IconButton
-                      size="small"
-                      onClick={handleOpenMemberMenu}
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        bgcolor: 'action.hover',
-                        '&:hover': { bgcolor: 'action.selected' }
-                      }}
-                    >
-                      <GroupIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </Box>
+                <MemberSection card={currentCard} />
 
                 {/* Labels Section */}
-                {currentCard.labels && currentCard.labels.length > 0 && (
-                  <Box sx={{ mb: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <LabelIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        Labels
-                      </Typography>
-                    </Box>
-
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      {currentCard.labels.map((label) => (
-                        <LabelChip
-                          key={label.id}
-                          label={label}
-                          onDelete={() => removeLabelFromCard(currentCard.columnId, currentCard.id, label.id)}
-                        />
-                      ))}
-                      <IconButton
-                        size="small"
-                        onClick={() => setLabelSelectorOpen(true)}
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          bgcolor: 'action.hover',
-                          '&:hover': { bgcolor: 'action.selected' },
-                        }}
-                      >
-                        <LabelIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                )}
+                <LabelsSection card={currentCard} onOpenLabelSelector={() => setLabelSelectorOpen(true)} />
 
                 {/* Description */}
                 <Box sx={{ mb: 3 }}>
@@ -808,7 +716,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                       onClick={() => setEditing(true)}
                     >
                       {description ? (
-                        <div dangerouslySetInnerHTML={{ __html: description }} />
+                          <div dangerouslySetInnerHTML={{ __html: description }} />
                       ) : (
                         <Typography color="text.secondary">
                           Add a more detailed description...
@@ -820,34 +728,16 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
 
                 {/* Attachments */}
                 <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <AttachmentIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      Attachments
-                    </Typography>
-                  </Box>
                   <AttachmentSection card={currentCard} />
                 </Box>
 
                 {/* Checklists */}
                 <Box sx={{ mb: 3 }} data-checklist-section>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <CheckIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      Checklists
-                    </Typography>
-                  </Box>
                   <ChecklistSection card={currentCard} />
                 </Box>
 
                 {/* Comments */}
                 <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <CommentIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      Activity
-                    </Typography>
-                  </Box>
                   <CommentSection card={currentCard} />
                 </Box>
 

@@ -25,11 +25,15 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
   const currentCard = storeCard ?? card;
 
   const shouldShowCardAction = () => {
+    const hasChecklistWithItems = !!currentCard?.checklists?.some(
+      cl => (cl.items?.length ?? 0) > 0
+    );
+
     return (
       !!currentCard?.members?.length ||
       !!currentCard?.comments?.length ||
       !!currentCard?.attachments?.length ||
-      (currentCard?.checklists && currentCard.checklists.length > 0)
+      hasChecklistWithItems
     );
   };
 
