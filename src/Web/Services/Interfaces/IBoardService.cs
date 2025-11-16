@@ -19,5 +19,9 @@ namespace ProjectManagement.Services.Interfaces
         Task<bool> RemoveMemberAsync(string boardId, string memberId, string userId);
         Task<bool> UpdateMemberRoleAsync(string boardId, string memberId, string role, string userId);
         Task TransferOwnershipAsync(string boardId, string newOwnerId, string currentUserId);
+        Task<BoardDto> CloneBoardAsync(string boardId, CloneBoardDto cloneBoardDto, string userId);
+        Task<BoardDto> SaveAsTemplateAsync(string boardId, string userId);
+        Task<List<BoardDto>> GetTemplatesAsync(string userId);
+        Task<BoardDto> CreateFromTemplateAsync(string templateId, CreateBoardFromTemplateDto createDto, string userId);
     }
 }

@@ -54,7 +54,6 @@ namespace ProjectManagement.Controllers
                 return NotFound();
 
             return CreatedAtAction(nameof(GetCard), new { boardId = card.BoardId, columnId, cardId = card.Id }, card);
-
         }
 
         [HttpPut("{cardId}")]
@@ -145,6 +144,32 @@ namespace ProjectManagement.Controllers
                 return NotFound();
 
             return Ok(await _cardService.GetCardAsync(cardId));
+        }
+
+        [HttpPost("{cardId}/clone")]
+        [RequirePermission(Permissions.Cards.Create)]
+        public async Task<ActionResult<CardDto>> CloneCard(
+            string boardId,
+            string columnId,
+            string cardId,
+            [FromBody] CloneCardDto cloneDto)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            try
+            {
+                var clonedCard = await _cardService.CloneCardAsync(columnId, cardId, cloneDto, userId);
+                return CreatedAtAction(
+                    nameof(GetCard),
+                    new { boardId, columnId, cardId = clonedCard.Id },
+                    clonedCard);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
         }
     }
 }

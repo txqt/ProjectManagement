@@ -1,4 +1,7 @@
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import LockIcon from "@mui/icons-material/Lock";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PublicIcon from "@mui/icons-material/Public";
 import SearchIcon from "@mui/icons-material/Search";
 import {
@@ -14,35 +17,37 @@ import {
   DialogTitle,
   FormControl,
   Grid,
+  IconButton,
   InputAdornment,
   InputLabel,
   ListItemIcon,
   ListItemText,
+  Menu,
   MenuItem,
   Pagination,
   Select,
   TextField,
   Typography
 } from "@mui/material";
-import { useEffect, useState, useCallback } from "react";
+import { debounce } from "lodash";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { useApi } from "~/hooks/useApi";
 import { apiService } from "~/services/api";
-import { toast } from "react-toastify";
-import { debounce } from "lodash";
 
 export default function BoardListView() {
   const { executeRequest } = useApi();
-  
+
   const [boards, setBoards] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("title");
   const [sortOrder, setSortOrder] = useState("asc");
@@ -50,6 +55,46 @@ export default function BoardListView() {
   const initialBoardState = { title: "", description: "", type: "private" };
   const [newBoard, setNewBoard] = useState(initialBoardState);
   const navigate = useNavigate();
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [selectedBoard, setSelectedBoard] = useState(null);
+
+  const handleOpenMenu = (event, board) => {
+    event.stopPropagation();
+    setMenuAnchor(event.currentTarget);
+    setSelectedBoard(board);
+  };
+
+  const handleCloseMenu = () => {
+    setMenuAnchor(null);
+    setSelectedBoard(null);
+  };
+
+  const handleCloneBoard = async () => {
+    if (!selectedBoard) return;
+
+    try {
+      const cloneData = {
+        title: selectedBoard.title + " (Clone)",
+        includeCards: true,
+        includeLists: true,
+      };
+
+      const { success, error } = await executeRequest(() =>
+        apiService.cloneBoard(selectedBoard.id, cloneData)
+      );
+
+      if (success) {
+        toast.success("Board cloned successfully!");
+        fetchBoards(currentPage, itemsPerPage, searchTerm, sortBy, sortOrder);
+      } else {
+        toast.error(error || "Failed to clone board");
+      }
+    } catch (err) {
+      toast.error("Clone failed: " + err.message);
+    }
+  };
+
+  const STORAGE_KEY = "board-list-options";
 
   const typeOptions = [
     { value: "private", label: "Private", desc: "Only invited members", icon: <LockIcon fontSize="small" /> },
@@ -87,9 +132,31 @@ export default function BoardListView() {
   const debouncedFetch = useCallback(
     debounce((page, pageSize, search, sort, order) => {
       fetchBoards(page, pageSize, search, sort, order);
-    }, 500),
+    }, 0),
     [fetchBoards]
   );
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const opts = JSON.parse(saved);
+
+      if (opts.sortBy) setSortBy(opts.sortBy);
+      if (opts.sortOrder) setSortOrder(opts.sortOrder);
+      if (opts.itemsPerPage) setItemsPerPage(opts.itemsPerPage);
+      if (opts.currentPage) setCurrentPage(opts.currentPage);
+    }
+  }, []);
+
+  useEffect(() => {
+    const opts = {
+      sortBy,
+      sortOrder,
+      itemsPerPage,
+      currentPage,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(opts));
+  }, [sortBy, sortOrder, itemsPerPage, currentPage]);
 
   useEffect(() => {
     debouncedFetch(currentPage, itemsPerPage, searchTerm, sortBy, sortOrder);
@@ -153,7 +220,7 @@ export default function BoardListView() {
 
       <Box mb={3}>
         <Grid container spacing={2} alignItems="center">
-          <Grid size={{xs:12, sm:6, md:4}}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <TextField
               fullWidth
               size="small"
@@ -170,7 +237,7 @@ export default function BoardListView() {
             />
           </Grid>
 
-          <Grid size={{xs:12, sm:6, md:3}}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Sort By</InputLabel>
               <Select
@@ -187,7 +254,7 @@ export default function BoardListView() {
             </FormControl>
           </Grid>
 
-          <Grid size={{xs:12, sm:6, md:3}}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Boards per page</InputLabel>
               <Select
@@ -203,7 +270,7 @@ export default function BoardListView() {
             </FormControl>
           </Grid>
 
-          <Grid size={{xs:12, sm:6, md:2}}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <Typography variant="body2" color="text.secondary" textAlign="right">
               {totalCount > 0 ? `${startIndex}-${endIndex} of ${totalCount}` : 'No results'}
             </Typography>
@@ -231,6 +298,14 @@ export default function BoardListView() {
                     transition: "all 0.3s"
                   }}
                 >
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleOpenMenu(e, board)}
+                    sx={{ position: 'absolute', top: 8, right: 8, zIndex: 10, color: "white" }}
+                  >
+                    <MoreVertIcon />
+                  </IconButton>
+
                   <CardActionArea
                     onClick={() => navigate(`/boards/${board.id}`)}
                     sx={{ height: "100%", position: "relative" }}
@@ -311,11 +386,11 @@ export default function BoardListView() {
           )}
         </>
       ) : (
-        <Box 
-          display="flex" 
-          flexDirection="column" 
-          alignItems="center" 
-          justifyContent="center" 
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
           py={8}
         >
           <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -390,6 +465,35 @@ export default function BoardListView() {
           </Button>
         </DialogActions>
       </Dialog>
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={handleCloseMenu}
+      >
+        <MenuItem
+          onClick={() => {
+            handleCloseMenu();
+            handleCloneBoard();
+          }}
+        >
+          <ListItemIcon>
+            <ContentCopyIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Clone board" />
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            handleCloseMenu();
+            handleSaveTemplate();
+          }}
+        >
+          <ListItemIcon>
+            <AutoAwesomeIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Save as template" />
+        </MenuItem>
+      </Menu>
     </Box>
   );
 }

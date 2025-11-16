@@ -126,7 +126,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const closeActivityDialog = () => setActivityDialogOpen(false);
 
   const [labelSelectorOpen, setLabelSelectorOpen] = useState(false);
-   // Label & Checklist functions
+  // Label & Checklist functions
   const boardLabels = useBoardStore((s) => s.boardLabels ?? []);
   const createLabel = useBoardStore((s) => s.createLabel);
   const updateLabel = useBoardStore((s) => s.updateLabel);
@@ -445,6 +445,33 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
           label="Cover"
           onClick={openAddCoverMenu}
         />
+        <SidebarButton
+          icon={<ContentCopyIcon fontSize="small" />}
+          label="Clone Card"
+          onClick={async () => {
+            const newTitle = prompt('Enter title for cloned card:', `${currentCard.title} (Copy)`);
+            if (newTitle) {
+              try {
+                await useBoardStore.getState().cloneCard(
+                  currentCard.columnId,
+                  currentCard.id,
+                  {
+                    title: newTitle,
+                    includeMembers: false,
+                    includeComments: false,
+                    includeAttachments: false,
+                    includeChecklists: true,
+                    includeLabels: true
+                  }
+                );
+                toast.success('Card cloned successfully');
+                onClose();
+              } catch {
+                toast.error('Failed to clone card');
+              }
+            }
+          }}
+        />
       </Stack>
 
       <Divider sx={{ my: 2 }} />
@@ -716,7 +743,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                       onClick={() => setEditing(true)}
                     >
                       {description ? (
-                          <div dangerouslySetInnerHTML={{ __html: description }} />
+                        <div dangerouslySetInnerHTML={{ __html: description }} />
                       ) : (
                         <Typography color="text.secondary">
                           Add a more detailed description...

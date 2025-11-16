@@ -1794,4 +1794,78 @@ export const useBoardStore = create((set, get) => ({
             }
         }));
     },
+    // Clone board
+    cloneBoard: async (boardId, cloneData) => {
+        try {
+            const clonedBoard = await apiService.cloneBoard(boardId, cloneData);
+            return clonedBoard;
+        } catch (err) {
+            console.error('cloneBoard error:', err);
+            throw err;
+        }
+    },
+
+    // Save as template
+    saveAsTemplate: async (boardId) => {
+        try {
+            const template = await apiService.saveAsTemplate(boardId);
+            return template;
+        } catch (err) {
+            console.error('saveAsTemplate error:', err);
+            throw err;
+        }
+    },
+
+    // Clone column
+    cloneColumn: async (columnId, cloneData) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
+
+        try {
+            const clonedColumn = await apiService.cloneColumn(boardId, columnId, cloneData);
+
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: [...state.board.columns, clonedColumn]
+                        .sort((a, b) => (a.rank || '').localeCompare(b.rank || ''))
+                }
+            }));
+
+            return clonedColumn;
+        } catch (err) {
+            console.error('cloneColumn error:', err);
+            throw err;
+        }
+    },
+
+    // Clone card
+    cloneCard: async (columnId, cardId, cloneData) => {
+        const boardId = get().boardId;
+        if (!boardId) throw new Error('No board selected');
+
+        try {
+            const clonedCard = await apiService.cloneCard(boardId, columnId, cardId, cloneData);
+
+            set(state => ({
+                board: {
+                    ...state.board,
+                    columns: state.board.columns.map(col =>
+                        col.id === columnId
+                            ? {
+                                ...col,
+                                cards: [...col.cards, clonedCard]
+                                    .sort((a, b) => (a.rank || '').localeCompare(b.rank || ''))
+                            }
+                            : col
+                    )
+                }
+            }));
+
+            return clonedCard;
+        } catch (err) {
+            console.error('cloneCard error:', err);
+            throw err;
+        }
+    },
 }));

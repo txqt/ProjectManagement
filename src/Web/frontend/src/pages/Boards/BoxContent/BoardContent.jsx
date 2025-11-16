@@ -35,6 +35,8 @@ function BoardContent({ board }) {
     const assignCardMember = useBoardStore(state => state.assignCardMember)
     const unassignCardMember = useBoardStore(state => state.unassignCardMember)
     const pendingTempIds = useBoardStore(state => state.pendingTempIds)
+    const cloneColumn = useBoardStore(state => state.cloneColumn)
+    const cloneCard = useBoardStore(state => state.cloneCard)
 
     const mouseSensor = useSensor(MouseSensor, {
         activationConstraint: { distance: 5 }
@@ -369,7 +371,10 @@ function BoardContent({ board }) {
                     deleteCard={deleteCard}
                     pendingTempIds={pendingTempIds}
                     assignCardMember={assignCardMember}
-                    unassignCardMember={unassignCardMember} />
+                    unassignCardMember={unassignCardMember} 
+                    cloneColumn={cloneColumn}
+                    cloneCard={cloneCard}
+                    />
                 {createPortal(
                     <DragOverlay dropAnimation={customDropAnimation}>
                         {activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN && (

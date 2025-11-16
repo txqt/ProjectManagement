@@ -441,6 +441,186 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
         }
 
+        public async Task<BoardDto> CloneBoardAsync(string boardId, CloneBoardDto cloneBoardDto, string userId)
+        {
+            var sourceBoard = await _context.Boards
+                .Include(b => b.Columns)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Members)
+                .Include(b => b.Columns)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Labels)
+                .ThenInclude(cl => cl.Label)
+                .Include(b => b.Columns)
+                .ThenInclude(c => c.Cards)
+                .ThenInclude(card => card.Checklists)
+                .ThenInclude(checklist => checklist.Items)
+                .Include(b => b.Members)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(b => b.Id == boardId);
+
+            if (sourceBoard == null)
+                throw new ArgumentException("Board not found");
+
+            var newBoard = new Board
+            {
+                Id = Guid.NewGuid().ToString(),
+                Title = cloneBoardDto.Title,
+                Description = sourceBoard.Description,
+                Type = sourceBoard.Type,
+                OwnerId = userId,
+                Cover = sourceBoard.Cover,
+                AllowShareInviteLink = sourceBoard.AllowShareInviteLink,
+                AllowCommentsOnCard = sourceBoard.AllowCommentsOnCard,
+                AllowAttachmentsOnCard = sourceBoard.AllowAttachmentsOnCard,
+                CreatedAt = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow
+            };
+
+            _context.Boards.Add(newBoard);
+
+            // Clone columns
+            foreach (var sourceColumn in sourceBoard.Columns.OrderBy(c => c.Rank))
+            {
+                var newColumn = new Column
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    BoardId = newBoard.Id,
+                    Title = sourceColumn.Title,
+                    Rank = sourceColumn.Rank,
+                    CreatedAt = DateTime.UtcNow,
+                    LastModified = DateTime.UtcNow
+                };
+
+                _context.Columns.Add(newColumn);
+
+                // Clone cards if requested
+                if (cloneBoardDto.IncludeCards)
+                {
+                    foreach (var sourceCard in sourceColumn.Cards.OrderBy(c => c.Rank))
+                    {
+                        var newCard = new Card
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            BoardId = newBoard.Id,
+                            ColumnId = newColumn.Id,
+                            Title = sourceCard.Title,
+                            Description = sourceCard.Description,
+                            Cover = sourceCard.Cover,
+                            Rank = sourceCard.Rank,
+                            CreatedAt = DateTime.UtcNow,
+                            LastModified = DateTime.UtcNow
+                        };
+
+                        _context.Cards.Add(newCard);
+
+                        // Clone labels
+                        foreach (var cardLabel in sourceCard.Labels)
+                        {
+                            _context.CardLabels.Add(new CardLabel
+                            {
+                                Id = Guid.NewGuid().ToString(), CardId = newCard.Id, LabelId = cardLabel.LabelId
+                            });
+                        }
+
+                        // Clone checklists
+                        foreach (var sourceChecklist in sourceCard.Checklists)
+                        {
+                            var newChecklist = new Checklist
+                            {
+                                Id = Guid.NewGuid().ToString(),
+                                CardId = newCard.Id,
+                                Title = sourceChecklist.Title,
+                                Position = sourceChecklist.Position
+                            };
+
+                            _context.Checklists.Add(newChecklist);
+
+                            foreach (var sourceItem in sourceChecklist.Items)
+                            {
+                                _context.ChecklistItems.Add(new ChecklistItem
+                                {
+                                    Id = Guid.NewGuid().ToString(),
+                                    ChecklistId = newChecklist.Id,
+                                    Title = sourceItem.Title,
+                                    IsCompleted = false,
+                                    Position = sourceItem.Position
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Clone members if requested
+            if (cloneBoardDto.IncludeMembers)
+            {
+                foreach (var sourceMember in sourceBoard.Members)
+                {
+                    _context.BoardMembers.Add(new BoardMember
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        BoardId = newBoard.Id,
+                        UserId = sourceMember.UserId,
+                        Role = sourceMember.Role,
+                        JoinedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            
+            await InvalidateUserBoardsCache(userId);
+
+            return await GetBoardAsync(newBoard.Id, userId);
+        }
+
+        public async Task<BoardDto> SaveAsTemplateAsync(string boardId, string userId)
+        {
+            var board = await _context.Boards
+                .Include(b => b.Columns)
+                .ThenInclude(c => c.Cards)
+                .FirstOrDefaultAsync(b => b.Id == boardId && b.OwnerId == userId);
+
+            if (board == null)
+                throw new ArgumentException("Board not found or access denied");
+
+            // Mark as template (you might want to add an IsTemplate flag to Board entity)
+            board.Type = "template";
+            board.LastModified = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<BoardDto>(board);
+        }
+
+        public async Task<List<BoardDto>> GetTemplatesAsync(string userId)
+        {
+            var templates = await _context.Boards
+                .Include(b => b.Columns)
+                .Where(b => b.Type == "template" && b.OwnerId == userId)
+                .OrderByDescending(b => b.CreatedAt)
+                .ToListAsync();
+
+            return _mapper.Map<List<BoardDto>>(templates);
+        }
+
+        public async Task<BoardDto> CreateFromTemplateAsync(
+            string templateId,
+            CreateBoardFromTemplateDto createDto,
+            string userId)
+        {
+            var cloneDto = new CloneBoardDto { Title = createDto.Title, IncludeCards = true, IncludeMembers = false };
+
+            var newBoard = await CloneBoardAsync(templateId, cloneDto, userId);
+
+            // Update type to user's preference
+            await UpdateBoardAsync(newBoard.Id,
+                new UpdateBoardDto { Type = createDto.Type, Description = createDto.Description }, userId);
+
+            return await GetBoardAsync(newBoard.Id, userId);
+        }
+
         private async Task InvalidateUserBoardsCache(string userId)
         {
             await _cache.RemoveAsync($"user_boards:{userId}");

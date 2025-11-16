@@ -47,9 +47,9 @@ namespace ProjectManagement.Services
                 .Include(c => c.Comments)
                 .ThenInclude(comment => comment.User)
                 .Include(c => c.Attachments)
-                .Include(c=>c.Checklists)
+                .Include(c => c.Checklists)
                 .ThenInclude(cl => cl.Items)
-                .Include(c=>c.Labels)
+                .Include(c => c.Labels)
                 .ThenInclude(cl => cl.Label)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(c => c.Id == cardId);
@@ -104,10 +104,10 @@ namespace ProjectManagement.Services
             );
 
             var createdCard = await GetCardAsync(card.Id);
-            
+
             await _cache.RemoveAsync($"board:{card.BoardId}");
-            await _cache.RemoveAsync($"user_boards:{userId}"); 
-            
+            await _cache.RemoveAsync($"user_boards:{userId}");
+
             await _boardNotificationService.BroadcastCardCreated(card.BoardId, card.ColumnId, createdCard, userId);
             return createdCard!;
         }
@@ -151,7 +151,7 @@ namespace ProjectManagement.Services
             _mapper.Map(updateCardDto, card);
             card.LastModified = DateTime.UtcNow;
 
-            if(updateCardDto.Cover == null)
+            if (updateCardDto.Cover == null)
             {
                 card.Cover = null;
             }
@@ -186,7 +186,7 @@ namespace ProjectManagement.Services
 
             var updatedCard = await GetCardAsync(cardId);
             await _boardNotificationService.BroadcastCardUpdated(card.BoardId, card.ColumnId, updatedCard, userId);
-            
+
             await _cache.RemoveAsync($"board:{card.BoardId}");
             await _cache.RemoveAsync($"user_boards:{userId}");
 
@@ -209,7 +209,7 @@ namespace ProjectManagement.Services
 
             var dto = _mapper.Map<CardDto>(card);
             await _boardNotificationService.BroadcastCardDeleted(dto.BoardId, dto.ColumnId, cardId, userId);
-            
+
             await _cache.RemoveAsync($"board:{card.BoardId}");
 
             return dto;
@@ -377,7 +377,7 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
             var dto = _mapper.Map<CardDto>(card);
-            
+
             await ActivityLogger.LogMemberAssignedAsync(
                 _activityLogService,
                 userId,
@@ -394,7 +394,7 @@ namespace ProjectManagement.Services
                 dto,
                 user.Id,
                 userId);
-            
+
             await _cache.RemoveAsync($"board:{card.BoardId}");
             await _cache.RemoveAsync($"user_boards:{userId}");
 
@@ -433,7 +433,7 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
             var dto = _mapper.Map<CardDto>(card);
-            
+
             await _cache.RemoveAsync($"board:{card.BoardId}");
             await _cache.RemoveAsync($"user_boards:{userId}");
 
@@ -445,6 +445,147 @@ namespace ProjectManagement.Services
                 userId);
 
             return true;
+        }
+
+        public async Task<CardDto> CloneCardAsync(
+            string columnId,
+            string cardId,
+            CloneCardDto cloneDto,
+            string userId)
+        {
+            var sourceCard = await _context.Cards
+                .Include(c => c.Members)
+                .Include(c => c.Labels)
+                .ThenInclude(cl => cl.Label)
+                .Include(c => c.Checklists)
+                .ThenInclude(checklist => checklist.Items)
+                .Include(c => c.Comments)
+                .Include(c => c.Attachments)
+                .FirstOrDefaultAsync(c => c.Id == cardId);
+
+            if (sourceCard == null)
+                throw new ArgumentException("Card not found");
+
+            // Get last card rank in column
+            var column = await _context.Columns
+                .Include(c => c.Cards)
+                .FirstOrDefaultAsync(c => c.Id == columnId);
+
+            if (column == null)
+                throw new ArgumentException("Column not found");
+
+            var lastCard = column.Cards.OrderByDescending(c => c.Rank).FirstOrDefault();
+            var newRank = lastCard != null
+                ? LexoRank.Parse(lastCard.Rank).GenNext().ToString()
+                : LexoRank.Middle().ToString();
+
+            var newCard = new Card
+            {
+                Id = Guid.NewGuid().ToString(),
+                BoardId = sourceCard.BoardId,
+                ColumnId = columnId,
+                Title = cloneDto.Title,
+                Description = sourceCard.Description,
+                Cover = sourceCard.Cover,
+                Rank = newRank,
+                CreatedAt = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow
+            };
+
+            _context.Cards.Add(newCard);
+
+            // Clone members if requested
+            if (cloneDto.IncludeMembers)
+            {
+                foreach (var member in sourceCard.Members)
+                {
+                    _context.CardMembers.Add(new CardMember
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        CardId = newCard.Id,
+                        UserId = member.UserId,
+                        AssignedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            // Clone labels if requested
+            if (cloneDto.IncludeLabels)
+            {
+                foreach (var cardLabel in sourceCard.Labels)
+                {
+                    _context.CardLabels.Add(new CardLabel
+                    {
+                        Id = Guid.NewGuid().ToString(), CardId = newCard.Id, LabelId = cardLabel.LabelId
+                    });
+                }
+            }
+
+            // Clone checklists if requested
+            if (cloneDto.IncludeChecklists)
+            {
+                foreach (var sourceChecklist in sourceCard.Checklists)
+                {
+                    var newChecklist = new Checklist
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        CardId = newCard.Id,
+                        Title = sourceChecklist.Title,
+                        Position = sourceChecklist.Position
+                    };
+
+                    _context.Checklists.Add(newChecklist);
+
+                    foreach (var sourceItem in sourceChecklist.Items)
+                    {
+                        _context.ChecklistItems.Add(new ChecklistItem
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            ChecklistId = newChecklist.Id,
+                            Title = sourceItem.Title,
+                            IsCompleted = false,
+                            Position = sourceItem.Position
+                        });
+                    }
+                }
+            }
+
+            // Clone comments if requested
+            if (cloneDto.IncludeComments)
+            {
+                foreach (var comment in sourceCard.Comments)
+                {
+                    _context.Comments.Add(new Comment
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        CardId = newCard.Id,
+                        UserId = comment.UserId,
+                        Content = comment.Content,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            // Clone attachments if requested (URLs only, not actual files)
+            if (cloneDto.IncludeAttachments)
+            {
+                foreach (var attachment in sourceCard.Attachments)
+                {
+                    _context.Attachments.Add(new Attachment
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        CardId = newCard.Id,
+                        Name = $"Copy of {attachment.Name}",
+                        Url = attachment.Url,
+                        Type = attachment.Type,
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            await _cache.RemoveAsync($"board:{sourceCard.BoardId}");
+
+            return await GetCardAsync(newCard.Id);
         }
     }
 }

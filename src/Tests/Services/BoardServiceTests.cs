@@ -6,6 +6,7 @@ using Moq;
 using ProjectManagement.Data;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Board;
+using ProjectManagement.Models.DTOs.Common;
 using ProjectManagement.Services;
 using ProjectManagement.Services.Interfaces;
 using Xunit;
@@ -143,12 +144,18 @@ namespace ProjectManagement.Tests.Services
                 .ReturnsAsync((IEnumerable<BoardDto>)null);
 
             // Act
-            var result = await _boardService.GetUserBoardsAsync(_testUserId);
+            var result = await _boardService.GetUserBoardsAsync(
+                _testUserId, 
+                new PaginationParams(), 
+                "", 
+                "title", 
+                "asc");
 
             // Assert
             result.Should().NotBeNull();
-            result.Should().HaveCount(1);
-            result.First().Title.Should().Be("Owned Board");
+            result.Items.Should().HaveCount(1);
+            result.Items.First().Title.Should().Be("Owned Board");
+            result.TotalCount.Should().Be(1);
         }
 
         [Fact]

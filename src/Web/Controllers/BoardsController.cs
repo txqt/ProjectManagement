@@ -14,7 +14,7 @@ namespace ProjectManagement.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [RateLimit(RequestsPerMinute = 30, RequestsPerHour = 100)] 
+    [RateLimit(RequestsPerMinute = 30, RequestsPerHour = 100)]
     public class BoardsController : ControllerBase
     {
         private readonly IBoardService _boardService;
@@ -38,19 +38,15 @@ namespace ProjectManagement.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            var paginationParams = new PaginationParams
-            {
-                Page = page,
-                PageSize = pageSize
-            };
+            var paginationParams = new PaginationParams { Page = page, PageSize = pageSize };
 
             var result = await _boardService.GetUserBoardsAsync(
-                userId, 
-                paginationParams, 
-                search, 
-                sortBy, 
+                userId,
+                paginationParams,
+                search,
+                sortBy,
                 sortOrder);
-            
+
             return Ok(result);
         }
 
@@ -113,7 +109,8 @@ namespace ProjectManagement.Controllers
 
         [HttpPost("{boardId}/members")]
         [RequirePermission(Permissions.Boards.ManageMembers)]
-        public async Task<ActionResult<BoardMemberDto>> AddMember(string boardId, [FromBody] AddBoardMemberDto addMemberDto)
+        public async Task<ActionResult<BoardMemberDto>> AddMember(string boardId,
+            [FromBody] AddBoardMemberDto addMemberDto)
         {
             try
             {
@@ -164,8 +161,8 @@ namespace ProjectManagement.Controllers
         [HttpPut("{boardId}/members/{memberId}/role")]
         [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult> UpdateMemberRole(
-            string boardId, 
-            string memberId, 
+            string boardId,
+            string memberId,
             [FromBody] UpdateMemberRoleDto updateRoleDto)
         {
             try
@@ -175,13 +172,8 @@ namespace ProjectManagement.Controllers
                     return Unauthorized();
 
                 await _boardService.UpdateMemberRoleAsync(boardId, memberId, updateRoleDto.Role, userId);
-        
-                return Ok(new 
-                { 
-                    message = "Member role updated successfully",
-                    memberId,
-                    newRole = updateRoleDto.Role 
-                });
+
+                return Ok(new { message = "Member role updated successfully", memberId, newRole = updateRoleDto.Role });
             }
             catch (ArgumentException ex)
             {
@@ -196,7 +188,7 @@ namespace ProjectManagement.Controllers
                 return Conflict(new { error = ex.Message });
             }
         }
-        
+
         [HttpPost("{boardId}/transfer-ownership")]
         [RequirePermission(Permissions.Boards.Delete)] // Chỉ owner mới có permission này
         public async Task<ActionResult> TransferOwnership(
@@ -210,12 +202,8 @@ namespace ProjectManagement.Controllers
                     return Unauthorized();
 
                 await _boardService.TransferOwnershipAsync(boardId, dto.NewOwnerId, userId);
-        
-                return Ok(new 
-                { 
-                    message = "Board ownership transferred successfully",
-                    newOwnerId = dto.NewOwnerId 
-                });
+
+                return Ok(new { message = "Board ownership transferred successfully", newOwnerId = dto.NewOwnerId });
             }
             catch (ArgumentException ex)
             {
@@ -228,6 +216,75 @@ namespace ProjectManagement.Controllers
             catch (InvalidOperationException ex)
             {
                 return Conflict(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("{boardId}/clone")]
+        [RequirePermission(Permissions.Boards.View)]
+        public async Task<ActionResult<BoardDto>> CloneBoard(string boardId, [FromBody] CloneBoardDto cloneBoardDto)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            try
+            {
+                var clonedBoard = await _boardService.CloneBoardAsync(boardId, cloneBoardDto, userId);
+                return CreatedAtAction(nameof(GetBoard), new { boardId = clonedBoard.Id }, clonedBoard);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("{boardId}/save-as-template")]
+        [RequirePermission(Permissions.Boards.Edit)]
+        public async Task<ActionResult<BoardDto>> SaveAsTemplate(string boardId)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            try
+            {
+                var template = await _boardService.SaveAsTemplateAsync(boardId, userId);
+                return Ok(template);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("templates")]
+        public async Task<ActionResult<List<BoardDto>>> GetTemplates()
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var templates = await _boardService.GetTemplatesAsync(userId);
+            return Ok(templates);
+        }
+
+        [HttpPost("templates/{templateId}/create")]
+        public async Task<ActionResult<BoardDto>> CreateFromTemplate(
+            string templateId,
+            [FromBody] CreateBoardFromTemplateDto createDto)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            try
+            {
+                var board = await _boardService.CreateFromTemplateAsync(templateId, createDto, userId);
+                return CreatedAtAction(nameof(GetBoard), new { boardId = board.Id }, board);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { error = ex.Message });
             }
         }
     }

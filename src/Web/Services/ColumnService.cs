@@ -14,13 +14,15 @@ namespace ProjectManagement.Services
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly IBoardNotificationService _boardNotificationService;
+        private readonly ICacheService _cache;
 
         public ColumnService(ApplicationDbContext context, IMapper mapper,
-            IBoardNotificationService boardNotificationService)
+            IBoardNotificationService boardNotificationService, ICacheService cache)
         {
             _context = context;
             _mapper = mapper;
             _boardNotificationService = boardNotificationService;
+            _cache = cache;
         }
 
         public async Task<ColumnDto?> GetColumnAsync(string columnId, string userId)
@@ -173,6 +175,156 @@ namespace ProjectManagement.Services
             await _boardNotificationService.BroadcastColumnsReordered(boardId, columnIds,
                 _mapper.Map<List<ColumnDto>>(columns), userId);
             return true;
+        }
+
+        public async Task<ColumnDto> CloneColumnAsync(
+            string boardId,
+            string columnId,
+            CloneColumnDto cloneDto,
+            string userId)
+        {
+            var sourceColumn = await _context.Columns
+                .Include(c => c.Cards)
+                .ThenInclude(c=>c.Members)
+                .Include(c => c.Cards)
+                .ThenInclude(card => card.Labels)
+                .ThenInclude(cl => cl.Label)
+                .Include(c => c.Cards)
+                .ThenInclude(card => card.Checklists)
+                .ThenInclude(checklist => checklist.Items)
+                .Include(c => c.Cards)
+                .ThenInclude(card => card.Attachments)
+                .Include(c => c.Cards)
+                .ThenInclude(c => c.Comments)
+                .FirstOrDefaultAsync(c => c.Id == columnId && c.BoardId == boardId);
+
+            if (sourceColumn == null)
+                throw new ArgumentException("Column not found");
+
+            // Get last column rank
+            var lastColumn = await _context.Columns
+                .Where(c => c.BoardId == boardId)
+                .OrderByDescending(c => c.Rank)
+                .FirstOrDefaultAsync();
+
+            var newRank = lastColumn != null
+                ? LexoRank.Parse(lastColumn.Rank).GenNext().ToString()
+                : LexoRank.Middle().ToString();
+
+            var newColumn = new Column
+            {
+                Id = Guid.NewGuid().ToString(),
+                BoardId = boardId,
+                Title = cloneDto.Title,
+                Rank = newRank,
+                CreatedAt = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow
+            };
+
+            _context.Columns.Add(newColumn);
+
+            if (cloneDto.IncludeCards)
+            {
+                foreach (var sourceCard in sourceColumn.Cards.OrderBy(c => c.Rank))
+                {
+                    var newCard = new Card
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        BoardId = boardId,
+                        ColumnId = newColumn.Id,
+                        Title = sourceCard.Title,
+                        Description = sourceCard.Description,
+                        Cover = sourceCard.Cover,
+                        Rank = sourceCard.Rank,
+                        CreatedAt = DateTime.UtcNow,
+                        LastModified = DateTime.UtcNow
+                    };
+
+                    _context.Cards.Add(newCard);
+
+                    //Clone members
+                    foreach (var cardMember in sourceCard.Members)
+                    {
+                        _context.CardMembers.Add(new CardMember
+                        {
+                            Id = Guid.NewGuid().ToString(), 
+                            CardId = newCard.Id, 
+                            UserId = cardMember.UserId
+                        });
+                    }
+
+                    // Clone labels
+                    foreach (var cardLabel in sourceCard.Labels)
+                    {
+                        _context.CardLabels.Add(new CardLabel
+                        {
+                            Id = Guid.NewGuid().ToString(), CardId = newCard.Id, LabelId = cardLabel.LabelId
+                        });
+                    }
+
+                    // Clone checklists
+                    foreach (var sourceChecklist in sourceCard.Checklists)
+                    {
+                        var newChecklist = new Checklist
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            CardId = newCard.Id,
+                            Title = sourceChecklist.Title,
+                            Position = sourceChecklist.Position
+                        };
+
+                        _context.Checklists.Add(newChecklist);
+
+                        foreach (var sourceItem in sourceChecklist.Items)
+                        {
+                            _context.ChecklistItems.Add(new ChecklistItem
+                            {
+                                Id = Guid.NewGuid().ToString(),
+                                ChecklistId = newChecklist.Id,
+                                Title = sourceItem.Title,
+                                IsCompleted = false,
+                                Position = sourceItem.Position
+                            });
+                        }
+                    }
+
+                    //Clone attachments
+                    foreach (var sourceAttachment in sourceCard.Attachments)
+                    {
+                        var newAttachment = new Attachment
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            CardId = newCard.Id,
+                            Name = sourceAttachment.Name,
+                            Url = sourceAttachment.Url,
+                            Type = sourceAttachment.Type,
+                            CreatedAt = DateTime.UtcNow,
+                            LastModified = DateTime.UtcNow
+                        };
+                        _context.Attachments.Add(newAttachment);
+                    }
+
+                    //Clone comments
+                    foreach (var sourceComment in sourceCard.Comments)
+                    {
+                        var newComment = new Comment
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            CardId = newCard.Id,
+                            UserId = sourceComment.UserId,
+                            Content = sourceComment.Content,
+                            CreatedAt = DateTime.UtcNow,
+                            LastModified = DateTime.UtcNow
+                        };
+                        _context.Comments.Add(newComment);
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            await _cache.RemoveAsync($"board:{boardId}");
+
+            return await GetColumnAsync(newColumn.Id, userId);
         }
     }
 }

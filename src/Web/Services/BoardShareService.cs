@@ -1,7 +1,11 @@
-﻿using ProjectManagement.Data;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
+using ProjectManagement.Data;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Models.Domain.Entities;
+using ProjectManagement.Models.DTOs.BoardJoinRequest;
 using ProjectManagement.Models.DTOs.BoardShare;
+using ProjectManagement.Models.DTOs.Notification;
 using ProjectManagement.Services.Interfaces;
 using System.Security.Cryptography;
 
@@ -12,12 +16,20 @@ namespace ProjectManagement.Services
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly ICacheService _cache;
+        private readonly UserManager<ApplicationUser>  _userManager;
+        private readonly INotificationService _notificationService;
+        private readonly IBoardNotificationService _boardNotificationService;
+        private readonly IMapper  _mapper;
 
-        public BoardShareService(ApplicationDbContext context, IConfiguration configuration, ICacheService cache)
+        public BoardShareService(ApplicationDbContext context, IConfiguration configuration, ICacheService cache, UserManager<ApplicationUser> userManager, INotificationService notificationService, IBoardNotificationService boardNotificationService, IMapper mapper)
         {
             _context = context;
             _configuration = configuration;
             _cache = cache;
+            _userManager = userManager;
+            _notificationService = notificationService;
+            _boardNotificationService = boardNotificationService;
+            _mapper = mapper;
         }
 
         public async Task<ShareTokenResponseDto?> GetActiveShareTokenAsync(string boardId)
@@ -130,6 +142,34 @@ namespace ProjectManagement.Services
 
             _context.BoardJoinRequests.Add(joinRequest);
             await _context.SaveChangesAsync();
+            
+            // Notify board owner and admins
+            var adminIds = board.Members
+                .Where(m => string.Equals(m.Role, "admin", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(m.Role, "owner", StringComparison.OrdinalIgnoreCase))
+                .Select(m => m.UserId)
+                .ToList();
+
+            if (!adminIds.Contains(board.OwnerId))
+                adminIds.Add(board.OwnerId);
+
+            var user = await _userManager.FindByIdAsync(userId);
+
+            foreach (var adminId in adminIds)
+            {
+                await _notificationService.CreateNotificationAsync(new CreateNotificationDto
+                {
+                    UserId = adminId,
+                    Type = "board_join_request",
+                    Title = "New board join request",
+                    Message = $"{user?.UserName} wants to join \"{board.Title}\"",
+                    ActionUrl = $"/boards/{board.Id}/join-requests",
+                    BoardId = board.Id
+                });
+            }
+
+            var requestDto = _mapper.Map<BoardJoinRequestDto>(joinRequest);
+            await _boardNotificationService.BroadcastJoinRequestCreated(board.Id, requestDto);
 
             return new JoinBoardResponseDto { Success = true, Message = "Join request submitted", BoardId = board.Id, Action = "request_created" };
         }

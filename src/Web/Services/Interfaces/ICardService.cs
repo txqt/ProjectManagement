@@ -13,5 +13,6 @@ namespace ProjectManagement.Services.Interfaces
         Task<bool> ReorderCardsAsync(string boardId, string columnId, List<string> cardIds, string userId);
         Task<bool> AssignMemberAsync(string cardId, string memberEmail, string userId);
         Task<bool> UnassignMemberAsync(string cardId, string memberId, string userId);
+        Task<CardDto> CloneCardAsync(string columnId, string cardId, CloneCardDto cloneDto, string userId);
     }
 }

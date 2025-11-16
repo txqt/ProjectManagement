@@ -9,6 +9,7 @@ import ConditionalRender from '~/components/ConditionalRender/ConditionalRender'
 import { usePermissionAttribute } from '~/hooks/usePermissionAttribute'
 import { sortCardsByRank } from '~/utils/sorts'
 import ListCards from './ListCards/ListCards'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 // OPTIMIZATION: Memoize với custom comparison
 const Column = memo(({ dragHandleProps, column, ...props }) => {
@@ -130,6 +131,29 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
             open={open}
             onClose={handleClose}
           >
+            <ConditionalRender permission="columns.create">
+              <MenuItem onClick={async () => {
+                handleClose();
+                const newTitle = prompt('Enter title for cloned column:', `${column.title} (Copy)`);
+                if (newTitle) {
+                  try {
+                    console.log(props.cloneColumn);
+                    await props.cloneColumn(column.id, {
+                      title: newTitle,
+                      includeCards: true
+                    });
+                    toast.success('Column cloned successfully');
+                  } catch {
+                    toast.error('Failed to clone column');
+                  }
+                }
+              }}>
+                <ListItemIcon>
+                  <ContentCopyIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Clone this column</ListItemText>
+              </MenuItem>
+            </ConditionalRender>
             <ConditionalRender permission="boards.delete">
               <MenuItem onClick={handleDeleteColumn}>
                 <ListItemIcon>

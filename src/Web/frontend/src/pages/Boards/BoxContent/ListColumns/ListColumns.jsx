@@ -77,6 +77,8 @@ function ListColumns({ ...props }) {
               pendingTempIds={props.pendingTempIds}
               assignCardMember={props.assignCardMember}
               unassignCardMember={props.unassignCardMember}
+              cloneColumn={props.cloneColumn}
+              cloneCard={props.cloneCard}
             />
           );
         })}
@@ -219,6 +221,8 @@ const SortableColumnWrapper = memo(function SortableColumnWrapper(props) {
         pendingTempIds={props.pendingTempIds}
         assignCardMember={props.assignCardMember}
         unassignCardMember={props.unassignCardMember}
+        cloneColumn={props.cloneColumn}
+        cloneCard={props.cloneCard}
       />
     </div>
   )

@@ -597,6 +597,47 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // Board clone and template
+  async cloneBoard(boardId, cloneData) {
+    return this.request(`/boards/${boardId}/clone`, {
+      method: 'POST',
+      body: JSON.stringify(cloneData),
+    });
+  }
+
+  async saveAsTemplate(boardId) {
+    return this.request(`/boards/${boardId}/save-as-template`, {
+      method: 'POST',
+    });
+  }
+
+  async getTemplates() {
+    return this.request('/boards/templates');
+  }
+
+  async createFromTemplate(templateId, createData) {
+    return this.request(`/boards/templates/${templateId}/create`, {
+      method: 'POST',
+      body: JSON.stringify(createData),
+    });
+  }
+
+  // Column clone
+  async cloneColumn(boardId, columnId, cloneData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/clone`, {
+      method: 'POST',
+      body: JSON.stringify(cloneData),
+    });
+  }
+
+  // Card clone
+  async cloneCard(boardId, columnId, cardId, cloneData) {
+    return this.request(`/boards/${boardId}/columns/${columnId}/cards/${cardId}/clone`, {
+      method: 'POST',
+      body: JSON.stringify(cloneData),
+    });
+  }
 }
 
 export const apiService = new ApiService();

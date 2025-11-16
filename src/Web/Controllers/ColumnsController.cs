@@ -41,7 +41,8 @@ namespace ProjectManagement.Controllers
 
         [HttpPost]
         [RequirePermission(Permissions.Columns.Create)]
-        public async Task<ActionResult<ColumnDto>> CreateColumn(string boardId, [FromBody] CreateColumnDto createColumnDto)
+        public async Task<ActionResult<ColumnDto>> CreateColumn(string boardId,
+            [FromBody] CreateColumnDto createColumnDto)
         {
             var userId = _userManager.GetUserId(User);
             if (string.IsNullOrEmpty(userId))
@@ -50,13 +51,14 @@ namespace ProjectManagement.Controllers
             var column = await _columnService.CreateColumnAsync(boardId, createColumnDto, userId);
             if (column == null)
                 return NotFound();
-            
+
             return CreatedAtAction(nameof(GetColumn), new { boardId, columnId = column.Id }, column);
         }
 
         [HttpPut("{columnId}")]
         [RequirePermission(Permissions.Columns.Edit)]
-        public async Task<ActionResult<ColumnDto>> UpdateColumn(string columnId, [FromBody] UpdateColumnDto updateColumnDto)
+        public async Task<ActionResult<ColumnDto>> UpdateColumn(string columnId,
+            [FromBody] UpdateColumnDto updateColumnDto)
         {
             var userId = _userManager.GetUserId(User);
             if (string.IsNullOrEmpty(userId))
@@ -96,6 +98,28 @@ namespace ProjectManagement.Controllers
                 return BadRequest();
 
             return NoContent();
+        }
+
+        [HttpPost("{columnId}/clone")]
+        [RequirePermission(Permissions.Columns.Create)]
+        public async Task<ActionResult<ColumnDto>> CloneColumn(
+            string boardId,
+            string columnId,
+            [FromBody] CloneColumnDto cloneDto)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            try
+            {
+                var clonedColumn = await _columnService.CloneColumnAsync(boardId, columnId, cloneDto, userId);
+                return CreatedAtAction(nameof(GetColumn), new { boardId, columnId = clonedColumn.Id }, clonedColumn);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
         }
     }
 }

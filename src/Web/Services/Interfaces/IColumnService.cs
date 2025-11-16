@@ -9,5 +9,6 @@ namespace ProjectManagement.Services.Interfaces
         Task<ColumnDto?> UpdateColumnAsync(string columnId, UpdateColumnDto updateColumnDto, string userId);
         Task<ColumnDto?> DeleteColumnAsync(string columnId, string userId);
         Task<bool> ReorderColumnsAsync(string boardId, List<string> columnOrderIds, string userId);
+        Task<ColumnDto> CloneColumnAsync(string boardId, string columnId, CloneColumnDto cloneDto, string userId);
     }
 }
