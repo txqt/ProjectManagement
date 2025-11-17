@@ -4,17 +4,22 @@ import LockIcon from "@mui/icons-material/Lock";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PublicIcon from "@mui/icons-material/Public";
 import SearchIcon from "@mui/icons-material/Search";
+import TabContext from '@mui/lab/TabContext';
+import TabList from '@mui/lab/TabList';
+import TabPanel from '@mui/lab/TabPanel';
 import {
   Box,
   Button,
   Card,
   CardActionArea,
   CardMedia,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   Grid,
   IconButton,
@@ -29,6 +34,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
+import Tab from '@mui/material/Tab';
 import { debounce } from "lodash";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -57,6 +63,65 @@ export default function BoardListView() {
   const navigate = useNavigate();
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [selectedBoard, setSelectedBoard] = useState(null);
+
+  const [templates, setTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [tabValue, setTabValue] = useState('blank');
+
+  const handleOpenDialog = async () => {
+    setOpen(true);
+    setTabValue('blank');
+    setSelectedTemplate(null);
+
+    // Load templates
+    setLoadingTemplates(true);
+    try {
+      const templatesData = await apiService.getTemplates();
+      setTemplates(templatesData || []);
+    } catch (err) {
+      console.error('Failed to load templates:', err);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  const handleCreateBoard = async () => {
+    if (tabValue === 'template' && selectedTemplate) {
+      // Create from template
+      const { success, error: apiErr } = await executeRequest(() =>
+        apiService.createFromTemplate(selectedTemplate.id, {
+          title: newBoard.title,
+          description: newBoard.description,
+          type: newBoard.type
+        })
+      );
+
+      if (success) {
+        setOpen(false);
+        setNewBoard(initialBoardState);
+        setSelectedTemplate(null);
+        toast.success("Board created from template successfully!");
+        fetchBoards(currentPage, itemsPerPage, searchTerm, sortBy, sortOrder);
+      } else {
+        toast.error(`Error creating board: ${apiErr}`);
+      }
+    } else {
+      // Create blank board (existing logic)
+      const { success, error: apiErr } = await executeRequest(() =>
+        apiService.createBoard(newBoard)
+      );
+
+      if (success) {
+        setOpen(false);
+        setNewBoard(initialBoardState);
+        toast.success("Board created successfully!");
+        fetchBoards(currentPage, itemsPerPage, searchTerm, sortBy, sortOrder);
+      } else {
+        toast.error(`Error creating board: ${apiErr}`);
+      }
+    }
+  };
 
   const handleOpenMenu = (event, board) => {
     event.stopPropagation();
@@ -182,20 +247,6 @@ export default function BoardListView() {
     setCurrentPage(1);
   }, [itemsPerPage, searchTerm, sortBy, sortOrder]);
 
-  const handleCreateBoard = async () => {
-    const { success, error: apiErr } = await executeRequest(() =>
-      apiService.createBoard(newBoard)
-    );
-    if (success) {
-      setOpen(false);
-      setNewBoard(initialBoardState);
-      toast.success("Board created successfully!");
-      fetchBoards(currentPage, itemsPerPage, searchTerm, sortBy, sortOrder);
-    } else {
-      toast.error(`Error creating board: ${apiErr}`);
-    }
-  };
-
   const handlePageChange = (event, value) => {
     setCurrentPage(value);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -229,7 +280,7 @@ export default function BoardListView() {
             {totalCount} board{totalCount !== 1 ? 's' : ''} total
           </Typography>
         </Box>
-        <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
+        <Button variant="contained" color="primary" onClick={handleOpenDialog}>
           Create New Board
         </Button>
       </Box>
@@ -423,61 +474,260 @@ export default function BoardListView() {
         </Box>
       )}
 
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          setSelectedTemplate(null);
+          setTabValue('blank');
+        }}
+        fullWidth
+        maxWidth="md"
+      >
         <DialogTitle>Create New Board</DialogTitle>
         <DialogContent>
-          <TextField
-            margin="dense"
-            label="Title"
-            fullWidth
-            value={newBoard.title}
-            onChange={(e) => setNewBoard({ ...newBoard, title: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Description"
-            fullWidth
-            multiline
-            rows={3}
-            value={newBoard.description}
-            onChange={(e) =>
-              setNewBoard({ ...newBoard, description: e.target.value })
-            }
-          />
+          <TabContext value={tabValue}>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <TabList
+                onChange={(e, newValue) => setTabValue(newValue)}
+                aria-label="board creation tabs"
+              >
+                <Tab label="Blank Board" value="blank" />
+                <Tab
+                  label={`From Template (${templates.length})`}
+                  value="template"
+                />
+              </TabList>
+            </Box>
 
-          <FormControl fullWidth margin="dense">
-            <InputLabel id="board-type-label">Type</InputLabel>
-            <Select
-              labelId="board-type-label"
-              label="Type"
-              value={newBoard.type}
-              onChange={(e) => setNewBoard({ ...newBoard, type: e.target.value })}
-              renderValue={(selected) => {
-                const opt = typeOptions.find(o => o.value === selected);
-                return (
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    {opt?.icon}
-                    <Typography sx={{ ml: 1 }}>{opt?.label}</Typography>
-                  </Box>
-                );
-              }}
-            >
-              {typeOptions.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  <ListItemIcon>{opt.icon}</ListItemIcon>
-                  <ListItemText
-                    primary={opt.label}
-                    secondary={opt.desc}
-                  />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+            {/* Blank Board Tab */}
+            <TabPanel value="blank" sx={{ px: 0 }}>
+              <TextField
+                margin="dense"
+                label="Title"
+                fullWidth
+                value={newBoard.title}
+                onChange={(e) => setNewBoard({ ...newBoard, title: e.target.value })}
+              />
+              <TextField
+                margin="dense"
+                label="Description"
+                fullWidth
+                multiline
+                rows={3}
+                value={newBoard.description}
+                onChange={(e) =>
+                  setNewBoard({ ...newBoard, description: e.target.value })
+                }
+              />
+
+              <FormControl fullWidth margin="dense">
+                <InputLabel id="board-type-label">Type</InputLabel>
+                <Select
+                  labelId="board-type-label"
+                  label="Type"
+                  value={newBoard.type}
+                  onChange={(e) => setNewBoard({ ...newBoard, type: e.target.value })}
+                  renderValue={(selected) => {
+                    const opt = typeOptions.find(o => o.value === selected);
+                    return (
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        {opt?.icon}
+                        <Typography sx={{ ml: 1 }}>{opt?.label}</Typography>
+                      </Box>
+                    );
+                  }}
+                >
+                  {typeOptions.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      <ListItemIcon>{opt.icon}</ListItemIcon>
+                      <ListItemText
+                        primary={opt.label}
+                        secondary={opt.desc}
+                      />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </TabPanel>
+
+            {/* Template Tab */}
+            <TabPanel value="template" sx={{ px: 0 }}>
+              {loadingTemplates ? (
+                <Box display="flex" justifyContent="center" py={4}>
+                  <CircularProgress />
+                </Box>
+              ) : templates.length === 0 ? (
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  py={4}
+                >
+                  <Typography variant="body1" color="text.secondary" gutterBottom>
+                    No templates available
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Save any board as a template to see it here
+                  </Typography>
+                </Box>
+              ) : (
+                <>
+                  <Typography variant="subtitle2" gutterBottom sx={{ mb: 2 }}>
+                    Select a template to start with:
+                  </Typography>
+
+                  <Grid container spacing={2} sx={{ mb: 3 }}>
+                    {templates.map((template) => (
+                      <Grid size={{ xs: 12, sm: 6 }} key={template.id}>
+                        <Card
+                          sx={{
+                            cursor: 'pointer',
+                            border: selectedTemplate?.id === template.id
+                              ? 2
+                              : 1,
+                            borderColor: selectedTemplate?.id === template.id
+                              ? 'primary.main'
+                              : 'divider',
+                            '&:hover': {
+                              borderColor: 'primary.main',
+                              boxShadow: 2
+                            }
+                          }}
+                          onClick={() => setSelectedTemplate(template)}
+                        >
+                          <CardActionArea>
+                            {template.cover && (
+                              <CardMedia
+                                component="img"
+                                height="120"
+                                image={template.cover}
+                                alt={template.title}
+                              />
+                            )}
+                            <Box sx={{ p: 2 }}>
+                              <Typography variant="h6" gutterBottom noWrap>
+                                {template.title}
+                              </Typography>
+                              {template.description && (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                  }}
+                                >
+                                  {template.description}
+                                </Typography>
+                              )}
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  mt: 1
+                                }}
+                              >
+                                <Typography variant="caption" color="text.secondary">
+                                  {template.columns?.length || 0} columns
+                                </Typography>
+                                {selectedTemplate?.id === template.id && (
+                                  <Chip
+                                    label="Selected"
+                                    size="small"
+                                    color="primary"
+                                  />
+                                )}
+                              </Box>
+                            </Box>
+                          </CardActionArea>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+
+                  {selectedTemplate && (
+                    <>
+                      <Divider sx={{ my: 2 }} />
+                      <Typography variant="subtitle2" gutterBottom>
+                        Customize your new board:
+                      </Typography>
+                      <TextField
+                        margin="dense"
+                        label="Board Title"
+                        fullWidth
+                        value={newBoard.title}
+                        onChange={(e) => setNewBoard({ ...newBoard, title: e.target.value })}
+                        placeholder={`Copy of ${selectedTemplate.title}`}
+                      />
+                      <TextField
+                        margin="dense"
+                        label="Description (optional)"
+                        fullWidth
+                        multiline
+                        rows={2}
+                        value={newBoard.description}
+                        onChange={(e) =>
+                          setNewBoard({ ...newBoard, description: e.target.value })
+                        }
+                      />
+
+                      <FormControl fullWidth margin="dense">
+                        <InputLabel id="board-type-label-template">Type</InputLabel>
+                        <Select
+                          labelId="board-type-label-template"
+                          label="Type"
+                          value={newBoard.type}
+                          onChange={(e) => setNewBoard({ ...newBoard, type: e.target.value })}
+                          renderValue={(selected) => {
+                            const opt = typeOptions.find(o => o.value === selected);
+                            return (
+                              <Box sx={{ display: "flex", alignItems: "center" }}>
+                                {opt?.icon}
+                                <Typography sx={{ ml: 1 }}>{opt?.label}</Typography>
+                              </Box>
+                            );
+                          }}
+                        >
+                          {typeOptions.map((opt) => (
+                            <MenuItem key={opt.value} value={opt.value}>
+                              <ListItemIcon>{opt.icon}</ListItemIcon>
+                              <ListItemText
+                                primary={opt.label}
+                                secondary={opt.desc}
+                              />
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </>
+                  )}
+                </>
+              )}
+            </TabPanel>
+          </TabContext>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreateBoard}>
-            Create
+          <Button onClick={() => {
+            setOpen(false);
+            setSelectedTemplate(null);
+            setTabValue('blank');
+          }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleCreateBoard}
+            disabled={
+              (tabValue === 'blank' && !newBoard.title) ||
+              (tabValue === 'template' && (!selectedTemplate || !newBoard.title))
+            }
+          >
+            {tabValue === 'template' ? 'Create from Template' : 'Create Board'}
           </Button>
         </DialogActions>
       </Dialog>
