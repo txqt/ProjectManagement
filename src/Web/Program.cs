@@ -146,6 +146,7 @@ builder.Services.Configure<RateLimitConfig>(
 builder.Services.AddSingleton<IRateLimiterService, RedisRateLimiterService>();
 
 builder.Services.AddScoped<ICacheService, RedisCacheService>();
+builder.Services.AddScoped<ICacheInvalidationService, CacheInvalidationService>();
 
 builder.Services.AddScoped<ILabelService, LabelService>();
 builder.Services.AddScoped<IChecklistService, ChecklistService>();

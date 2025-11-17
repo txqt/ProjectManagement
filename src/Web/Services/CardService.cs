@@ -19,14 +19,14 @@ namespace ProjectManagement.Services
         private readonly IBoardNotificationService _boardNotificationService;
         private readonly INotificationService _notificationService;
         private readonly IActivityLogService _activityLogService;
-        private readonly ICacheService _cache;
+        private readonly ICacheInvalidationService _cacheInvalidation;
 
         public CardService(
             ApplicationDbContext context,
             IMapper mapper,
             UserManager<ApplicationUser> userManager,
             IBoardNotificationService boardNotificationService,
-            INotificationService notificationService, IActivityLogService activityLogService, ICacheService cache)
+            INotificationService notificationService, IActivityLogService activityLogService, ICacheInvalidationService cacheInvalidation)
         {
             _context = context;
             _mapper = mapper;
@@ -34,7 +34,7 @@ namespace ProjectManagement.Services
             _boardNotificationService = boardNotificationService;
             _notificationService = notificationService;
             _activityLogService = activityLogService;
-            _cache = cache;
+            _cacheInvalidation = cacheInvalidation;
         }
 
         public async Task<CardDto?> GetCardAsync(string cardId)
@@ -105,8 +105,7 @@ namespace ProjectManagement.Services
 
             var createdCard = await GetCardAsync(card.Id);
 
-            await _cache.RemoveAsync($"board:{card.BoardId}");
-            await _cache.RemoveAsync($"user_boards:{userId}");
+            await _cacheInvalidation.InvalidateCardCachesAsync(card.Id, card.BoardId);
 
             await _boardNotificationService.BroadcastCardCreated(card.BoardId, card.ColumnId, createdCard, userId);
             return createdCard!;
@@ -187,8 +186,7 @@ namespace ProjectManagement.Services
             var updatedCard = await GetCardAsync(cardId);
             await _boardNotificationService.BroadcastCardUpdated(card.BoardId, card.ColumnId, updatedCard, userId);
 
-            await _cache.RemoveAsync($"board:{card.BoardId}");
-            await _cache.RemoveAsync($"user_boards:{userId}");
+            await _cacheInvalidation.InvalidateCardCachesAsync(cardId, card.BoardId);
 
             return updatedCard;
         }
@@ -210,7 +208,7 @@ namespace ProjectManagement.Services
             var dto = _mapper.Map<CardDto>(card);
             await _boardNotificationService.BroadcastCardDeleted(dto.BoardId, dto.ColumnId, cardId, userId);
 
-            await _cache.RemoveAsync($"board:{card.BoardId}");
+            await _cacheInvalidation.InvalidateCardCachesAsync(cardId, card.BoardId);
 
             return dto;
         }
@@ -288,8 +286,7 @@ namespace ProjectManagement.Services
             );
 
             var dto = _mapper.Map<CardDto>(card);
-            await _cache.RemoveAsync($"board:{card.BoardId}");
-            await _cache.RemoveAsync($"user_boards:{userId}");
+            await _cacheInvalidation.InvalidateCardCachesAsync(cardId, card.BoardId);
             await _boardNotificationService.BroadcastCardMoved(dto.BoardId, oldColumnId,
                 moveCardDto.ToColumnId, cardId, moveCardDto.NewIndex, userId);
 
@@ -343,8 +340,8 @@ namespace ProjectManagement.Services
                 .Where(id => existingCards.ContainsKey(id))
                 .Select(id => existingCards[id])
                 .ToList();
-            await _cache.RemoveAsync($"board:{boardId}");
-            await _cache.RemoveAsync($"user_boards:{userId}");
+            
+            await _cacheInvalidation.InvalidateBoardCachesAsync(boardId);
 
             await _boardNotificationService.BroadcastCardsReordered(
                 boardId, columnId, cardIds,
@@ -395,8 +392,7 @@ namespace ProjectManagement.Services
                 user.Id,
                 userId);
 
-            await _cache.RemoveAsync($"board:{card.BoardId}");
-            await _cache.RemoveAsync($"user_boards:{userId}");
+            await _cacheInvalidation.InvalidateCardCachesAsync(cardId, card.BoardId);
 
             var assigner = await _userManager.FindByIdAsync(userId);
             await _notificationService.CreateCardAssignedNotificationAsync(
@@ -434,8 +430,7 @@ namespace ProjectManagement.Services
 
             var dto = _mapper.Map<CardDto>(card);
 
-            await _cache.RemoveAsync($"board:{card.BoardId}");
-            await _cache.RemoveAsync($"user_boards:{userId}");
+            await _cacheInvalidation.InvalidateCardCachesAsync(cardId, card.BoardId);
 
             await _boardNotificationService.BroadcastCardUnassigned(
                 cardMember.Card.BoardId,
@@ -583,7 +578,7 @@ namespace ProjectManagement.Services
             }
 
             await _context.SaveChangesAsync();
-            await _cache.RemoveAsync($"board:{sourceCard.BoardId}");
+            await _cacheInvalidation.InvalidateCardCachesAsync(newCard.Id, sourceCard.BoardId);
 
             return await GetCardAsync(newCard.Id);
         }

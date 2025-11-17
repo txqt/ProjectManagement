@@ -18,13 +18,15 @@ namespace ProjectManagement.Services
         private readonly IHubContext<BoardHub> _hub;
         private readonly BoardPresenceTracker _boardPresenceTracker;
         private readonly ICacheService _cache;
+        private readonly ICacheInvalidationService _cacheInvalidation;
 
         public BoardNotificationService(IHubContext<BoardHub> hub, BoardPresenceTracker boardPresenceTracker,
-            ICacheService cache)
+            ICacheService cache, ICacheInvalidationService cacheInvalidation)
         {
             _hub = hub;
             _boardPresenceTracker = boardPresenceTracker;
             _cache = cache;
+            _cacheInvalidation = cacheInvalidation;
         }
 
         private static string GroupName(string boardId) => $"board-{boardId}";
@@ -218,8 +220,7 @@ namespace ProjectManagement.Services
 
         public async Task BroadcastJoinRequestCreated(string boardId, BoardJoinRequestDto request)
         {
-            var cacheKey = $"board_join_requests:{boardId}:all";
-            await _cache.RemoveAsync(cacheKey);
+            await _cacheInvalidation.InvalidateJoinRequestsCacheAsync(boardId);
 
             await _hub.Clients
                 .Group(GroupName(boardId))

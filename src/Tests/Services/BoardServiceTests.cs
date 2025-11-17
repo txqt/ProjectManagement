@@ -19,6 +19,7 @@ namespace ProjectManagement.Tests.Services
         private readonly Mock<IMapper> _mapperMock;
         private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
         private readonly Mock<ICacheService> _cacheMock;
+        private readonly Mock<ICacheInvalidationService> _cacheInvalidationServiceMock;
         private readonly BoardService _boardService;
         private readonly string _testUserId = "test-user-id";
 
@@ -38,12 +39,15 @@ namespace ProjectManagement.Tests.Services
             var userStoreMock = new Mock<IUserStore<ApplicationUser>>();
             _userManagerMock = new Mock<UserManager<ApplicationUser>>(
                 userStoreMock.Object, null, null, null, null, null, null, null, null);
+            
+            _cacheInvalidationServiceMock = new Mock<ICacheInvalidationService>();
 
             _boardService = new BoardService(
                 _context,
                 _mapperMock.Object,
                 _userManagerMock.Object,
-                _cacheMock.Object
+                _cacheMock.Object,
+                _cacheInvalidationServiceMock.Object
             );
 
             // Seed test data
@@ -137,18 +141,19 @@ namespace ProjectManagement.Tests.Services
 
             var expectedDto = new BoardDto { Id = ownedBoard.Id, Title = ownedBoard.Title };
 
-            _mapperMock.Setup(m => m.Map<IEnumerable<BoardDto>>(It.IsAny<List<Board>>()))
-                .Returns(new List<BoardDto> { expectedDto });
+            _mapperMock
+                .Setup(m => m.Map<BoardDto>(It.IsAny<Board>()))
+                .Returns((Board b) => new BoardDto { Id = b.Id, Title = b.Title });
 
-            _cacheMock.Setup(c => c.GetAsync<IEnumerable<BoardDto>>(It.IsAny<string>()))
-                .ReturnsAsync((IEnumerable<BoardDto>)null);
+            _cacheMock.Setup(c => c.GetAsync<PaginatedResult<BoardDto>>(It.IsAny<string>()))
+                .ReturnsAsync((PaginatedResult<BoardDto>?)null);
 
             // Act
             var result = await _boardService.GetUserBoardsAsync(
-                _testUserId, 
-                new PaginationParams(), 
-                "", 
-                "title", 
+                _testUserId,
+                new PaginationParams(),
+                "",
+                "title",
                 "asc");
 
             // Assert

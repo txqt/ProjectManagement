@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Data;
+using ProjectManagement.Helpers;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Label;
 using ProjectManagement.Services.Interfaces;
@@ -13,23 +14,33 @@ namespace ProjectManagement.Services
         private readonly IMapper _mapper;
         private readonly IPermissionService _permissionService;
         private readonly ICacheService _cache;
+        private readonly ICacheInvalidationService _cacheInvalidation;
 
-        public LabelService(ApplicationDbContext context, IMapper mapper, IPermissionService permissionService, ICacheService cache)
+        public LabelService(ApplicationDbContext context, IMapper mapper, IPermissionService permissionService, ICacheService cache, ICacheInvalidationService cacheInvalidation)
         {
             _context = context;
             _mapper = mapper;
             _permissionService = permissionService;
             _cache = cache;
+            _cacheInvalidation = cacheInvalidation;
         }
 
         public async Task<List<LabelDto>> GetBoardLabelsAsync(string boardId)
         {
+            var cacheKey = CacheKeys.Labels(boardId);
+            var cached = await _cache.GetAsync<List<LabelDto>>(cacheKey);
+            if (cached != null) return cached;
+            
             var labels = await _context.Labels
                 .Where(l => l.BoardId == boardId)
                 .OrderBy(l => l.Title)
                 .ToListAsync();
+            
+            var dtos = _mapper.Map<List<LabelDto>>(labels);
+            
+            await _cache.SetAsync(cacheKey, dtos, TimeSpan.FromMinutes(5));
 
-            return _mapper.Map<List<LabelDto>>(labels);
+            return dtos;
         }
 
         public async Task<LabelDto> CreateLabelAsync(string boardId, CreateLabelDto createDto, string userId)
@@ -45,6 +56,8 @@ namespace ProjectManagement.Services
 
             _context.Labels.Add(label);
             await _context.SaveChangesAsync();
+            
+            await _cacheInvalidation.InvalidateLabelCachesAsync(boardId);
 
             return _mapper.Map<LabelDto>(label);
         }
@@ -62,6 +75,8 @@ namespace ProjectManagement.Services
 
             _mapper.Map(updateDto, label);
             await _context.SaveChangesAsync();
+            
+            await _cacheInvalidation.InvalidateLabelCachesAsync(label.BoardId);
 
             return _mapper.Map<LabelDto>(label);
         }
@@ -79,6 +94,8 @@ namespace ProjectManagement.Services
 
             _context.Labels.Remove(label);
             await _context.SaveChangesAsync();
+            
+            await _cacheInvalidation.InvalidateLabelCachesAsync(label.BoardId);
 
             return true;
         }
@@ -110,7 +127,7 @@ namespace ProjectManagement.Services
 
             await _context.SaveChangesAsync();
             
-            await InvalidateBoardCache(boardId);
+            await _cacheInvalidation.InvalidateLabelCachesAsync(boardId);
             
             return true;
         }
@@ -131,15 +148,9 @@ namespace ProjectManagement.Services
             _context.CardLabels.Remove(cardLabel);
             await _context.SaveChangesAsync();
 
-            await InvalidateBoardCache(boardId);
+            await _cacheInvalidation.InvalidateLabelCachesAsync(boardId);
             
             return true;
-        }
-        
-        private async Task InvalidateBoardCache(string boardId)
-        {
-            var cacheKey = $"board:{boardId}";
-            await _cache.RemoveAsync(cacheKey);
         }
     }
 }

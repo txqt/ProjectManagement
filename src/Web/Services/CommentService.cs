@@ -12,15 +12,17 @@ namespace ProjectManagement.Services
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly IBoardNotificationService _boardNotificationService;
+        private readonly ICacheInvalidationService _cacheInvalidation;
 
         public CommentService(
             ApplicationDbContext context,
             IMapper mapper,
-            IBoardNotificationService boardNotificationService)
+            IBoardNotificationService boardNotificationService, ICacheInvalidationService cacheInvalidation)
         {
             _context = context;
             _mapper = mapper;
             _boardNotificationService = boardNotificationService;
+            _cacheInvalidation = cacheInvalidation;
         }
 
         public async Task<IEnumerable<CommentDto>> GetCommentsAsync(string cardId)
@@ -66,6 +68,8 @@ namespace ProjectManagement.Services
                 .FirstOrDefaultAsync(c => c.Id == comment.Id);
 
             var commentDto = _mapper.Map<CommentDto>(createdComment);
+            
+            await _cacheInvalidation.InvalidateCommentCachesAsync(cardId, card.BoardId);
 
             await _boardNotificationService.BroadcastCommentAdded(
                 card.BoardId,
@@ -95,6 +99,8 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
             var commentDto = _mapper.Map<CommentDto>(comment);
+            
+            await _cacheInvalidation.InvalidateCommentCachesAsync(comment.CardId, comment.Card.BoardId);
 
             await _boardNotificationService.BroadcastCommentUpdated(
                 comment.Card.BoardId,
@@ -122,6 +128,8 @@ namespace ProjectManagement.Services
 
             _context.Comments.Remove(comment);
             await _context.SaveChangesAsync();
+            
+            await _cacheInvalidation.InvalidateCommentCachesAsync(cardId, boardId);
 
             await _boardNotificationService.BroadcastCommentDeleted(
                 boardId,

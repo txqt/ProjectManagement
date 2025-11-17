@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using ProjectManagement.Data;
 using Microsoft.EntityFrameworkCore;
+using ProjectManagement.Helpers;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Notification;
 using ProjectManagement.Services.Interfaces;
@@ -15,18 +16,20 @@ namespace ProjectManagement.Services
         private readonly ILogger<NotificationService> _logger;
         private readonly IBoardNotificationService _boardNotificationService;
         private readonly ICacheService  _cache;
+        private readonly ICacheInvalidationService _cacheInvalidation;
 
         public NotificationService(
             ApplicationDbContext context,
             IMapper mapper,
             ILogger<NotificationService> logger,
-            IBoardNotificationService boardNotificationService, ICacheService cache)
+            IBoardNotificationService boardNotificationService, ICacheService cache, ICacheInvalidationService cacheInvalidation)
         {
             _context = context;
             _mapper = mapper;
             _logger = logger;
             _boardNotificationService = boardNotificationService;
             _cache = cache;
+            _cacheInvalidation = cacheInvalidation;
         }
 
         public async Task<NotificationDto> CreateNotificationAsync(CreateNotificationDto createNotificationDto)
@@ -53,6 +56,8 @@ namespace ProjectManagement.Services
                 notification.Id, notification.UserId, notification.Type);
 
             var dto = _mapper.Map<NotificationDto>(notification);
+            
+            await _cacheInvalidation.InvalidateNotificationCachesAsync(notification.UserId);
 
             await _boardNotificationService.SendNotificationToUser(notification.UserId, dto);
 
@@ -61,7 +66,7 @@ namespace ProjectManagement.Services
 
         public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(string userId, int skip = 0, int take = 20, bool? unreadOnly = null)
         {
-            string cacheKey = $"notifications:{userId}:{skip}:{take}:{unreadOnly}";
+            string cacheKey = $"{CacheKeys.Notifications(userId, skip, take, unreadOnly)}";
             var cached = await _cache.GetAsync<List<NotificationDto>>(cacheKey);
             if (cached != null)
                 return cached;
@@ -96,7 +101,7 @@ namespace ProjectManagement.Services
 
         public async Task<NotificationSummaryDto> GetNotificationSummaryAsync(string userId)
         {
-            string cacheKey = $"notification_summary:{userId}";
+            string cacheKey = CacheKeys.NotificationSummary(userId);
             var cached = await _cache.GetAsync<NotificationSummaryDto>(cacheKey);
             if (cached != null)
                 return cached;
@@ -128,6 +133,8 @@ namespace ProjectManagement.Services
             notification.ReadAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            
+            await _cacheInvalidation.InvalidateNotificationCachesAsync(notification.UserId);
 
             await _boardNotificationService.BroadcastNotificationRead(notification.UserId, notification.Id);
             return true;
@@ -141,6 +148,8 @@ namespace ProjectManagement.Services
 
             if (!unreadNotifications.Any())
                 return false;
+            
+            await _cacheInvalidation.InvalidateNotificationCachesAsync(userId);
 
             foreach (var notification in unreadNotifications)
             {
@@ -163,6 +172,8 @@ namespace ProjectManagement.Services
 
             _context.Notifications.Remove(notification);
             await _context.SaveChangesAsync();
+            
+            await _cacheInvalidation.InvalidateNotificationCachesAsync(userId);
 
             await _boardNotificationService.BroadcastNotificationDeleted(notification.UserId, notification.Id);
             return true;
@@ -212,6 +223,7 @@ namespace ProjectManagement.Services
             if (affectedCount > 0)
             {
                 await _context.SaveChangesAsync();
+                await _cacheInvalidation.InvalidateNotificationCachesAsync(userId);
             }
 
             return affectedCount;

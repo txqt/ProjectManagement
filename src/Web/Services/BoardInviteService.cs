@@ -2,6 +2,7 @@
 using ProjectManagement.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using ProjectManagement.Helpers;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.BoardInvite;
 using ProjectManagement.Models.DTOs.Notification;
@@ -17,13 +18,14 @@ namespace ProjectManagement.Services
         private readonly INotificationService _notificationService;
         private readonly ILogger<BoardInviteService> _logger;
         private readonly ICacheService _cache;
+        private readonly ICacheInvalidationService _cacheInvalidation;
 
         public BoardInviteService(
             ApplicationDbContext context,
             IMapper mapper,
             UserManager<ApplicationUser> userManager,
             INotificationService notificationService,
-            ILogger<BoardInviteService> logger, ICacheService cache)
+            ILogger<BoardInviteService> logger, ICacheService cache, ICacheInvalidationService cacheInvalidation)
         {
             _context = context;
             _mapper = mapper;
@@ -31,6 +33,7 @@ namespace ProjectManagement.Services
             _notificationService = notificationService;
             _logger = logger;
             _cache = cache;
+            _cacheInvalidation = cacheInvalidation;
         }
 
         public async Task<BoardInviteDto> CreateInviteAsync(string boardId, CreateBoardInviteDto createInviteDto,
@@ -82,6 +85,8 @@ namespace ProjectManagement.Services
 
             _context.BoardInvites.Add(invite);
             await _context.SaveChangesAsync();
+            
+            await _cacheInvalidation.InvalidateBoardInvitesCacheAsync(boardId);
 
             // Create notification if user exists
             if (existingUser != null)
@@ -107,7 +112,7 @@ namespace ProjectManagement.Services
         public async Task<IEnumerable<BoardInviteDto>> GetBoardInvitesAsync(string boardId, string userId,
             string? status)
         {
-            var cacheKey = $"board_invites:{boardId}:{status ?? "all"}";
+            var cacheKey = CacheKeys.BoardInvites(boardId, status);
             var cached = await _cache.GetAsync<IEnumerable<BoardInviteDto>>(cacheKey);
             if (cached != null)
                 return cached;
@@ -213,6 +218,10 @@ namespace ProjectManagement.Services
                 invite.RespondedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
+                
+                // Invalidate caches
+                await _cacheInvalidation.InvalidateBoardInvitesCacheAsync(invite.BoardId);
+                await _cacheInvalidation.InvalidateBoardCachesAsync(invite.BoardId);
 
                 // Notify inviter
                 await _notificationService.CreateNotificationAsync(new CreateNotificationDto
@@ -233,6 +242,8 @@ namespace ProjectManagement.Services
                 invite.RespondedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
+                
+                await _cacheInvalidation.InvalidateBoardInvitesCacheAsync(invite.BoardId);
 
                 // Notify inviter
                 await _notificationService.CreateNotificationAsync(new CreateNotificationDto
@@ -271,9 +282,13 @@ namespace ProjectManagement.Services
 
             if (invite.Status != InviteStatus.Pending)
                 return false;
+            
+            var boardId = invite.BoardId;
 
             invite.Status = InviteStatus.Cancelled;
             await _context.SaveChangesAsync();
+            
+            await _cacheInvalidation.InvalidateBoardInvitesCacheAsync(boardId);
 
             return true;
         }
@@ -311,6 +326,8 @@ namespace ProjectManagement.Services
             // Extend expiry date
             invite.ExpiresAt = DateTime.UtcNow.AddDays(7);
             await _context.SaveChangesAsync();
+            
+            await _cacheInvalidation.InvalidateBoardInvitesCacheAsync(invite.BoardId);
 
             // Create new notification if user exists
             if (!string.IsNullOrEmpty(invite.InviteeId))

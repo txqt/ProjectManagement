@@ -11,10 +11,12 @@ namespace ProjectManagement.Services
         private readonly IDatabase _db;
         private readonly IConnectionMultiplexer _connection;
         private const int DEFAULT_EXPIRY_HOURS = 24;
+        private readonly ILogger<RedisCacheService> _logger;
 
-        public RedisCacheService(IConnectionMultiplexer connection)
+        public RedisCacheService(IConnectionMultiplexer connection, ILogger<RedisCacheService> logger)
         {
             _connection = connection;
+            _logger = logger;
             _db = connection.GetDatabase();
         }
 
@@ -32,14 +34,17 @@ namespace ProjectManagement.Services
 
         public async Task<T?> GetAsync<T>(string key)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentException("Cache key cannot be null or empty when calling GetAsync.");
-
-            var cached = await _db.StringGetAsync(key);
-            if (!cached.HasValue) return default;
-
-            Console.WriteLine($"✅ Cache hit for: {key}");
-            return JsonSerializer.Deserialize<T>(cached!);
+            try
+            {
+                var cached = await _db.StringGetAsync(key);
+                if (!cached.HasValue) return default;
+                return JsonSerializer.Deserialize<T>(cached!);
+            }
+            catch (RedisConnectionException ex)
+            {
+                _logger.LogWarning(ex, "Redis connection failed for key {Key}", key);
+                return default; // Fail gracefully
+            }
         }
 
         public async Task SetAsync<T>(string? key, T value, TimeSpan? expiry = null)
@@ -67,11 +72,19 @@ namespace ProjectManagement.Services
         
         public async Task RemoveByPatternAsync(string pattern)
         {
-            // pattern like "user_boards:123:*"
             var server = _connection.GetServer(_connection.GetEndPoints().First());
-            var keys = server.Keys(pattern: pattern);
-            var ids = keys.Select(k => (RedisKey)k).ToArray();
-            if (ids.Length > 0) await _db.KeyDeleteAsync(ids);
+    
+            var keys = server.KeysAsync(pattern: pattern);
+            var batch = _db.CreateBatch();
+            var tasks = new List<Task>();
+    
+            await foreach (var key in keys)
+            {
+                tasks.Add(batch.KeyDeleteAsync(key));
+            }
+    
+            batch.Execute();
+            await Task.WhenAll(tasks);
         }
     }
 }

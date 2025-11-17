@@ -606,7 +606,7 @@ class ApiService {
     });
   }
 
-  async saveAsTemplate(boardId) {
+  async saveBoardAsTemplate(boardId) {
     return this.request(`/boards/${boardId}/save-as-template`, {
       method: 'POST',
     });

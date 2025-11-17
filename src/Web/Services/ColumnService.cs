@@ -14,15 +14,15 @@ namespace ProjectManagement.Services
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly IBoardNotificationService _boardNotificationService;
-        private readonly ICacheService _cache;
+        private readonly ICacheInvalidationService _cacheInvalidation;
 
         public ColumnService(ApplicationDbContext context, IMapper mapper,
-            IBoardNotificationService boardNotificationService, ICacheService cache)
+            IBoardNotificationService boardNotificationService, ICacheInvalidationService cacheInvalidation)
         {
             _context = context;
             _mapper = mapper;
             _boardNotificationService = boardNotificationService;
-            _cache = cache;
+            _cacheInvalidation = cacheInvalidation;
         }
 
         public async Task<ColumnDto?> GetColumnAsync(string columnId, string userId)
@@ -82,6 +82,8 @@ namespace ProjectManagement.Services
             {
                 return null;
             }
+            
+            await _cacheInvalidation.InvalidateColumnCachesAsync(column.Id, boardId);
 
             await _boardNotificationService.BroadcastColumnCreated(boardId, createdColumn, userId);
 
@@ -108,6 +110,8 @@ namespace ProjectManagement.Services
             {
                 return null;
             }
+            
+            await _cacheInvalidation.InvalidateColumnCachesAsync(column.Id, column.BoardId);
 
             await _boardNotificationService.BroadcastColumnUpdated(updatedColumn.BoardId, updatedColumn, userId);
 
@@ -128,6 +132,8 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
             var columnDto = _mapper.Map<ColumnDto>(column);
+            
+            await _cacheInvalidation.InvalidateColumnCachesAsync(columnId, column.BoardId);
 
             await _boardNotificationService.BroadcastColumnDeleted(column.BoardId, column.Id, userId);
             return columnDto;
@@ -171,6 +177,8 @@ namespace ProjectManagement.Services
             }
 
             await _context.SaveChangesAsync();
+            
+            await _cacheInvalidation.InvalidateBoardCachesAsync(boardId);
 
             await _boardNotificationService.BroadcastColumnsReordered(boardId, columnIds,
                 _mapper.Map<List<ColumnDto>>(columns), userId);
@@ -322,7 +330,7 @@ namespace ProjectManagement.Services
             }
 
             await _context.SaveChangesAsync();
-            await _cache.RemoveAsync($"board:{boardId}");
+            await _cacheInvalidation.InvalidateColumnCachesAsync(newColumn.Id, boardId);
 
             return await GetColumnAsync(newColumn.Id, userId);
         }

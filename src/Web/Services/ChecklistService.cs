@@ -15,14 +15,16 @@ namespace ProjectManagement.Services
         private readonly IPermissionService _permissionService;
         private readonly ICacheService _cache;
         private readonly  IBoardNotificationService _boardNotificationService;
+        private readonly ICacheInvalidationService _cacheInvalidation;
 
-        public ChecklistService(ApplicationDbContext context, IMapper mapper, IPermissionService permissionService, ICacheService cache, IBoardNotificationService boardNotificationService)
+        public ChecklistService(ApplicationDbContext context, IMapper mapper, IPermissionService permissionService, ICacheService cache, IBoardNotificationService boardNotificationService, ICacheInvalidationService cacheInvalidation)
         {
             _context = context;
             _mapper = mapper;
             _permissionService = permissionService;
             _cache = cache;
             _boardNotificationService = boardNotificationService;
+            _cacheInvalidation = cacheInvalidation;
         }
 
         public async Task<ChecklistDto> CreateChecklistAsync(string boardId, string columnId, string cardId, CreateChecklistDto createDto, string userId)
@@ -50,7 +52,7 @@ namespace ProjectManagement.Services
 
             var dto = _mapper.Map<ChecklistDto>(checklist);
             
-            await InvalidateBoardCache(boardId);
+            await _cacheInvalidation.InvalidateChecklistCachesAsync(cardId, boardId);
 
             await _boardNotificationService.BroadcastChecklistCreated(boardId, columnId, cardId, dto, userId);
             
@@ -78,7 +80,7 @@ namespace ProjectManagement.Services
             var dto = _mapper.Map<ChecklistDto>(checklist);
             var card = checklist.Card;
             
-            await InvalidateBoardCache(card.BoardId);
+            await _cacheInvalidation.InvalidateChecklistCachesAsync(card.Id, card.BoardId);
             
             await _boardNotificationService.BroadcastChecklistUpdated(card.BoardId, card.ColumnId, card.Id, dto, userId);
 
@@ -104,7 +106,7 @@ namespace ProjectManagement.Services
 
             var card = checklist.Card;
             
-            await InvalidateBoardCache(card.BoardId);
+            await _cacheInvalidation.InvalidateChecklistCachesAsync(card.Id, card.BoardId);
             
             await _boardNotificationService.BroadcastChecklistDeleted(card.BoardId, card.ColumnId, card.Id, checklistId, userId);
 
@@ -138,9 +140,9 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
             
             var boardId = checklist.Card.BoardId;
-            await InvalidateBoardCache(boardId);
-            
             var card = checklist.Card;
+            
+            await _cacheInvalidation.InvalidateChecklistCachesAsync(card.Id, boardId);
 
             var dto = _mapper.Map<ChecklistItemDto>(item);
             
@@ -179,9 +181,9 @@ namespace ProjectManagement.Services
             var dto = _mapper.Map<ChecklistItemDto>(item);
             var card =  item.Checklist.Card;
             
-            await InvalidateBoardCache(card.BoardId);
+            await _cacheInvalidation.InvalidateChecklistCachesAsync(card.Id, card.BoardId);
             
-            await _boardNotificationService.BroadcastChecklistItemUpdated(card.BoardId, card.Id, card.Id, item.ChecklistId, dto, userId);
+            await _boardNotificationService.BroadcastChecklistItemUpdated(card.BoardId, card.ColumnId, card.Id, item.ChecklistId, dto, userId);
 
             return dto;
         }
@@ -204,10 +206,11 @@ namespace ProjectManagement.Services
             _context.ChecklistItems.Remove(item);
             await _context.SaveChangesAsync();
             
-            var boardId = item.Checklist.Card.BoardId;
-            await InvalidateBoardCache(boardId);
-
             var card = item.Checklist.Card;
+            var boardId = card.BoardId;
+            
+            await _cacheInvalidation.InvalidateChecklistCachesAsync(card.Id, boardId);
+            
             // Broadcast via SignalR
             await _boardNotificationService.BroadcastChecklistItemDeleted(boardId, card.ColumnId, card.Id, item.ChecklistId, itemId, userId);
 
@@ -248,15 +251,9 @@ namespace ProjectManagement.Services
 
             await _boardNotificationService.BroadcastChecklistItemToggled(cardDto.BoardId, cardDto.ColumnId, cardDto.Id, item.ChecklistId, checkListItemDto, userId);
 
-            await InvalidateBoardCache(cardDto.BoardId);
+            await _cacheInvalidation.InvalidateChecklistCachesAsync(cardDto.Id, cardDto.BoardId);
 
             return true;
-        }
-        
-        private async Task InvalidateBoardCache(string boardId)
-        {
-            var cacheKey = $"board:{boardId}";
-            await _cache.RemoveAsync(cacheKey);
         }
     }
 }

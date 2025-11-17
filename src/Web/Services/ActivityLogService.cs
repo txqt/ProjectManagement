@@ -3,6 +3,7 @@ using ProjectManagement.Data;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using ProjectManagement.Helpers;
 using ProjectManagement.Hubs;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Activity;
@@ -16,15 +17,17 @@ namespace ProjectManagement.Services
         private readonly IMapper _mapper;
         private readonly IBoardNotificationService _boardNotificationService;
         private readonly ICacheService _cache;
+        private readonly ICacheInvalidationService _cacheInvalidation;
 
         public ActivityLogService(
             ApplicationDbContext context,
-            IMapper mapper, IBoardNotificationService boardNotificationService, ICacheService cache)
+            IMapper mapper, IBoardNotificationService boardNotificationService, ICacheService cache, ICacheInvalidationService cacheInvalidation)
         {
             _context = context;
             _mapper = mapper;
             _boardNotificationService = boardNotificationService;
             _cache = cache;
+            _cacheInvalidation = cacheInvalidation;
         }
 
         public async Task<ActivityLogDto> LogActivityAsync(string userId, CreateActivityLogDto dto)
@@ -64,8 +67,12 @@ namespace ProjectManagement.Services
                     .Reference(a => a.Column)
                     .LoadAsync();
             }
+            
+            await _cache.RemoveByPatternAsync($"activity_summary:{dto.BoardId}:*");
 
             var activityDto = _mapper.Map<ActivityLogDto>(activity);
+            
+            await _cacheInvalidation.InvalidateActivitySummaryCacheAsync(dto.BoardId);
 
             // Broadcast to board group
             await _boardNotificationService.BroadcastActivityLogged(dto.BoardId, activityDto);
@@ -144,7 +151,7 @@ namespace ProjectManagement.Services
 
         public async Task<ActivitySummaryDto> GetActivitySummaryAsync(string boardId, int days = 7)
         {
-            var cacheKey = $"ActivitySummary:{boardId}:{days}";
+            var cacheKey = CacheKeys.ActivitySummary(boardId, days);
             var cached = await _cache.GetAsync<ActivitySummaryDto>(cacheKey);
             if (cached != null)
             {
@@ -191,8 +198,17 @@ namespace ProjectManagement.Services
                 .Where(a => a.CreatedAt < cutoffDate)
                 .ToListAsync();
 
+            // Get unique board IDs để invalidate cache
+            var affectedBoardIds = oldActivities.Select(a => a.BoardId).Distinct().ToList();
+
             _context.ActivityLogs.RemoveRange(oldActivities);
             await _context.SaveChangesAsync();
+
+            // Invalidate activity summary cache cho các boards bị ảnh hưởng
+            foreach (var boardId in affectedBoardIds)
+            {
+                await _cacheInvalidation.InvalidateActivitySummaryCacheAsync(boardId);
+            }
         }
     }
 }

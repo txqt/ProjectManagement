@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using ProjectManagement.Data;
 using Microsoft.EntityFrameworkCore;
+using ProjectManagement.Helpers;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.BoardJoinRequest;
 using ProjectManagement.Models.DTOs.BoardShare;
@@ -20,8 +21,9 @@ namespace ProjectManagement.Services
         private readonly INotificationService _notificationService;
         private readonly IBoardNotificationService _boardNotificationService;
         private readonly IMapper  _mapper;
+        private readonly ICacheInvalidationService _cacheInvalidation;
 
-        public BoardShareService(ApplicationDbContext context, IConfiguration configuration, ICacheService cache, UserManager<ApplicationUser> userManager, INotificationService notificationService, IBoardNotificationService boardNotificationService, IMapper mapper)
+        public BoardShareService(ApplicationDbContext context, IConfiguration configuration, ICacheService cache, UserManager<ApplicationUser> userManager, INotificationService notificationService, IBoardNotificationService boardNotificationService, IMapper mapper, ICacheInvalidationService cacheInvalidation)
         {
             _context = context;
             _configuration = configuration;
@@ -30,6 +32,7 @@ namespace ProjectManagement.Services
             _notificationService = notificationService;
             _boardNotificationService = boardNotificationService;
             _mapper = mapper;
+            _cacheInvalidation = cacheInvalidation;
         }
 
         public async Task<ShareTokenResponseDto?> GetActiveShareTokenAsync(string boardId)
@@ -81,6 +84,8 @@ namespace ProjectManagement.Services
 
             _context.BoardShareTokens.Add(shareToken);
             await _context.SaveChangesAsync();
+            
+            await _cache.RemoveAsync(CacheKeys.ActiveShareToken(boardId));
 
             return new ShareTokenResponseDto
             {
@@ -142,6 +147,8 @@ namespace ProjectManagement.Services
 
             _context.BoardJoinRequests.Add(joinRequest);
             await _context.SaveChangesAsync();
+            
+            await _cacheInvalidation.InvalidateJoinRequestsCacheAsync(board.Id);
             
             // Notify board owner and admins
             var adminIds = board.Members

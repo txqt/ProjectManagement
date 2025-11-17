@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using ProjectManagement.Data;
 using Microsoft.EntityFrameworkCore;
+using ProjectManagement.Helpers;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Attachment;
 using ProjectManagement.Services.Interfaces;
@@ -13,15 +14,17 @@ namespace ProjectManagement.Services
         private readonly IMapper _mapper;
         private readonly IWebHostEnvironment _env;
         private readonly IBoardNotificationService _boardNotificationService;
+        private readonly ICacheInvalidationService _cacheInvalidation;
         private readonly ICacheService _cache;
 
         public AttachmentService(ApplicationDbContext context, IMapper mapper, IWebHostEnvironment env,
-            IBoardNotificationService boardNotificationService, ICacheService cache)
+            IBoardNotificationService boardNotificationService, ICacheInvalidationService cacheInvalidation, ICacheService cache)
         {
             _context = context;
             _mapper = mapper;
             _env = env;
             _boardNotificationService = boardNotificationService;
+            _cacheInvalidation = cacheInvalidation;
             _cache = cache;
         }
 
@@ -68,7 +71,7 @@ namespace ProjectManagement.Services
 
         public async Task<IEnumerable<AttachmentDto>> GetAttachmentsAsync(string cardId)
         {
-            var cacheKey = $"attachments:{cardId}";
+            var cacheKey = CacheKeys.Attachments(cardId);
             var cached = await _cache.GetAsync<IEnumerable<AttachmentDto>>(cacheKey);
             if (cached != null)
                 return cached;
@@ -114,8 +117,7 @@ namespace ProjectManagement.Services
 
             var attachmentDto = _mapper.Map<AttachmentDto>(attachment);
             
-            await _cache.RemoveAsync($"attachments:{cardId}");
-            await _cache.RemoveAsync($"board:{card.BoardId}");
+            await _cacheInvalidation.InvalidateAttachmentCachesAsync(cardId, card.BoardId);
 
             await _boardNotificationService.BroadcastAttachmentAdded(
                 card.BoardId,
@@ -144,8 +146,7 @@ namespace ProjectManagement.Services
             _context.Attachments.Remove(attachment);
             await _context.SaveChangesAsync();
             
-            await _cache.RemoveAsync($"attachments:{cardId}");
-            await _cache.RemoveAsync($"board:{boardId}");
+            await _cacheInvalidation.InvalidateAttachmentCachesAsync(cardId, boardId);
 
             await _boardNotificationService.BroadcastAttachmentDeleted(
                 boardId,

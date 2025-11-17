@@ -79,18 +79,34 @@ export default function BoardListView() {
         includeLists: true,
       };
 
-      const cloneBoard = await executeRequest(() =>
+      const result = await executeRequest(() =>
         apiService.cloneBoard(selectedBoard.id, cloneData)
       );
 
-      if (cloneBoard !== null) {
-        setBoards((prevBoards) => [cloneBoard, ...prevBoards]);
+      if (result.success) {
+        setBoards((prevBoards) => [result.data, ...prevBoards]);
         toast.success("Board cloned successfully!");
       } else {
         toast.error("Failed to clone board");
       }
     } catch (err) {
       toast.error("Clone failed: " + err.message);
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!selectedBoard) return;
+    try {
+      const result = await executeRequest(() =>
+        apiService.saveBoardAsTemplate(selectedBoard.id)
+      );
+      if (result.success) {
+        toast.success("Board saved as template successfully!");
+      } else {
+        toast.error("Failed to save board as template");
+      }
+    } catch (err) {
+      toast.error("Save as template failed: " + err.message);
     }
   };
 
