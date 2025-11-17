@@ -64,5 +64,14 @@ namespace ProjectManagement.Services
             await server.FlushDatabaseAsync();
             Console.WriteLine("🗑️ All cache cleared");
         }
+        
+        public async Task RemoveByPatternAsync(string pattern)
+        {
+            // pattern like "user_boards:123:*"
+            var server = _connection.GetServer(_connection.GetEndPoints().First());
+            var keys = server.Keys(pattern: pattern);
+            var ids = keys.Select(k => (RedisKey)k).ToArray();
+            if (ids.Length > 0) await _db.KeyDeleteAsync(ids);
+        }
     }
 }

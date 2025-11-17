@@ -189,8 +189,7 @@ namespace ProjectManagement.Services
 
             await _context.SaveChangesAsync();
 
-            await InvalidateBoardCache(boardId);
-            await InvalidateUserBoardsCache(userId);
+            await InvalidateCachesForBoard(boardId);
 
             var updatedBoard = await GetBoardAsync(boardId, userId);
             return updatedBoard;
@@ -202,8 +201,12 @@ namespace ProjectManagement.Services
             if (board == null || board.OwnerId != userId)
                 return false;
 
+            await InvalidateCachesForBoard(boardId);
+            
             _context.Boards.Remove(board);
+            
             await _context.SaveChangesAsync();
+
             return true;
         }
 
@@ -623,7 +626,28 @@ namespace ProjectManagement.Services
 
         private async Task InvalidateUserBoardsCache(string userId)
         {
-            await _cache.RemoveAsync($"user_boards:{userId}");
+            var pattern = $"user_boards:{userId}:*";
+            await _cache.RemoveByPatternAsync(pattern);
+        }
+        
+        private async Task InvalidateCachesForBoard(string boardId)
+        {
+            var board = await _context.Boards
+                .Include(b => b.Members)
+                .FirstOrDefaultAsync(b => b.Id == boardId);
+
+            if (board == null) return;
+
+            await InvalidateBoardCache(boardId);
+
+            if (!string.IsNullOrEmpty(board.OwnerId))
+                await InvalidateUserBoardsCache(board.OwnerId);
+
+            var memberIds = board.Members.Select(m => m.UserId).Distinct().ToList();
+            foreach (var mId in memberIds)
+            {
+                await InvalidateUserBoardsCache(mId);
+            }
         }
 
         private async Task InvalidateBoardCache(string boardId)

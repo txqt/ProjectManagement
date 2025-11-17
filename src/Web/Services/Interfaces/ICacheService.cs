@@ -6,5 +6,6 @@
         Task SetAsync<T>(string key, T value, TimeSpan? expiry = null);
         Task RemoveAsync(string key);
         Task ClearAsync();
+        Task RemoveByPatternAsync(string pattern);
     }
 }

@@ -79,15 +79,15 @@ export default function BoardListView() {
         includeLists: true,
       };
 
-      const { success, error } = await executeRequest(() =>
+      const cloneBoard = await executeRequest(() =>
         apiService.cloneBoard(selectedBoard.id, cloneData)
       );
 
-      if (success) {
+      if (cloneBoard !== null) {
+        setBoards((prevBoards) => [cloneBoard, ...prevBoards]);
         toast.success("Board cloned successfully!");
-        fetchBoards(currentPage, itemsPerPage, searchTerm, sortBy, sortOrder);
       } else {
-        toast.error(error || "Failed to clone board");
+        toast.error("Failed to clone board");
       }
     } catch (err) {
       toast.error("Clone failed: " + err.message);
