@@ -593,7 +593,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
           </IconButton>
         </Box>
 
-        <DialogContent sx={{ p: 0, display: 'flex', overflow: 'hidden', opacity: isTemplate ? 0.7 : 1 }}>
+        <DialogContent sx={{ p: 0, display: 'flex', overflow: 'hidden', position: 'relative' }}>
           {/* Main Content Area */}
           <Box sx={{
             flex: 1,
@@ -817,6 +817,18 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
               {!isMobile && !isTablet && renderSidebar()}
             </Box>
           </Box>
+          {isTemplate && (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 50,
+                cursor: 'not-allowed',
+                backgroundColor: 'gray',
+                opacity: 0.5
+              }}
+            />
+          )}
         </DialogContent>
 
         {/* Mobile Action Bar */}

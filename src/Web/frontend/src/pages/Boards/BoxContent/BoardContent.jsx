@@ -1,27 +1,28 @@
 // ============ UPDATED: BoardContent.jsx ============
-import Box from '@mui/material/Box';
-import ListColumns from './ListColumns/ListColumns';
-import { sortColumnsByRank } from '~/utils/sorts';
-import { MouseSensor, TouchSensor } from '~/customLibraries/DndKitSensors';
 import {
     DndContext,
-    useSensor,
-    useSensors,
     DragOverlay,
-    defaultDropAnimationSideEffects,
     closestCorners,
+    defaultDropAnimationSideEffects,
+    getFirstCollision,
     pointerWithin,
-    getFirstCollision
+    useSensor,
+    useSensors
 } from '@dnd-kit/core';
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
+import { Alert } from '@mui/material';
+import Box from '@mui/material/Box';
+import { cloneDeep } from 'lodash';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { MouseSensor, TouchSensor } from '~/customLibraries/DndKitSensors';
+import { useIsTemplateBoard } from '~/hooks/useIsTemplateBoard';
+import { useBoardStore } from '~/stores/boardStore';
+import { ACTIVE_DRAG_ITEM_TYPE } from '~/utils/constants';
+import { sortColumnsByRank } from '~/utils/sorts';
 import Column from './ListColumns/Column/Column';
 import Card from './ListColumns/Column/ListCards/Card/Card';
-import { cloneDeep } from 'lodash';
-import { ACTIVE_DRAG_ITEM_TYPE } from '~/utils/constants';
-import { createPortal } from 'react-dom';
-import { useBoardStore } from '~/stores/boardStore';
-import { useIsTemplateBoard } from '~/hooks/useIsTemplateBoard';
+import ListColumns from './ListColumns/ListColumns';
 
 function BoardContent({ board }) {
     const moveCard = useBoardStore(state => state.moveCard)
@@ -348,6 +349,13 @@ function BoardContent({ board }) {
             onDragMove={isTemplate ? () => false : handleDragOver}
             onDragEnd={isTemplate ? () => false : handleDragEnd}
         >
+            {isTemplate && (
+                <Alert severity="info" sx={{
+                    p: 1,
+                }}>
+                    This is a template board. All editing features are disabled. To use this template, create a new board from it.
+                </Alert>
+            )}
             <Box
                 sx={{
                     backgroundImage: board?.cover

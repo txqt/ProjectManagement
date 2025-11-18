@@ -271,24 +271,6 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated, boa
     }
   };
 
-  // New: Save current board as template (moved from BoardListView menu)
-  const handleChangeType = async (type) => {
-    if (!board) return;
-
-    setLoading(true);
-    try {
-      const updatedBoard = await updateBoard(
-        {
-          type,
-        });
-
-      if (onBoardUpdated) onBoardUpdated(updatedBoard);
-
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleToggleTemplateOrBoard = async () => {
     if (!board) return;
 
