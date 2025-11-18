@@ -42,6 +42,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Create)]
         public async Task<ActionResult<CardDto>> CreateCard(string columnId, [FromBody] CreateCardDto createCardDto)
         {
@@ -57,6 +58,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{cardId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Edit)]
         public async Task<ActionResult<CardDto>> UpdateCard(string cardId, [FromBody] UpdateCardDto updateCardDto)
         {
@@ -72,6 +74,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{cardId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Delete)]
         public async Task<ActionResult> DeleteCard(string cardId)
         {
@@ -87,6 +90,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{cardId}/move")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Move)]
         public async Task<ActionResult> MoveCard(string cardId, [FromBody] MoveCardDto moveCardDto)
         {
@@ -102,6 +106,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("reorder")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Move)]
         public async Task<ActionResult> ReorderCards(string boardId, string columnId, [FromBody] List<string> cardIds)
         {
@@ -117,6 +122,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{cardId}/members")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Assign)]
         public async Task<ActionResult> AssignMember(string cardId, [FromBody] string memberEmail)
         {
@@ -132,6 +138,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{cardId}/members/{memberId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Assign)]
         public async Task<ActionResult> UnassignMember(string cardId, string memberId)
         {
@@ -147,6 +154,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{cardId}/clone")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Create)]
         public async Task<ActionResult<CardDto>> CloneCard(
             string boardId,

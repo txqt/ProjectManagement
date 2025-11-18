@@ -1,6 +1,7 @@
 ﻿using ProjectManagement.Data;
 using Microsoft.AspNetCore.Identity;
 using ProjectManagement.Authorization;
+using ProjectManagement.Models.Common;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Services;
 
@@ -160,7 +161,7 @@ namespace ProjectManagement.Data
                         Id = Guid.NewGuid().ToString(),
                         Title = "Alice's Private Project",
                         Description = "A private board owned by Alice",
-                        Type = "private",
+                        Type = BoardType.Private,
                         OwnerId = alice.Id,
                         CreatedAt = DateTime.UtcNow,
                         LastModified = DateTime.UtcNow
@@ -172,7 +173,7 @@ namespace ProjectManagement.Data
                         Id = Guid.NewGuid().ToString(),
                         Title = "Team Collaboration Board",
                         Description = "A public board for team collaboration",
-                        Type = "public",
+                        Type = BoardType.Public,
                         OwnerId = alice.Id,
                         CreatedAt = DateTime.UtcNow,
                         LastModified = DateTime.UtcNow

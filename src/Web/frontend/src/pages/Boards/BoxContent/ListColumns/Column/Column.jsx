@@ -10,9 +10,12 @@ import { usePermissionAttribute } from '~/hooks/usePermissionAttribute'
 import { sortCardsByRank } from '~/utils/sorts'
 import ListCards from './ListCards/ListCards'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { useIsTemplateBoard } from '~/hooks/useIsTemplateBoard';
 
 // OPTIMIZATION: Memoize với custom comparison
 const Column = memo(({ dragHandleProps, column, ...props }) => {
+  const isTemplate = useIsTemplateBoard();
+
   const dndAttr = usePermissionAttribute('columns.reorder', column.boardId);
   const orderedCards = sortCardsByRank(column?.cards)
 
@@ -69,12 +72,13 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
         borderRadius: '6px',
         height: 'fit-content',
         maxHeight: (theme) =>
-          `calc(${theme.custom.boardContentHeight} - ${theme.spacing(5)})`
+          `calc(${theme.custom.boardContentHeight} - ${theme.spacing(5)})`,
+        opacity: isTemplate ? 0.8 : 1,
       }}
     >
       {/* Header */}
       <Box
-        {...dragHandleProps}
+        {...(isTemplate ? {} : dragHandleProps)}
         sx={{
           height: (theme) => theme.custom.columnHeaderHeight,
           p: 2,
@@ -83,7 +87,7 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
           justifyContent: 'space-between'
         }}
       >
-        {editMode ? (
+        {editMode && !isTemplate ? (
           <TextField
             autoFocus
             variant="outlined"
@@ -106,15 +110,15 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
         ) : (
           <Typography
             variant="h6"
-            onClick={() => setEditMode(true)}
-            sx={{ fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }}
+            onClick={() => !isTemplate && setEditMode(true)}
+            sx={{ fontSize: '1rem', fontWeight: 'bold', cursor: isTemplate ? 'default' : 'pointer' }}
           >
             {column?.title}
           </Typography>
         )}
 
         {/* Dropdown */}
-        <Box>
+        {!isTemplate && (<Box>
           <Tooltip title="More options">
             <ExpandMoreIcon
               sx={{ color: 'text.primary', cursor: 'pointer' }}
@@ -165,7 +169,7 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
               </MenuItem>
             </ConditionalRender>
           </Menu>
-        </Box>
+        </Box>)}
       </Box>
 
       {/* Cards - OPTIMIZATION: Pass stable props */}
@@ -181,7 +185,7 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
       />
 
       {/* Footer */}
-      <Box sx={{ height: (theme) => theme.custom.columnFooterHeight, p: 2 }}>
+      {!isTemplate && (<Box sx={{ height: (theme) => theme.custom.columnFooterHeight, p: 2 }}>
         {!openNewCardForm ? (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Button
@@ -225,7 +229,7 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
             />
           </Box>
         )}
-      </Box>
+      </Box>)}
     </Box>
   )
 }, (prevProps, nextProps) => {

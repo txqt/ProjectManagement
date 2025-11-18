@@ -37,6 +37,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Boards.Edit)]
         public async Task<ActionResult<LabelDto>> CreateLabel(string boardId, [FromBody] CreateLabelDto createDto)
         {
@@ -60,6 +61,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{labelId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Boards.Edit)]
         public async Task<ActionResult<LabelDto>> UpdateLabel(
             string boardId,
@@ -88,6 +90,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{labelId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Boards.Edit)]
         public async Task<ActionResult> DeleteLabel(string boardId, string labelId)
         {
@@ -113,6 +116,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("cards/{cardId}/labels/{labelId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Edit)]
         public async Task<ActionResult> AddLabelToCard(
             string boardId,
@@ -142,6 +146,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("cards/{cardId}/labels/{labelId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Edit)]
         public async Task<ActionResult> RemoveLabelFromCard(
             string boardId,

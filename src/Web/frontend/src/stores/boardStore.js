@@ -1827,13 +1827,24 @@ export const useBoardStore = create((set, get) => ({
         }
     },
 
-    // Save as template
-    saveAsTemplate: async (boardId) => {
+    makeTemplate: async () => {
+        set({ loading: true, error: null });
         try {
-            const template = await apiService.saveAsTemplate(boardId);
-            return template;
+            await apiService.makeTemplate(get().boardId);
+            set({ board: { ...get().board, type: "template" }, loading: false });
         } catch (err) {
-            console.error('saveAsTemplate error:', err);
+            set({ error: err.message || err, loading: false });
+            throw err;
+        }
+    },
+
+    convertToBoard: async () => {
+        set({ loading: true, error: null });
+        try {
+            await apiService.convertToBoard(get().boardId);
+            set({ board: { ...get().board, type: "private" }, loading: false });
+        } catch (err) {
+            set({ error: err.message || err, loading: false });
             throw err;
         }
     },

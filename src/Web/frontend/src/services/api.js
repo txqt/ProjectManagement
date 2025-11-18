@@ -606,8 +606,14 @@ class ApiService {
     });
   }
 
-  async saveBoardAsTemplate(boardId) {
-    return this.request(`/boards/${boardId}/save-as-template`, {
+  async makeTemplate(boardId) {
+    return this.request(`/boards/${boardId}/make-template`, {
+      method: 'POST',
+    });
+  }
+
+  async convertToBoard(boardId) {
+    return this.request(`/boards/${boardId}/convert-to-board`, {
       method: 'POST',
     });
   }

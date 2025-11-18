@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using ProjectManagement.Data;
+using ProjectManagement.Models.Common;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Board;
 using ProjectManagement.Models.DTOs.Common;
@@ -75,7 +76,7 @@ namespace ProjectManagement.Tests.Services
             {
                 Title = "Test Board",
                 Description = "Test Description",
-                Type = "public"
+                Type = BoardType.Public
             };
 
             var expectedBoard = new Board

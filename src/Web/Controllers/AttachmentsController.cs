@@ -25,6 +25,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost]
+        [RequireNotTemplate]
         public async Task<ActionResult<AttachmentDto>> Upload(string boardId, string columnId, string cardId, IFormFile file)
         {
             var userId = _userManager.GetUserId(User);
@@ -47,6 +48,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Attach)]
         public async Task<ActionResult<AttachmentDto>> CreateAttachment(string cardId,
             [FromBody] CreateAttachmentDto createAttachmentDto)
@@ -60,6 +62,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{attachmentId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Attach)]
         public async Task<ActionResult> DeleteAttachment(string attachmentId)
         {

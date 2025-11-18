@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using ProjectManagement.Data;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Helpers;
+using ProjectManagement.Models.Common;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.BoardJoinRequest;
 using ProjectManagement.Models.DTOs.BoardShare;
@@ -113,7 +114,7 @@ namespace ProjectManagement.Services
             if (board.Members.Any(m => m.UserId == userId))
                 return new JoinBoardResponseDto { Success = true, Message = "Already a member", BoardId = board.Id, Action = "already_member" };
 
-            if (board.Type == "public")
+            if (board.Type == BoardType.Public)
             {
                 var newMember = new BoardMember
                 {

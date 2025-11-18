@@ -13,9 +13,13 @@ import { useBoardStore } from '~/stores/boardStore';
 import { usePermissionAttribute } from '~/hooks/usePermissionAttribute';
 import { Box, Chip } from '@mui/material';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import { useIsTemplateBoard } from '~/hooks/useIsTemplateBoard';
 
 const Card = memo(({ card, onOpen, isDragging, isPending }) => {
   const dndAttr = usePermissionAttribute('cards.move', card.boardId);
+
+  const isTemplate = useIsTemplateBoard();
+
   const storeCard = useBoardStore(s => {
     const cols = s.board?.columns ?? [];
     if (!card?.id || !card?.columnId) return null;
@@ -72,12 +76,12 @@ const Card = memo(({ card, onOpen, isDragging, isPending }) => {
     <MuiCard
       {...dndAttr}
       sx={{
-        cursor: 'pointer',
+        cursor: isTemplate ? 'default' : 'pointer',
         boxShadow: '0 1px 1px rgba(0,0,0,0.2)',
         overflow: 'unset',
         border: '1px solid transparent',
-        '&:hover': { borderColor: (theme) => theme.palette.primary.main },
-        opacity: isPending ? 0.5 : 1,
+        '&:hover': { borderColor: isTemplate ? 'transparent' : (theme) => theme.palette.primary.main },
+        opacity: isPending ? 0.5 : (isTemplate ? 0.8 : 1),
         pointerEvents: isPending ? 'none' : 'auto',
         transition: 'opacity 0.2s ease',
       }}

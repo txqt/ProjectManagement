@@ -40,6 +40,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Columns.Create)]
         public async Task<ActionResult<ColumnDto>> CreateColumn(string boardId,
             [FromBody] CreateColumnDto createColumnDto)
@@ -56,6 +57,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{columnId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Columns.Edit)]
         public async Task<ActionResult<ColumnDto>> UpdateColumn(string columnId,
             [FromBody] UpdateColumnDto updateColumnDto)
@@ -71,6 +73,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{columnId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Columns.Delete)]
         public async Task<ActionResult> DeleteColumn(string columnId)
         {
@@ -86,6 +89,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("reorder")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Columns.Reorder)]
         public async Task<ActionResult> ReorderColumns(string boardId, [FromBody] List<string> columnOrderIds)
         {
@@ -101,6 +105,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{columnId}/clone")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Columns.Create)]
         public async Task<ActionResult<ColumnDto>> CloneColumn(
             string boardId,

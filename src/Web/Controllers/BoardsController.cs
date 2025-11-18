@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using ProjectManagement.Attributes;
 using ProjectManagement.Authorization;
+using ProjectManagement.Models.Common;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Board;
 using ProjectManagement.Models.DTOs.Common;
@@ -78,6 +79,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{boardId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Boards.Edit)]
         public async Task<ActionResult<BoardDto>> UpdateBoard(string boardId, [FromBody] UpdateBoardDto updateBoardDto)
         {
@@ -108,6 +110,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{boardId}/members")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult<BoardMemberDto>> AddMember(string boardId,
             [FromBody] AddBoardMemberDto addMemberDto)
@@ -136,6 +139,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{boardId}/members/{memberId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult> RemoveMember(string boardId, string memberId)
         {
@@ -159,6 +163,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{boardId}/members/{memberId}/role")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Boards.ManageMembers)]
         public async Task<ActionResult> UpdateMemberRole(
             string boardId,
@@ -190,6 +195,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{boardId}/transfer-ownership")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Boards.Delete)] // Chỉ owner mới có permission này
         public async Task<ActionResult> TransferOwnership(
             string boardId,
@@ -238,9 +244,9 @@ namespace ProjectManagement.Controllers
             }
         }
 
-        [HttpPost("{boardId}/save-as-template")]
+        [HttpPost("{boardId}/make-template")]
         [RequirePermission(Permissions.Boards.Edit)]
-        public async Task<ActionResult<BoardDto>> SaveAsTemplate(string boardId)
+        public async Task<ActionResult<BoardDto>> MakeTemplate(string boardId)
         {
             var userId = _userManager.GetUserId(User);
             if (string.IsNullOrEmpty(userId))
@@ -248,7 +254,26 @@ namespace ProjectManagement.Controllers
 
             try
             {
-                var template = await _boardService.SaveAsTemplateAsync(boardId, userId);
+                var template = await _boardService.SetTypeAsync(boardId, BoardType.Template, userId);
+                return Ok(template);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+        
+        [HttpPost("{boardId}/convert-to-board")]
+        [RequirePermission(Permissions.Boards.Edit)]
+        public async Task<ActionResult<BoardDto>> ConvertToBoard(string boardId)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            try
+            {
+                var template = await _boardService.SetTypeAsync(boardId, BoardType.Private, userId);
                 return Ok(template);
             }
             catch (ArgumentException ex)

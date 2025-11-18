@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using ProjectManagement.Models.Common;
 using ProjectManagement.Models.Domain.Entities;
 using System.Reflection.Emit;
 using System.Text.Json;
@@ -39,7 +40,7 @@ namespace ProjectManagement.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
-                entity.Property(e => e.Type).IsRequired().HasDefaultValue("public");
+                entity.Property(e => e.Type).IsRequired().HasDefaultValue(BoardType.Public);
 
                 entity.HasOne(e => e.Owner)
                     .WithMany(u => u.OwnedBoards)

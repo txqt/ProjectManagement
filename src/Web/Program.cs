@@ -9,6 +9,7 @@ using ProjectManagement.Authorization;
 using ProjectManagement.Configuration;
 using ProjectManagement.Data;
 using ProjectManagement.Extensions;
+using ProjectManagement.Filters;
 using ProjectManagement.Hubs;
 using ProjectManagement.Mappings;
 using ProjectManagement.Models.Domain.Entities;
@@ -21,8 +22,12 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<TemplateReadOnlyFilter>();
+});
 
-builder.Services.AddControllers();
+builder.Services.AddScoped<IAuthorizationHandler, NotTemplateAuthorizationHandler>();
 
 // Add Entity Framework
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

@@ -37,6 +37,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Comment)]
         public async Task<ActionResult<CommentDto>> CreateComment(string cardId, [FromBody] CreateCommentDto createCommentDto)
         {
@@ -49,6 +50,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{commentId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Comment)]
         public async Task<ActionResult<CommentDto>> UpdateComment(string commentId, [FromBody] UpdateCommentDto updateCommentDto)
         {
@@ -64,6 +66,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{commentId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Comment)]
         public async Task<ActionResult> DeleteComment(string commentId)
         {

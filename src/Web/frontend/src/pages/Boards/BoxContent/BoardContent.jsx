@@ -21,6 +21,7 @@ import { cloneDeep } from 'lodash';
 import { ACTIVE_DRAG_ITEM_TYPE } from '~/utils/constants';
 import { createPortal } from 'react-dom';
 import { useBoardStore } from '~/stores/boardStore';
+import { useIsTemplateBoard } from '~/hooks/useIsTemplateBoard';
 
 function BoardContent({ board }) {
     const moveCard = useBoardStore(state => state.moveCard)
@@ -37,6 +38,7 @@ function BoardContent({ board }) {
     const pendingTempIds = useBoardStore(state => state.pendingTempIds)
     const cloneColumn = useBoardStore(state => state.cloneColumn)
     const cloneCard = useBoardStore(state => state.cloneCard)
+    const isTemplate = useIsTemplateBoard();
 
     const mouseSensor = useSensor(MouseSensor, {
         activationConstraint: { distance: 5 }
@@ -342,9 +344,9 @@ function BoardContent({ board }) {
         <DndContext
             sensors={sensors}
             collisionDetection={collisionDetectionStrategy}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
+            onDragStart={isTemplate ? () => false : handleDragStart}
+            onDragMove={isTemplate ? () => false : handleDragOver}
+            onDragEnd={isTemplate ? () => false : handleDragEnd}
         >
             <Box
                 sx={{
@@ -371,10 +373,10 @@ function BoardContent({ board }) {
                     deleteCard={deleteCard}
                     pendingTempIds={pendingTempIds}
                     assignCardMember={assignCardMember}
-                    unassignCardMember={unassignCardMember} 
+                    unassignCardMember={unassignCardMember}
                     cloneColumn={cloneColumn}
                     cloneCard={cloneCard}
-                    />
+                />
                 {createPortal(
                     <DragOverlay dropAnimation={customDropAnimation}>
                         {activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN && (

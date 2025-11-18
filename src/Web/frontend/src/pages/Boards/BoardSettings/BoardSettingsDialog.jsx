@@ -97,6 +97,10 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated, boa
 
   const [allowShareInviteLink, setallowShareInviteLink] = useState(true);
 
+  const makeTemplate = useBoardStore(state => state.makeTemplate);
+
+  const convertToBoard = useBoardStore(state => state.convertToBoard);
+
   useEffect(() => {
     if (board && open) {
       setTitle(board.title || '');
@@ -285,6 +289,26 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated, boa
     }
   };
 
+  const handleToggleTemplateOrBoard = async () => {
+    if (!board) return;
+
+    setLoading(true);
+
+    try {
+      console.log('board.type', board.type)
+      if (board.type === "template") {
+        await convertToBoard();
+      }
+      else {
+        await makeTemplate();
+      }
+      if (onBoardUpdated) onBoardUpdated(board);
+
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <>
       <Dialog
@@ -431,7 +455,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated, boa
                   <Button
                     variant="outlined"
                     startIcon={<AutoAwesomeIcon />}
-                    onClick={() => handleChangeType("template")}
+                    onClick={() => handleToggleTemplateOrBoard()}
                     disabled={loading}
                   >
                     Make template
@@ -439,7 +463,7 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated, boa
                 ) : (<Button
                   variant="outlined"
                   startIcon={<AutoAwesomeIcon />}
-                  onClick={() => handleChangeType("private")}
+                  onClick={() => handleToggleTemplateOrBoard()}
                   disabled={loading}
                 >
                   Convert to board

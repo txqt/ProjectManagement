@@ -20,7 +20,7 @@ namespace ProjectManagement.Services.Interfaces
         Task<bool> UpdateMemberRoleAsync(string boardId, string memberId, string role, string userId);
         Task TransferOwnershipAsync(string boardId, string newOwnerId, string currentUserId);
         Task<BoardDto> CloneBoardAsync(string boardId, CloneBoardDto cloneBoardDto, string userId);
-        Task<BoardDto> SaveAsTemplateAsync(string boardId, string userId);
+        Task<bool> SetTypeAsync(string boardId, string boardType, string userId);
         Task<List<BoardDto>> GetTemplatesAsync(string userId);
         Task<BoardDto> CreateFromTemplateAsync(string templateId, CreateBoardFromTemplateDto createDto, string userId);
     }

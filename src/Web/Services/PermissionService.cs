@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Authorization;
+using ProjectManagement.Models.Common;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Services.Interfaces;
 
@@ -121,7 +122,7 @@ namespace ProjectManagement.Services
             var membership = board.Members.FirstOrDefault(m => m.UserId == userId);
             if (membership == null)
             {
-                if (board.Type == "public" && IsViewOnlyPermission(permission))
+                if (board.Type == BoardType.Public && IsViewOnlyPermission(permission))
                     return (true, "Public board view access");
 
                 return (false, "User is not a board member");

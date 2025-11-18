@@ -579,7 +579,7 @@ namespace ProjectManagement.Services
             return await GetBoardAsync(newBoard.Id, userId);
         }
 
-        public async Task<BoardDto> SaveAsTemplateAsync(string boardId, string userId)
+        public async Task<bool> SetTypeAsync(string boardId, string boardType, string userId)
         {
             var board = await _context.Boards
                 .Include(b => b.Columns)
@@ -589,13 +589,12 @@ namespace ProjectManagement.Services
             if (board == null)
                 throw new ArgumentException("Board not found or access denied");
 
-            // Mark as template (you might want to add an IsTemplate flag to Board entity)
-            board.Type = "template";
+            board.Type = boardType;
             board.LastModified = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
-            return _mapper.Map<BoardDto>(board);
+            return true;
         }
 
         public async Task<List<BoardDto>> GetTemplatesAsync(string userId)

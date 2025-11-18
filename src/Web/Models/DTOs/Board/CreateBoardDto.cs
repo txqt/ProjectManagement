@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using ProjectManagement.Models.Common;
+using System.ComponentModel.DataAnnotations;
 
 namespace ProjectManagement.Models.DTOs.Board
 {
@@ -12,6 +13,6 @@ namespace ProjectManagement.Models.DTOs.Board
         
         public string? Cover { get; set; }
 
-        public string Type { get; set; } = "public";
+        public string Type { get; set; } = BoardType.Public;
     }
 }

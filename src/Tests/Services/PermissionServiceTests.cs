@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using ProjectManagement.Authorization;
 using ProjectManagement.Data;
+using ProjectManagement.Models.Common;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Services;
 using System.Security.Claims;
@@ -206,7 +207,7 @@ namespace ProjectManagement.Tests.Services
             {
                 Id = Guid.NewGuid().ToString(),
                 Title = "Test Board",
-                Type = "private",
+                Type = BoardType.Private,
                 OwnerId = _adminUserId,
                 CreatedAt = DateTime.UtcNow,
                 LastModified = DateTime.UtcNow
@@ -235,7 +236,7 @@ namespace ProjectManagement.Tests.Services
             {
                 Id = Guid.NewGuid().ToString(),
                 Title = "Public Board",
-                Type = "public",
+                Type = BoardType.Public,
                 OwnerId = _adminUserId,
                 CreatedAt = DateTime.UtcNow,
                 LastModified = DateTime.UtcNow

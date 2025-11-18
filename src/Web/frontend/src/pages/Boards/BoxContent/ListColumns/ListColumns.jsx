@@ -13,8 +13,11 @@ import Button from '@mui/material/Button';
 import { useMemo, useState, useCallback, memo } from 'react';
 import { toast } from 'react-toastify';
 import Column from './Column/Column';
+import { useIsTemplateBoard } from '~/hooks/useIsTemplateBoard';
 
 function ListColumns({ ...props }) {
+  const isTemplate = useIsTemplateBoard();
+
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
   const toggleOpenNewColumnForm = useCallback(() => setOpenNewColumnForm(prev => !prev), []);
   const [newColumnTitle, setNewColumnTitle] = useState('');
@@ -84,7 +87,7 @@ function ListColumns({ ...props }) {
         })}
 
         {/* Box Add new column CTA */}
-        {!openNewColumnForm ? (
+        {!isTemplate && !openNewColumnForm ? (
           <Box
             onClick={toggleOpenNewColumnForm}
             sx={{
@@ -109,7 +112,7 @@ function ListColumns({ ...props }) {
               Add new column
             </Button>
           </Box>
-        ) : (
+        ) : !isTemplate ? (
           <Box
             sx={{
               minWidth: '250px',
@@ -175,7 +178,7 @@ function ListColumns({ ...props }) {
               />
             </Box>
           </Box>
-        )}
+        ) : null}
       </Box>
     </SortableContext>
   )
@@ -229,14 +232,14 @@ const SortableColumnWrapper = memo(function SortableColumnWrapper(props) {
 }, (prevProps, nextProps) => {
   // OPTIMIZATION: Wrapper chỉ re-render khi drag state hoặc pending thay đổi
   // Column content comparison được handle bởi Column component
-  
+
   if (prevProps.column?.id !== nextProps.column?.id) return false
   if (prevProps.isColumnPending !== nextProps.isColumnPending) return false
-  
+
   // IMPORTANT: PHẢI pass through column changes để Column component nhận được update
   // Chỉ block re-render nếu column object hoàn toàn giống nhau (reference equality)
   if (prevProps.column !== nextProps.column) return false
-  
+
   return true
 })
 

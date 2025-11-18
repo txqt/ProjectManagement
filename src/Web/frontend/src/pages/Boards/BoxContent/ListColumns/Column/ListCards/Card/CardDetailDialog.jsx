@@ -3,7 +3,6 @@ import ArchiveIcon from '@mui/icons-material/Archive';
 import CheckIcon from '@mui/icons-material/Check';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import CloseIcon from '@mui/icons-material/Close';
-import CommentIcon from '@mui/icons-material/Comment';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
@@ -27,7 +26,6 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Paper,
   Stack,
   TextField,
   Typography,
@@ -47,8 +45,10 @@ import LabelsSection from '~/components/CardDetails/LabelsSection';
 import MemberSection from '~/components/CardDetails/MemberSection';
 import LabelSelector from '~/components/Label/LabelSelector';
 import UnsplashMenu from '~/components/UnsplashMenu/UnsplashMenu';
+import { useIsTemplateBoard } from '~/hooks/useIsTemplateBoard';
 import { apiService } from '~/services/api';
 import { useBoardStore } from '~/stores/boardStore';
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 
 // Sidebar Action Button Component
 const SidebarButton = ({ icon, label, onClick, disabled = false }) => (
@@ -76,6 +76,8 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
+
+  const isTemplate = useIsTemplateBoard();
 
   // Store & SignalR
   const storeCard = useBoardStore(
@@ -525,7 +527,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         PaperProps={{
           sx: {
             height: isMobile ? '100%' : '90vh',
-            maxHeight: isMobile ? '100%' : '90vh'
+            maxHeight: isMobile ? '100%' : '90vh',
           }
         }}
         data-no-dnd='true'
@@ -575,6 +577,15 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                 {currentCard.title}
               </Typography>
             )}
+            {isTemplate && (
+              <Chip
+                icon={<AutoAwesomeIcon />}
+                label="Template (Read Only)"
+                size="small"
+                color="warning"
+                sx={{ ml: 2 }}
+              />
+            )}
           </Box>
 
           <IconButton onClick={onClose} size="small">
@@ -582,7 +593,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
           </IconButton>
         </Box>
 
-        <DialogContent sx={{ p: 0, display: 'flex', overflow: 'hidden' }}>
+        <DialogContent sx={{ p: 0, display: 'flex', overflow: 'hidden', opacity: isTemplate ? 0.7 : 1 }}>
           {/* Main Content Area */}
           <Box sx={{
             flex: 1,
@@ -590,6 +601,11 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
             display: 'flex',
             flexDirection: 'column'
           }}>
+            {isTemplate && (
+              <Alert severity="info" sx={{ m: 2 }}>
+                This is a template board. All editing features are disabled. To use this template, create a new board from it.
+              </Alert>
+            )}
             {/* Warning if card moved */}
             {cardMovedWarning && (
               <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ m: 2 }}>
@@ -690,7 +706,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                         Description
                       </Typography>
                     </Box>
-                    {!editing && (
+                    {editing && !isTemplate ? (
                       <Button
                         size="small"
                         startIcon={<EditIcon />}
@@ -698,6 +714,18 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                       >
                         {description ? 'Edit' : 'Add'}
                       </Button>
+                    ) : (
+                      <Box
+                        onClick={() => !isTemplate && setEditing(true)}
+                      >
+                        {description ? (
+                          <div dangerouslySetInnerHTML={{ __html: description }} />
+                        ) : (
+                          <Typography color="text.secondary">
+                            {isTemplate ? 'No description' : 'Add a more detailed description...'}
+                          </Typography>
+                        )}
+                      </Box>
                     )}
                   </Box>
 
@@ -792,7 +820,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
         </DialogContent>
 
         {/* Mobile Action Bar */}
-        {isMobile && (
+        {!isTemplate && isMobile && (
           <Box sx={{
             p: 2,
             borderTop: 1,

@@ -1,4 +1,5 @@
-﻿using ProjectManagement.Models.Domain.Common;
+﻿using ProjectManagement.Models.Common;
+using ProjectManagement.Models.Domain.Common;
 using System.ComponentModel.DataAnnotations;
 
 namespace ProjectManagement.Models.Domain.Entities
@@ -12,7 +13,7 @@ namespace ProjectManagement.Models.Domain.Entities
         public string? Description { get; set; }
 
         [Required]
-        public string Type { get; set; } = "public"; // public, private
+        public string Type { get; set; } = BoardType.Public;
 
         [Required]
         public string OwnerId { get; set; } = string.Empty;

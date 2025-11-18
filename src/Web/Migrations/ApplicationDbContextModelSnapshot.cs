@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ProjectManagement.Data;
+using ProjectManagement.Models.Common;
 
 #nullable disable
 
@@ -378,7 +379,7 @@ namespace ProjectManagement.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("text")
-                        .HasDefaultValue("public");
+                        .HasDefaultValue(BoardType.Public);
 
                     b.HasKey("Id");
 

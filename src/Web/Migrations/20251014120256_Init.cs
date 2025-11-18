@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using ProjectManagement.Models.Common;
 
 #nullable disable
 
@@ -167,7 +168,7 @@ namespace ProjectManagement.Migrations
                     Id = table.Column<string>(type: "text", nullable: false),
                     Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
-                    Type = table.Column<string>(type: "text", nullable: false, defaultValue: "public"),
+                    Type = table.Column<string>(type: "text", nullable: false, defaultValue: BoardType.Public),
                     OwnerId = table.Column<string>(type: "text", nullable: false),
                     Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "text", nullable: true),

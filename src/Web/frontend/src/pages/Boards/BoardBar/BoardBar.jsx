@@ -24,6 +24,8 @@ import { useAuth } from '~/hooks/useAuth';
 import BoardSettingsDialog from '~/pages/Boards/BoardSettings/BoardSettingsDialog';
 import { useBoardStore } from '~/stores/boardStore';
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender';
+import { useIsTemplateBoard } from '~/hooks/useIsTemplateBoard';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 
 const MENU_STYPES = {
   color: 'white',
@@ -47,6 +49,7 @@ export default function BoardBar() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [boardMember, setBoardMember] = useState('');
   const { user } = useAuth();
+  const isTemplate = useIsTemplateBoard();
 
   useEffect(() => {
     if (board?.members?.length > 0) {
@@ -76,6 +79,15 @@ export default function BoardBar() {
         <Chip sx={MENU_STYPES} icon={<DashboardIcon />} label={board.title} title="Board name" />
         <Chip sx={MENU_STYPES} icon={<VpnLockIcon />} label={capitalizeFirstLetter(board.type)} title="Board type" />
 
+        {isTemplate && (
+          <Chip 
+            sx={{ ...MENU_STYPES, bgcolor: 'rgba(255, 152, 0, 0.2)' }}
+            icon={<AutoAwesomeIcon />}
+            label="Read Only"
+            size="small"
+          />
+        )}
+
         <Tooltip title={isConnected ? 'Real-time sync active' : 'Disconnected - changes may not sync'}>
           <Chip
             sx={{ ...MENU_STYPES, bgcolor: isConnected ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)' }}
@@ -94,6 +106,7 @@ export default function BoardBar() {
           startIcon={<PersonAddIcon />}
           sx={{ color: 'white', borderColor: 'white', '&:hover': { borderColor: 'white' } }}
           onClick={() => setInviteOpen(true)}
+          disabled={isTemplate} tabIndex={isTemplate ? -1 : 0}
         >
           Invite
         </Button>
@@ -103,6 +116,7 @@ export default function BoardBar() {
           startIcon={<ShareIcon />}
           sx={{ color: 'white', borderColor: 'white', '&:hover': { borderColor: 'white' } }}
           onClick={() => setShareOpen(true)}
+          disabled={isTemplate} tabIndex={isTemplate ? -1 : 0}
         >
           Share
         </Button>

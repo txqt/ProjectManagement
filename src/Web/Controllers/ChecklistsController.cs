@@ -26,6 +26,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Edit)]
         public async Task<ActionResult<ChecklistDto>> CreateChecklist(
             string boardId,
@@ -54,6 +55,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{checklistId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Edit)]
         public async Task<ActionResult<ChecklistDto>> UpdateChecklist(
             string boardId,
@@ -81,6 +83,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{checklistId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Edit)]
         public async Task<ActionResult> DeleteChecklist(
             string boardId,
@@ -107,6 +110,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{checklistId}/items")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Edit)]
         public async Task<ActionResult<ChecklistItemDto>> CreateChecklistItem(
             string boardId,
@@ -136,6 +140,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPut("{checklistId}/items/{itemId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Edit)]
         public async Task<ActionResult<ChecklistItemDto>> UpdateChecklistItem(
             string boardId,
@@ -164,6 +169,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpPost("{checklistId}/items/{itemId}/toggle")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Edit)]
         public async Task<ActionResult> ToggleChecklistItem(
             string boardId,
@@ -191,6 +197,7 @@ namespace ProjectManagement.Controllers
         }
 
         [HttpDelete("{checklistId}/items/{itemId}")]
+        [RequireNotTemplate]
         [RequirePermission(Permissions.Cards.Edit)]
         public async Task<ActionResult> DeleteChecklistItem(
             string boardId,
