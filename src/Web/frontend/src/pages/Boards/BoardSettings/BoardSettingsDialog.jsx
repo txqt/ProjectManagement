@@ -33,7 +33,9 @@ import {
   Edit as EditIcon,
   Public as PublicIcon,
   Lock as LockIcon,
-  Save as SaveIcon
+  Save as SaveIcon,
+  ContentCopy as ContentCopyIcon,
+  AutoAwesome as AutoAwesomeIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { apiService } from '~/services/api';
@@ -58,8 +60,11 @@ function TabPanel({ children, value, index, ...other }) {
   );
 }
 
-export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
-  const board = useBoardStore(state => state.board);
+export default function BoardSettingsDialog({ open, onClose, onBoardUpdated, board: boardProp }) {
+  // If boardProp is provided (when opening from outside), use it; otherwise fall back to store.
+  const boardFromStore = useBoardStore(state => state.board);
+  const board = boardProp || boardFromStore;
+
   const deleteBoard = useBoardStore(state => state.deleteBoard);
   const updateBoard = useBoardStore(state => state.updateBoard);
   const updateBoardMemberRole = useBoardStore(state => state.updateBoardMemberRole);
@@ -117,15 +122,24 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
 
     setLoading(true);
     try {
-      const updatedBoard = await updateBoard(
-        {
-          title,
-          description,
-          type,
-          cover
-        });
+      // If store action exists use it; otherwise fall back to API
+      if (updateBoard) {
+        const updatedBoard = await updateBoard(
+          {
+            title,
+            description,
+            type,
+            cover
+          });
 
-      if (onBoardUpdated) onBoardUpdated(updatedBoard);
+        if (onBoardUpdated) onBoardUpdated(updatedBoard);
+      } else if (board?.id) {
+        const res = await apiService.updateBoard(board.id, { title, description, type, cover });
+        if (res) {
+          if (onBoardUpdated) onBoardUpdated(res);
+        }
+      }
+
       toast.success('Board settings updated successfully');
     } finally {
       setLoading(false);
@@ -141,7 +155,11 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
   const handleUpdateMemberRole = async (memberId, role) => {
     setLoading(true);
     try {
-      await updateBoardMemberRole(memberId, role);
+      if (updateBoardMemberRole) {
+        await updateBoardMemberRole(memberId, role);
+      } else if (board?.id) {
+        await apiService.updateBoardMemberRole(board.id, memberId, { role });
+      }
 
       setEditingMemberId(null);
       toast.success('Member role updated');
@@ -156,7 +174,11 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
 
     setLoading(true);
     try {
-      await removeBoardMember(memberId);
+      if (removeBoardMember) {
+        await removeBoardMember(memberId);
+      } else if (board?.id) {
+        await apiService.removeBoardMember(board.id, memberId);
+      }
       toast.success('Member removed');
     } catch (error) {
       console.error('Failed to remove member:', error);
@@ -170,13 +192,19 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
   const handleSaveAdvanced = async () => {
     setLoading(true);
     try {
-      const updatedBoard = await updateBoard({
-        allowShareInviteLink,
-        allowCommentsOnCard,
-        allowAttachmentsOnCard
-      });
+      if (updateBoard) {
+        const updatedBoard = await updateBoard({
+          allowShareInviteLink,
+          allowCommentsOnCard,
+          allowAttachmentsOnCard
+        });
 
-      if (onBoardUpdated) onBoardUpdated(updatedBoard);
+        if (onBoardUpdated) onBoardUpdated(updatedBoard);
+      } else if (board?.id) {
+        const res = await apiService.updateBoard(board.id, { allowShareInviteLink, allowCommentsOnCard, allowAttachmentsOnCard });
+        if (res && onBoardUpdated) onBoardUpdated(res);
+      }
+
       toast.success('Advanced settings updated');
     } finally {
       setLoading(false);
@@ -196,11 +224,62 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
 
     setLoading(true);
     try {
-      await deleteBoard(board.id);
+      if (deleteBoard) {
+        await deleteBoard(board.id);
+      } else if (board?.id) {
+        await apiService.deleteBoard(board.id);
+      }
       toast.success('Board deleted successfully');
       onClose();
       // Redirect to home page
       window.location.href = '/';
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // New: Clone board (moved from BoardListView menu)
+  const handleCloneBoard = async () => {
+    if (!board) return;
+    if (!window.confirm('Clone this board? This will create a new board copy.')) return;
+
+    setLoading(true);
+    try {
+      const cloneData = {
+        title: `${board.title} (Clone)`,
+        includeCards: true,
+        includeLists: true,
+      };
+
+      const res = await apiService.cloneBoard(board.id, cloneData);
+      if (res && res.id) {
+        toast.success('Board cloned successfully');
+        // Redirect to the cloned board
+        window.location.href = `/boards/${res.id}`;
+      } else {
+        toast.error('Failed to clone board');
+      }
+    } catch (err) {
+      console.error('Clone failed:', err);
+      toast.error('Clone failed: ' + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // New: Save current board as template (moved from BoardListView menu)
+  const handleChangeType = async (type) => {
+    if (!board) return;
+
+    setLoading(true);
+    try {
+      const updatedBoard = await updateBoard(
+        {
+          type,
+        });
+
+      if (onBoardUpdated) onBoardUpdated(updatedBoard);
+
     } finally {
       setLoading(false);
     }
@@ -256,27 +335,28 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
                 onChange={(e) => setDescription(e.target.value)}
               />
 
-              <FormControl fullWidth>
-                <InputLabel>Visibility</InputLabel>
-                <Select
-                  value={type}
-                  label="Visibility"
-                  onChange={(e) => setType(e.target.value)}
-                >
-                  <MenuItem value="private">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LockIcon fontSize="small" />
-                      Private - Only invited members
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="public">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PublicIcon fontSize="small" />
-                      Public - Anyone with link
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
+              {board?.type !== 'template' && (
+                <FormControl fullWidth>
+                  <InputLabel>Visibility</InputLabel>
+                  <Select
+                    value={type}
+                    label="Visibility"
+                    onChange={(e) => setType(e.target.value)}
+                  >
+                    <MenuItem value="private">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LockIcon fontSize="small" />
+                        Private - Only invited members
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="public">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <PublicIcon fontSize="small" />
+                        Public - Anyone with link
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>)}
 
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
@@ -337,7 +417,34 @@ export default function BoardSettingsDialog({ open, onClose, onBoardUpdated }) {
                 </Box>
               </Box>
 
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<ContentCopyIcon />}
+                  onClick={handleCloneBoard}
+                  disabled={loading}
+                >
+                  Clone Board
+                </Button>
+
+                {board?.type !== 'template' ? (
+                  <Button
+                    variant="outlined"
+                    startIcon={<AutoAwesomeIcon />}
+                    onClick={() => handleChangeType("template")}
+                    disabled={loading}
+                  >
+                    Make template
+                  </Button>
+                ) : (<Button
+                  variant="outlined"
+                  startIcon={<AutoAwesomeIcon />}
+                  onClick={() => handleChangeType("private")}
+                  disabled={loading}
+                >
+                  Convert to board
+                </Button>)}
+
                 <Button
                   variant="contained"
                   startIcon={<SaveIcon />}

@@ -61,8 +61,6 @@ export default function BoardListView() {
   const initialBoardState = { title: "", description: "", type: "private" };
   const [newBoard, setNewBoard] = useState(initialBoardState);
   const navigate = useNavigate();
-  const [menuAnchor, setMenuAnchor] = useState(null);
-  const [selectedBoard, setSelectedBoard] = useState(null);
 
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
@@ -120,58 +118,6 @@ export default function BoardListView() {
       } else {
         toast.error(`Error creating board: ${apiErr}`);
       }
-    }
-  };
-
-  const handleOpenMenu = (event, board) => {
-    event.stopPropagation();
-    setMenuAnchor(event.currentTarget);
-    setSelectedBoard(board);
-  };
-
-  const handleCloseMenu = () => {
-    setMenuAnchor(null);
-    setSelectedBoard(null);
-  };
-
-  const handleCloneBoard = async () => {
-    if (!selectedBoard) return;
-
-    try {
-      const cloneData = {
-        title: selectedBoard.title + " (Clone)",
-        includeCards: true,
-        includeLists: true,
-      };
-
-      const result = await executeRequest(() =>
-        apiService.cloneBoard(selectedBoard.id, cloneData)
-      );
-
-      if (result.success) {
-        setBoards((prevBoards) => [result.data, ...prevBoards]);
-        toast.success("Board cloned successfully!");
-      } else {
-        toast.error("Failed to clone board");
-      }
-    } catch (err) {
-      toast.error("Clone failed: " + err.message);
-    }
-  };
-
-  const handleSaveTemplate = async () => {
-    if (!selectedBoard) return;
-    try {
-      const result = await executeRequest(() =>
-        apiService.saveBoardAsTemplate(selectedBoard.id)
-      );
-      if (result.success) {
-        toast.success("Board saved as template successfully!");
-      } else {
-        toast.error("Failed to save board as template");
-      }
-    } catch (err) {
-      toast.error("Save as template failed: " + err.message);
     }
   };
 
@@ -365,14 +311,6 @@ export default function BoardListView() {
                     transition: "all 0.3s"
                   }}
                 >
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleOpenMenu(e, board)}
-                    sx={{ position: 'absolute', top: 8, right: 8, zIndex: 10, color: "white" }}
-                  >
-                    <MoreVertIcon />
-                  </IconButton>
-
                   <CardActionArea
                     onClick={() => navigate(`/boards/${board.id}`)}
                     sx={{ height: "100%", position: "relative" }}
@@ -731,35 +669,6 @@ export default function BoardListView() {
           </Button>
         </DialogActions>
       </Dialog>
-      <Menu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
-        onClose={handleCloseMenu}
-      >
-        <MenuItem
-          onClick={() => {
-            handleCloseMenu();
-            handleCloneBoard();
-          }}
-        >
-          <ListItemIcon>
-            <ContentCopyIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Clone board" />
-        </MenuItem>
-
-        <MenuItem
-          onClick={() => {
-            handleCloseMenu();
-            handleSaveTemplate();
-          }}
-        >
-          <ListItemIcon>
-            <AutoAwesomeIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Save as template" />
-        </MenuItem>
-      </Menu>
     </Box>
   );
 }

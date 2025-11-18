@@ -418,34 +418,34 @@ export const useBoardStore = create((set, get) => ({
 
 
 
-    // Reorder columns
+    // Reorder columns (optimistic)
     reorderColumns: async (columnIds) => {
         const originalBoard = get().board;
 
-        // Optimistic update: gán rank tạm thời cho các column
+        // Optimistic update: set ranks but keep full objects (preserve nested data)
         set(state => {
-            const idToColumn = state.board.columns.reduce((map, col) => {
-                map[col.id] = col;
-                return map;
-            }, {});
+            const orderMap = new Map(columnIds.map((id, idx) => [id, idx]));
 
-            const newColumns = columnIds
-                .map((id, idx) => {
-                    const column = idToColumn[id];
-                    if (!column) return null;
-
-                    // Gán rank tạm — để render ổn định, zero-padded
-                    return { ...column, rank: String(idx).padStart(6, '0') };
+            // Sort existing columns by whether they appear in columnIds (those that appear follow index)
+            const newColumns = state.board.columns
+                .slice() // copy
+                .sort((a, b) => {
+                    const ia = orderMap.has(a.id) ? orderMap.get(a.id) : Number.MAX_SAFE_INTEGER;
+                    const ib = orderMap.has(b.id) ? orderMap.get(b.id) : Number.MAX_SAFE_INTEGER;
+                    return ia - ib;
                 })
-                .filter(Boolean);
-
-            // Giữ lại các column không nằm trong danh sách reorder (nếu có)
-            const rest = state.board.columns.filter(c => !columnIds.includes(c.id));
+                .map(col => {
+                    if (orderMap.has(col.id)) {
+                        // giữ nguyên nested data, chỉ update rank để render theo thứ tự mới
+                        return { ...col, rank: String(orderMap.get(col.id)).padStart(6, '0') };
+                    }
+                    return col;
+                });
 
             return {
                 board: {
                     ...state.board,
-                    columns: [...newColumns, ...rest]
+                    columns: newColumns
                 }
             };
         });
@@ -539,12 +539,34 @@ export const useBoardStore = create((set, get) => ({
 
     handleColumnsReordered: (data) => {
         if (Array.isArray(data.orderedColumns)) {
-            set(state => ({
-                board: {
-                    ...state.board,
-                    columns: data.orderedColumns
-                }
-            }));
+            set(state => {
+                const existingColumnsMap = new Map();
+                state.board.columns.forEach(col => {
+                    existingColumnsMap.set(col.id, col);
+                });
+
+                const mergedColumns = data.orderedColumns.map(serverCol => {
+                    const existingCol = existingColumnsMap.get(serverCol.id);
+
+                    if (existingCol) {
+                        return {
+                            ...existingCol,
+                            rank: serverCol.rank,
+                            title: serverCol.title ?? existingCol.title,
+                            cards: existingCol.cards
+                        };
+                    }
+
+                    return serverCol;
+                });
+
+                return {
+                    board: {
+                        ...state.board,
+                        columns: mergedColumns
+                    }
+                };
+            });
             console.log('Columns updated from server event.');
         }
     },
