@@ -14,17 +14,28 @@ import { useMemo, useState, useCallback, memo } from 'react';
 import { toast } from 'react-toastify';
 import Column from './Column/Column';
 import { useIsTemplateBoard } from '~/hooks/useIsTemplateBoard';
+import { useBoardStore } from '~/stores/boardStore';
 
-function ListColumns({ ...props }) {
+function ListColumns({ columns }) {
   const isTemplate = useIsTemplateBoard();
-
+  const createColumn = useBoardStore(state => state.createColumn)
+  const updateCard = useBoardStore(state => state.updateCard)
+  const updateColumn = useBoardStore(state => state.updateColumn)
+  const createCard = useBoardStore(state => state.createCard)
+  const deleteColumn = useBoardStore(state => state.deleteColumn)
+  const deleteCard = useBoardStore(state => state.deleteCard)
+  const assignCardMember = useBoardStore(state => state.assignCardMember)
+  const unassignCardMember = useBoardStore(state => state.unassignCardMember)
+  const pendingTempIds = useBoardStore(state => state.pendingTempIds)
+  const cloneColumn = useBoardStore(state => state.cloneColumn)
+  const cloneCard = useBoardStore(state => state.cloneCard)
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false);
   const toggleOpenNewColumnForm = useCallback(() => setOpenNewColumnForm(prev => !prev), []);
   const [newColumnTitle, setNewColumnTitle] = useState('');
 
   const columnsId = useMemo(() => {
-    return props.columns?.map((c) => c.id);
-  }, [props.columns]);
+    return columns?.map((c) => c.id);
+  }, [columns]);
 
   const addNewColumn = useCallback(async () => {
     if (!newColumnTitle) {
@@ -33,7 +44,7 @@ function ListColumns({ ...props }) {
     }
 
     try {
-      await props.createColumn({
+      await createColumn({
         title: newColumnTitle,
         description: 'description',
         type: 'public'
@@ -45,7 +56,7 @@ function ListColumns({ ...props }) {
       console.error(err);
       toast.error(err?.message || 'Có lỗi xảy ra');
     }
-  }, [newColumnTitle, props.createColumn, toggleOpenNewColumnForm])
+  }, [newColumnTitle, createColumn, toggleOpenNewColumnForm])
 
   return (
     <SortableContext
@@ -63,25 +74,25 @@ function ListColumns({ ...props }) {
           '&::-webkit-scrollbar-track': { m: 2 }
         }}
       >
-        {props.columns?.map((column) => {
-          const isColumnPending = props.pendingTempIds?.has?.(column.id) ?? false;
+        {columns?.map((column) => {
+          const isColumnPending = pendingTempIds?.has?.(column.id) ?? false;
 
           return (
             <SortableColumnWrapper
               key={column.id}
               column={column}
               isColumnPending={isColumnPending}
-              createColumn={props.createColumn}
-              updateCard={props.updateCard}
-              updateColumn={props.updateColumn}
-              createCard={props.createCard}
-              deleteColumn={props.deleteColumn}
-              deleteCard={props.deleteCard}
-              pendingTempIds={props.pendingTempIds}
-              assignCardMember={props.assignCardMember}
-              unassignCardMember={props.unassignCardMember}
-              cloneColumn={props.cloneColumn}
-              cloneCard={props.cloneCard}
+              createColumn={createColumn}
+              updateCard={updateCard}
+              updateColumn={updateColumn}
+              createCard={createCard}
+              deleteColumn={deleteColumn}
+              deleteCard={deleteCard}
+              pendingTempIds={pendingTempIds}
+              assignCardMember={assignCardMember}
+              unassignCardMember={unassignCardMember}
+              cloneColumn={cloneColumn}
+              cloneCard={cloneCard}
             />
           );
         })}
@@ -214,7 +225,7 @@ const SortableColumnWrapper = memo(function SortableColumnWrapper(props) {
   return (
     <div ref={setNodeRef} style={dndKitColumnStyles}>
       <Column
-        dragHandleProps={dragHandleProps}
+        dragHandleProps={props.dragHandleProps}
         column={props.column}
         createCard={props.createCard}
         updateCard={props.updateCard}
@@ -230,8 +241,6 @@ const SortableColumnWrapper = memo(function SortableColumnWrapper(props) {
     </div>
   )
 }, (prevProps, nextProps) => {
-  // OPTIMIZATION: Wrapper chỉ re-render khi drag state hoặc pending thay đổi
-  // Column content comparison được handle bởi Column component
 
   if (prevProps.column?.id !== nextProps.column?.id) return false
   if (prevProps.isColumnPending !== nextProps.isColumnPending) return false

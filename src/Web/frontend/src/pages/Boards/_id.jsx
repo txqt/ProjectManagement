@@ -14,8 +14,6 @@ function Board() {
     // Setup SignalR connection
     const { connectionError } = useBoardSignalR(boardId);
     
-    // Get state and actions directly from store
-    const board = useBoardStore((state) => state.board);
     const error = useBoardStore((state) => state.error);
 
     // Show errors
@@ -47,9 +45,7 @@ function Board() {
             <BoardBar />
 
             {/* Board Content */}
-            <BoardContent
-                board={board}
-            />
+            <BoardContent />
         </Container>
     );
 }

@@ -24,21 +24,11 @@ import Column from './ListColumns/Column/Column';
 import Card from './ListColumns/Column/ListCards/Card/Card';
 import ListColumns from './ListColumns/ListColumns';
 
-function BoardContent({ board }) {
+function BoardContent() {
+    const board = useBoardStore((state) => state.board);
     const moveCard = useBoardStore(state => state.moveCard)
     const reorderColumns = useBoardStore(state => state.reorderColumns)
     const reorderCards = useBoardStore(state => state.reorderCards)
-    const createColumn = useBoardStore(state => state.createColumn)
-    const updateCard = useBoardStore(state => state.updateCard)
-    const updateColumn = useBoardStore(state => state.updateColumn)
-    const createCard = useBoardStore(state => state.createCard)
-    const deleteColumn = useBoardStore(state => state.deleteColumn)
-    const deleteCard = useBoardStore(state => state.deleteCard)
-    const assignCardMember = useBoardStore(state => state.assignCardMember)
-    const unassignCardMember = useBoardStore(state => state.unassignCardMember)
-    const pendingTempIds = useBoardStore(state => state.pendingTempIds)
-    const cloneColumn = useBoardStore(state => state.cloneColumn)
-    const cloneCard = useBoardStore(state => state.cloneCard)
     const isTemplate = useIsTemplateBoard();
 
     const mouseSensor = useSensor(MouseSensor, {
@@ -373,17 +363,6 @@ function BoardContent({ board }) {
             >
                 <ListColumns
                     columns={orderedColumns}
-                    createColumn={createColumn}
-                    updateCard={updateCard}
-                    updateColumn={updateColumn}
-                    createCard={createCard}
-                    deleteColumn={deleteColumn}
-                    deleteCard={deleteCard}
-                    pendingTempIds={pendingTempIds}
-                    assignCardMember={assignCardMember}
-                    unassignCardMember={unassignCardMember}
-                    cloneColumn={cloneColumn}
-                    cloneCard={cloneCard}
                 />
                 {createPortal(
                     <DragOverlay dropAnimation={customDropAnimation}>
