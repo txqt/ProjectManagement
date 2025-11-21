@@ -292,6 +292,38 @@ namespace ProjectManagement.Data
 
                 entity.HasIndex(e => e.ChecklistId);
             });
+
+            // ActivityLog configuration
+            builder.Entity<ActivityLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Action).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.EntityType).IsRequired().HasMaxLength(50);
+
+                entity.HasOne(e => e.Board)
+                    .WithMany()
+                    .HasForeignKey(e => e.BoardId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Card)
+                    .WithMany()
+                    .HasForeignKey(e => e.CardId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Column)
+                    .WithMany()
+                    .HasForeignKey(e => e.ColumnId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.BoardId);
+                entity.HasIndex(e => e.CardId);
+                entity.HasIndex(e => e.CreatedAt);
+            });
         }
     }
 }

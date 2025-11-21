@@ -82,17 +82,7 @@ function ListColumns({ columns }) {
               key={column.id}
               column={column}
               isColumnPending={isColumnPending}
-              createColumn={createColumn}
-              updateCard={updateCard}
-              updateColumn={updateColumn}
-              createCard={createCard}
-              deleteColumn={deleteColumn}
-              deleteCard={deleteCard}
               pendingTempIds={pendingTempIds}
-              assignCardMember={assignCardMember}
-              unassignCardMember={unassignCardMember}
-              cloneColumn={cloneColumn}
-              cloneCard={cloneCard}
             />
           );
         })}
@@ -225,18 +215,10 @@ const SortableColumnWrapper = memo(function SortableColumnWrapper(props) {
   return (
     <div ref={setNodeRef} style={dndKitColumnStyles}>
       <Column
-        dragHandleProps={props.dragHandleProps}
+        dragHandleProps={dragHandleProps}
         column={props.column}
-        createCard={props.createCard}
-        updateCard={props.updateCard}
-        updateColumn={props.updateColumn}
-        deleteColumn={props.deleteColumn}
         deleteCard={props.deleteCard}
         pendingTempIds={props.pendingTempIds}
-        assignCardMember={props.assignCardMember}
-        unassignCardMember={props.unassignCardMember}
-        cloneColumn={props.cloneColumn}
-        cloneCard={props.cloneCard}
       />
     </div>
   )

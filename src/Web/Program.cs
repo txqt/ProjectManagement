@@ -156,6 +156,8 @@ builder.Services.AddScoped<ICacheInvalidationService, CacheInvalidationService>(
 builder.Services.AddScoped<ILabelService, LabelService>();
 builder.Services.AddScoped<IChecklistService, ChecklistService>();
 
+builder.Services.AddScoped<LexoRankMigrationService>();
+
 // Add CORS
 builder.Services.AddCors(options =>
 {

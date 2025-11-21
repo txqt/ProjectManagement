@@ -273,6 +273,7 @@ export const createCardSlice = (set, get) => ({
 
     // SignalR handlers
     handleCardCreated: (data) => {
+        console.log('handleCardCreated')
         set(state => ({
             board: {
                 ...state.board,

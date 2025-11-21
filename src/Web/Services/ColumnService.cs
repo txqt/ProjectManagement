@@ -82,7 +82,7 @@ namespace ProjectManagement.Services
             {
                 return null;
             }
-            
+
             await _cacheInvalidation.InvalidateColumnCachesAsync(column.Id, boardId);
 
             await _boardNotificationService.BroadcastColumnCreated(boardId, createdColumn, userId);
@@ -95,6 +95,20 @@ namespace ProjectManagement.Services
             var column = await _context.Columns
                 .Include(c => c.Board)
                 .ThenInclude(b => b.Members)
+                .Include(c => c.Cards)
+                .ThenInclude(c => c.Labels)
+                .ThenInclude(c => c.Label)
+                .Include(c => c.Cards)
+                .ThenInclude(c => c.Members)
+                .ThenInclude(cm => cm.User)
+                .Include(c => c.Cards)
+                .ThenInclude(c => c.Comments)
+                .ThenInclude(comment => comment.User)
+                .Include(c => c.Cards)
+                .ThenInclude(c => c.Attachments)
+                .Include(c => c.Cards)
+                .ThenInclude(c => c.Checklists)
+                .ThenInclude(cl => cl.Items)
                 .FirstOrDefaultAsync(c => c.Id == columnId);
 
             if (column == null)
@@ -110,7 +124,7 @@ namespace ProjectManagement.Services
             {
                 return null;
             }
-            
+
             await _cacheInvalidation.InvalidateColumnCachesAsync(column.Id, column.BoardId);
 
             await _boardNotificationService.BroadcastColumnUpdated(updatedColumn.BoardId, updatedColumn, userId);
@@ -132,7 +146,7 @@ namespace ProjectManagement.Services
             await _context.SaveChangesAsync();
 
             var columnDto = _mapper.Map<ColumnDto>(column);
-            
+
             await _cacheInvalidation.InvalidateColumnCachesAsync(columnId, column.BoardId);
 
             await _boardNotificationService.BroadcastColumnDeleted(column.BoardId, column.Id, userId);
@@ -177,7 +191,7 @@ namespace ProjectManagement.Services
             }
 
             await _context.SaveChangesAsync();
-            
+
             await _cacheInvalidation.InvalidateBoardCachesAsync(boardId);
 
             await _boardNotificationService.BroadcastColumnsReordered(boardId, columnIds,
@@ -193,7 +207,7 @@ namespace ProjectManagement.Services
         {
             var sourceColumn = await _context.Columns
                 .Include(c => c.Cards)
-                .ThenInclude(c=>c.Members)
+                .ThenInclude(c => c.Members)
                 .Include(c => c.Cards)
                 .ThenInclude(card => card.Labels)
                 .ThenInclude(cl => cl.Label)
@@ -255,9 +269,7 @@ namespace ProjectManagement.Services
                     {
                         _context.CardMembers.Add(new CardMember
                         {
-                            Id = Guid.NewGuid().ToString(), 
-                            CardId = newCard.Id, 
-                            UserId = cardMember.UserId
+                            Id = Guid.NewGuid().ToString(), CardId = newCard.Id, UserId = cardMember.UserId
                         });
                     }
 

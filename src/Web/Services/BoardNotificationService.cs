@@ -46,7 +46,6 @@ namespace ProjectManagement.Services
             var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
             if (excluded.Length == 0)
             {
-                // fallback
                 return _hub.Clients.Group(GroupName(boardId)).SendAsync("ColumnCreated", new { column, userId });
             }
 
@@ -54,18 +53,35 @@ namespace ProjectManagement.Services
                 .SendAsync("ColumnCreated", new { column, userId });
         }
 
-        public Task BroadcastColumnUpdated(string boardId, ColumnDto column, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("ColumnUpdated", new { column, userId });
+        public Task BroadcastColumnUpdated(string boardId, ColumnDto column, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("ColumnUpdated", new { column, userId });
+            }
 
-        public Task BroadcastColumnDeleted(string boardId, string columnId, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("ColumnDeleted", new { columnId, userId });
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("ColumnUpdated", new { column, userId });
+        }
+
+        public Task BroadcastColumnDeleted(string boardId, string columnId, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("ColumnDeleted", new { columnId, userId });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("ColumnDeleted", new { columnId, userId });
+        }
 
         public Task BroadcastCardCreated(string boardId, string columnId, CardDto card, string userId)
         {
             var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
             if (excluded.Length == 0)
             {
-                //fallback
                 return _hub.Clients.Group(GroupName(boardId)).SendAsync("CardCreated", new { card, columnId, userId });
             }
 
@@ -73,40 +89,98 @@ namespace ProjectManagement.Services
                 .SendAsync("CardCreated", new { card, columnId, userId });
         }
 
-        public Task BroadcastCardUpdated(string boardId, string columnId, CardDto card, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("CardUpdated", new { card, columnId, userId });
+        public Task BroadcastCardUpdated(string boardId, string columnId, CardDto card, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("CardUpdated", new { card, columnId, userId });
+            }
 
-        public Task BroadcastCardDeleted(string boardId, string columnId, string cardId, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("CardDeleted", new { cardId, columnId, userId });
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("CardUpdated", new { card, columnId, userId });
+        }
+
+        public Task BroadcastCardDeleted(string boardId, string columnId, string cardId, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("CardDeleted", new { cardId, columnId, userId });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("CardDeleted", new { cardId, columnId, userId });
+        }
 
         public async Task BroadcastCardsReordered(string boardId, string columnId, List<string> cardIds,
             List<CardDto> orderedCards, string userId)
         {
-            // CHANGED: Pass card ranks instead of IDs
-            // Frontend will use these ranks to sort cards
-            await _hub.Clients
-                .Group(GroupName(boardId))
-                .SendAsync("CardsReordered", new
-                {
-                    boardId,
-                    columnId,
-                    cardIds,
-                    orderedCards,
-                    userId
-                });
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                await _hub.Clients
+                    .Group(GroupName(boardId))
+                    .SendAsync("CardsReordered", new
+                    {
+                        boardId,
+                        columnId,
+                        cardIds,
+                        orderedCards,
+                        userId
+                    });
+            }
+            else
+            {
+                await _hub.Clients
+                    .GroupExcept(GroupName(boardId), excluded)
+                    .SendAsync("CardsReordered", new
+                    {
+                        boardId,
+                        columnId,
+                        cardIds,
+                        orderedCards,
+                        userId
+                    });
+            }
         }
 
         public async Task BroadcastColumnsReordered(string boardId, List<string> columnIds,
             List<ColumnDto> orderedColumns, string userId)
         {
-            await _hub.Clients
-                .Group(GroupName(boardId))
-                .SendAsync("ColumnsReordered", new { boardId, columnIds, orderedColumns, userId });
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                await _hub.Clients
+                    .Group(GroupName(boardId))
+                    .SendAsync("ColumnsReordered", new { boardId, columnIds, orderedColumns, userId });
+            }
+            else
+            {
+                await _hub.Clients
+                    .GroupExcept(GroupName(boardId), excluded)
+                    .SendAsync("ColumnsReordered", new { boardId, columnIds, orderedColumns, userId });
+            }
         }
 
         public Task BroadcastCardMoved(string boardId, string fromColumnId, string toColumnId, string cardId,
-            int newIndex, string userId) =>
-            _hub.Clients.Group(GroupName(boardId))
+            int newIndex, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId))
+                    .SendAsync("CardMoved", new
+                    {
+                        cardId,
+                        fromColumnId,
+                        toColumnId,
+                        newIndex,
+                        userId
+                    });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
                 .SendAsync("CardMoved", new
                 {
                     cardId,
@@ -115,6 +189,7 @@ namespace ProjectManagement.Services
                     newIndex,
                     userId
                 });
+        }
 
         public async Task SendNotificationToUser(string userId, NotificationDto notification)
         {
@@ -132,90 +207,193 @@ namespace ProjectManagement.Services
         }
 
         public Task BroadcastCardAssigned(string boardId, string columnId, CardDto cardDto, string assignedUserId,
-            string userId) =>
-            _hub.Clients.Group(GroupName(boardId))
+            string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId))
+                    .SendAsync("CardAssigned", new { card = cardDto, columnId, assignedUserId, userId });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
                 .SendAsync("CardAssigned", new { card = cardDto, columnId, assignedUserId, userId });
+        }
 
         public Task BroadcastCardUnassigned(string boardId, string columnId, CardDto cardDto, string unassignedUserId,
-            string userId) =>
-            _hub.Clients.Group(GroupName(boardId))
+            string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId))
+                    .SendAsync("CardUnassigned", new { card = cardDto, columnId, unassignedUserId, userId });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
                 .SendAsync("CardUnassigned", new { card = cardDto, columnId, unassignedUserId, userId });
+        }
 
         // Comment events
         public async Task BroadcastCommentAdded(string boardId, string columnId, string cardId, CommentDto comment,
             string userId)
         {
-            await _hub.Clients
-                .Group(GroupName(boardId))
-                .SendAsync("CommentAdded", new
-                {
-                    boardId,
-                    columnId,
-                    cardId,
-                    comment,
-                    userId
-                });
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                await _hub.Clients
+                    .Group(GroupName(boardId))
+                    .SendAsync("CommentAdded", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        comment,
+                        userId
+                    });
+            }
+            else
+            {
+                await _hub.Clients
+                    .GroupExcept(GroupName(boardId), excluded)
+                    .SendAsync("CommentAdded", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        comment,
+                        userId
+                    });
+            }
         }
 
         public async Task BroadcastCommentUpdated(string boardId, string columnId, string cardId, CommentDto comment,
             string userId)
         {
-            await _hub.Clients
-                .Group(GroupName(boardId))
-                .SendAsync("CommentUpdated", new
-                {
-                    boardId,
-                    columnId,
-                    cardId,
-                    comment,
-                    userId
-                });
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                await _hub.Clients
+                    .Group(GroupName(boardId))
+                    .SendAsync("CommentUpdated", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        comment,
+                        userId
+                    });
+            }
+            else
+            {
+                await _hub.Clients
+                    .GroupExcept(GroupName(boardId), excluded)
+                    .SendAsync("CommentUpdated", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        comment,
+                        userId
+                    });
+            }
         }
 
         public async Task BroadcastCommentDeleted(string boardId, string columnId, string cardId, string commentId,
             string userId)
         {
-            await _hub.Clients
-                .Group(GroupName(boardId))
-                .SendAsync("CommentDeleted", new
-                {
-                    boardId,
-                    columnId,
-                    cardId,
-                    commentId,
-                    userId
-                });
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                await _hub.Clients
+                    .Group(GroupName(boardId))
+                    .SendAsync("CommentDeleted", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        commentId,
+                        userId
+                    });
+            }
+            else
+            {
+                await _hub.Clients
+                    .GroupExcept(GroupName(boardId), excluded)
+                    .SendAsync("CommentDeleted", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        commentId,
+                        userId
+                    });
+            }
         }
 
         // Attachment events
         public async Task BroadcastAttachmentAdded(string boardId, string columnId, string cardId,
             AttachmentDto attachment, string userId)
         {
-            await _hub.Clients
-                .Group(GroupName(boardId))
-                .SendAsync("AttachmentAdded", new
-                {
-                    boardId,
-                    columnId,
-                    cardId,
-                    attachment,
-                    userId
-                });
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                await _hub.Clients
+                    .Group(GroupName(boardId))
+                    .SendAsync("AttachmentAdded", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        attachment,
+                        userId
+                    });
+            }
+            else
+            {
+                await _hub.Clients
+                    .GroupExcept(GroupName(boardId), excluded)
+                    .SendAsync("AttachmentAdded", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        attachment,
+                        userId
+                    });
+            }
         }
 
         public async Task BroadcastAttachmentDeleted(string boardId, string columnId, string cardId,
             string attachmentId, string userId)
         {
-            await _hub.Clients
-                .Group(GroupName(boardId))
-                .SendAsync("AttachmentDeleted", new
-                {
-                    boardId,
-                    columnId,
-                    cardId,
-                    attachmentId,
-                    userId
-                });
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                await _hub.Clients
+                    .Group(GroupName(boardId))
+                    .SendAsync("AttachmentDeleted", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        attachmentId,
+                        userId
+                    });
+            }
+            else
+            {
+                await _hub.Clients
+                    .GroupExcept(GroupName(boardId), excluded)
+                    .SendAsync("AttachmentDeleted", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        attachmentId,
+                        userId
+                    });
+            }
         }
 
         public async Task BroadcastJoinRequestCreated(string boardId, BoardJoinRequestDto request)
@@ -247,29 +425,87 @@ namespace ProjectManagement.Services
         }
 
         // Label implementations
-        public Task BroadcastLabelCreated(string boardId, LabelDto label, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("LabelCreated", new { boardId, label, userId });
+        public Task BroadcastLabelCreated(string boardId, LabelDto label, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("LabelCreated", new { boardId, label, userId });
+            }
 
-        public Task BroadcastLabelUpdated(string boardId, LabelDto label, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("LabelUpdated", new { boardId, label, userId });
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("LabelCreated", new { boardId, label, userId });
+        }
 
-        public Task BroadcastLabelDeleted(string boardId, string labelId, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("LabelDeleted", new { boardId, labelId, userId });
+        public Task BroadcastLabelUpdated(string boardId, LabelDto label, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("LabelUpdated", new { boardId, label, userId });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("LabelUpdated", new { boardId, label, userId });
+        }
+
+        public Task BroadcastLabelDeleted(string boardId, string labelId, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("LabelDeleted", new { boardId, labelId, userId });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("LabelDeleted", new { boardId, labelId, userId });
+        }
 
         public Task BroadcastCardLabelAdded(string boardId, string columnId, string cardId, string labelId,
-            string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("CardLabelAdded", new
+            string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
             {
-                boardId,
-                columnId,
-                cardId,
-                labelId,
-                userId
-            });
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("CardLabelAdded", new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    labelId,
+                    userId
+                });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("CardLabelAdded", new
+                {
+                    boardId,
+                    columnId,
+                    cardId,
+                    labelId,
+                    userId
+                });
+        }
 
         public Task BroadcastCardLabelRemoved(string boardId, string columnId, string cardId, string labelId,
-            string userId) =>
-            _hub.Clients.Group(GroupName(boardId))
+            string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId))
+                    .SendAsync("CardLabelRemoved", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        labelId,
+                        userId
+                    });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
                 .SendAsync("CardLabelRemoved", new
                 {
                     boardId,
@@ -278,11 +514,27 @@ namespace ProjectManagement.Services
                     labelId,
                     userId
                 });
+        }
 
         // Checklist implementations
         public Task BroadcastChecklistCreated(string boardId, string columnId, string cardId, ChecklistDto checklist,
-            string userId) =>
-            _hub.Clients.Group(GroupName(boardId))
+            string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId))
+                    .SendAsync("ChecklistCreated", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklist,
+                        userId
+                    });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
                 .SendAsync("ChecklistCreated", new
                 {
                     boardId,
@@ -291,10 +543,26 @@ namespace ProjectManagement.Services
                     checklist,
                     userId
                 });
+        }
 
         public Task BroadcastChecklistUpdated(string boardId, string columnId, string cardId, ChecklistDto checklist,
-            string userId) =>
-            _hub.Clients.Group(GroupName(boardId))
+            string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId))
+                    .SendAsync("ChecklistUpdated", new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklist,
+                        userId
+                    });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
                 .SendAsync("ChecklistUpdated", new
                 {
                     boardId,
@@ -303,69 +571,159 @@ namespace ProjectManagement.Services
                     checklist,
                     userId
                 });
+        }
 
         public Task BroadcastChecklistDeleted(string boardId, string columnId, string cardId, string checklistId,
-            string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistDeleted",
-                new
-                {
-                    boardId,
-                    columnId,
-                    cardId,
-                    checklistId,
-                    userId
-                });
+            string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistDeleted",
+                    new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklistId,
+                        userId
+                    });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("ChecklistDeleted",
+                    new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklistId,
+                        userId
+                    });
+        }
 
         public Task BroadcastChecklistItemCreated(string boardId, string columnId, string cardId, string checklistId,
-            ChecklistItemDto item, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemCreated",
-                new
-                {
-                    boardId,
-                    columnId,
-                    cardId,
-                    checklistId,
-                    item,
-                    userId
-                });
+            ChecklistItemDto item, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemCreated",
+                    new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklistId,
+                        item,
+                        userId
+                    });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("ChecklistItemCreated",
+                    new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklistId,
+                        item,
+                        userId
+                    });
+        }
 
         public Task BroadcastChecklistItemUpdated(string boardId, string columnId, string cardId, string checklistId,
-            ChecklistItemDto item, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemUpdated",
-                new
-                {
-                    boardId,
-                    columnId,
-                    cardId,
-                    checklistId,
-                    item,
-                    userId
-                });
+            ChecklistItemDto item, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemUpdated",
+                    new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklistId,
+                        item,
+                        userId
+                    });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("ChecklistItemUpdated",
+                    new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklistId,
+                        item,
+                        userId
+                    });
+        }
 
         public Task BroadcastChecklistItemToggled(string boardId, string columnId, string cardId, string checklistId,
-            ChecklistItemDto checklistItemDto, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemToggled",
-                new
-                {
-                    boardId,
-                    columnId,
-                    cardId,
-                    checklistId,
-                    checklistItemDto,
-                    userId
-                });
+            ChecklistItemDto checklistItemDto, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemToggled",
+                    new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklistId,
+                        checklistItemDto,
+                        userId
+                    });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("ChecklistItemToggled",
+                    new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklistId,
+                        checklistItemDto,
+                        userId
+                    });
+        }
 
         public Task BroadcastChecklistItemDeleted(string boardId, string columnId, string cardId, string checklistId,
-            string itemId, string userId) =>
-            _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemDeleted",
-                new
-                {
-                    boardId,
-                    columnId,
-                    cardId,
-                    checklistId,
-                    itemId,
-                    userId
-                });
+            string itemId, string userId)
+        {
+            var excluded = GetExcludedConnectionsForUserInBoard(boardId, userId);
+            if (excluded.Length == 0)
+            {
+                return _hub.Clients.Group(GroupName(boardId)).SendAsync("ChecklistItemDeleted",
+                    new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklistId,
+                        itemId,
+                        userId
+                    });
+            }
+
+            return _hub.Clients.GroupExcept(GroupName(boardId), excluded)
+                .SendAsync("ChecklistItemDeleted",
+                    new
+                    {
+                        boardId,
+                        columnId,
+                        cardId,
+                        checklistId,
+                        itemId,
+                        userId
+                    });
+        }
     }
 }

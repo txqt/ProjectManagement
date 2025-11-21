@@ -26,7 +26,8 @@ namespace ProjectManagement.Services
             IMapper mapper,
             UserManager<ApplicationUser> userManager,
             IBoardNotificationService boardNotificationService,
-            INotificationService notificationService, IActivityLogService activityLogService, ICacheInvalidationService cacheInvalidation)
+            INotificationService notificationService, IActivityLogService activityLogService,
+            ICacheInvalidationService cacheInvalidation)
         {
             _context = context;
             _mapper = mapper;
@@ -340,7 +341,7 @@ namespace ProjectManagement.Services
                 .Where(id => existingCards.ContainsKey(id))
                 .Select(id => existingCards[id])
                 .ToList();
-            
+
             await _cacheInvalidation.InvalidateBoardCachesAsync(boardId);
 
             await _boardNotificationService.BroadcastCardsReordered(
@@ -360,6 +361,13 @@ namespace ProjectManagement.Services
             var card = await _context.Cards
                 .Include(c => c.Board)
                 .Include(c => c.Column)
+                .Include(c => c.Members)
+                .Include(c => c.Labels)
+                .ThenInclude(cl => cl.Label)
+                .Include(c => c.Checklists)
+                .ThenInclude(c => c.Items)
+                .Include(c=>c.Attachments)
+                .Include(c=>c.Comments)
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
             if (card == null)
@@ -411,6 +419,12 @@ namespace ProjectManagement.Services
                 .Include(c => c.Board)
                 .Include(c => c.Column)
                 .Include(c => c.Members)
+                .Include(c => c.Labels)
+                .ThenInclude(cl => cl.Label)
+                .Include(c => c.Checklists)
+                .ThenInclude(c => c.Items)
+                .Include(c=>c.Attachments)
+                .Include(c=>c.Comments)
                 .FirstOrDefaultAsync(c => c.Id == cardId);
 
             if (card == null)

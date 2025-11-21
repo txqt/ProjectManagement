@@ -159,6 +159,7 @@ export const createColumnSlice = (set, get) => ({
     },
 
     handleColumnUpdated: (data) => {
+        console.log('handleColumnUpdated', data);
         set(state => ({
             board: {
                 ...state.board,

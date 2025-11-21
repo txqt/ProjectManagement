@@ -11,6 +11,7 @@ import { sortCardsByRank } from '~/utils/sorts'
 import ListCards from './ListCards/ListCards'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useIsTemplateBoard } from '~/hooks/useIsTemplateBoard';
+import { useBoardStore } from '~/stores/boardStore'
 
 // OPTIMIZATION: Memoize với custom comparison
 const Column = memo(({ dragHandleProps, column, ...props }) => {
@@ -29,13 +30,18 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
   const [newCardTitle, setNewCardTitle] = useState('')
   const [editMode, setEditMode] = useState(false)
 
+  const createCard = useBoardStore(state => state.createCard);
+  const cloneColumn = useBoardStore(state => state.cloneColumn);
+  const updateColumn = useBoardStore(state => state.updateColumn)
+  const deleteColumn = useBoardStore(state => state.deleteColumn);
+
   const addNewCard = useCallback(async () => {
     if (!newCardTitle) {
       toast.error('Please enter Card Title', { position: 'bottom-right' })
       return
     }
     try {
-      await props.createCard(column.id, {
+      await createCard(column.id, {
         title: newCardTitle,
         description: 'Description'
       })
@@ -44,21 +50,21 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
     } catch (err) {
       console.error(err)
     }
-  }, [newCardTitle, props.createCard, column.id, toggleOpenNewCardForm])
+  }, [newCardTitle, createCard, column.id, toggleOpenNewCardForm])
 
   const handleUpdateColumn = useCallback(async (newTitle) => {
-    await props.updateColumn(column.id, { title: newTitle })
+    await updateColumn(column.id, { title: newTitle })
     setEditMode(false)
-  }, [props.updateColumn, column.id])
+  }, [updateColumn, column.id])
 
-  const handleDeleteColumn = useCallback(() => {
+  const handleDeleteColumn = useCallback(async () => {
     if (column.cards && column.cards.length > 0) {
       if (!window.confirm(`Column "${column.title}" has ${column.cards.length} cards. Are you sure you want to delete it?`))
         return
     }
 
-    props.deleteColumn(column.id)
-  }, [props.deleteColumn, column])
+    await deleteColumn(column.id)
+  }, [deleteColumn, column])
 
   return (
     <Box
@@ -141,8 +147,7 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
                 const newTitle = prompt('Enter title for cloned column:', `${column.title} (Copy)`);
                 if (newTitle) {
                   try {
-                    console.log(props.cloneColumn);
-                    await props.cloneColumn(column.id, {
+                    await cloneColumn(column.id, {
                       title: newTitle,
                       includeCards: true
                     });
@@ -175,13 +180,7 @@ const Column = memo(({ dragHandleProps, column, ...props }) => {
       {/* Cards - OPTIMIZATION: Pass stable props */}
       <ListCards
         cards={orderedCards}
-        columnId={column.id}
-        createCard={props.createCard}
-        updateCard={props.updateCard}
-        deleteCard={props.deleteCard}
         pendingTempIds={props.pendingTempIds}
-        assignCardMember={props.assignCardMember}
-        unassignCardMember={props.unassignCardMember}
       />
 
       {/* Footer */}

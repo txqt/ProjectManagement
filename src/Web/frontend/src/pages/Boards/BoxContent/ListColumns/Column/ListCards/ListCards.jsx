@@ -12,6 +12,7 @@ import Card from './Card/Card';
 import CardDetailDialog from './Card/CardDetailDialog';
 import ListCardsSkeleton from './ListCardsSkeleton';
 import ConditionalRender from '~/components/ConditionalRender/ConditionalRender';
+import { useBoardStore } from '~/stores/boardStore';
 
 // OPTIMIZATION: Tách sortable wrapper ra component riêng
 const SortableCardWrapper = memo(function SortableCardWrapper({ card, onContextMenu, onOpen, isPending }) {
@@ -53,7 +54,7 @@ const SortableCardWrapper = memo(function SortableCardWrapper({ card, onContextM
   return true
 })
 
-const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
+const ListCards = memo(({ cards, pendingTempIds }) => {
   // menu state: position-based (use anchorReference="anchorPosition")
   const [menuPos, setMenuPos] = React.useState(null);
   const [selectedCard, setSelectedCard] = React.useState(null);
@@ -61,6 +62,7 @@ const ListCards = memo(({ cards, deleteCard, pendingTempIds }) => {
   // dialog state
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [dialogCard, setDialogCard] = React.useState(null);
+  const deleteCard = useBoardStore(state => state.deleteCard);
 
   const openMenu = useCallback((event, card) => {
     event.preventDefault();
