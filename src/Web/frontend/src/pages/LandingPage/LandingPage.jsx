@@ -158,7 +158,6 @@ export default function LandingPage() {
                     }}
                 >
                     <ModeSelect
-                        label="Mode"
                         value={themeMode}
                         onChange={setThemeMode}
                     />
@@ -329,7 +328,7 @@ export default function LandingPage() {
 
                     <Grid container spacing={4}>
                         {features.map((feature, index) => (
-                            <Grid size={{xs: 12, sm: 6, md: 4}} key={index}>
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
                                 <Card
                                     sx={{
                                         height: '100%',

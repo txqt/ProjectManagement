@@ -62,7 +62,7 @@ function AppBar() {
 
             <Divider sx={{ my: 2 }} />
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <ModeSelect label="Theme" value={themeMode} onChange={setThemeMode} />
+                <ModeSelect value={themeMode} onChange={setThemeMode} />
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                 <NotificationBell />
@@ -142,7 +142,7 @@ function AppBar() {
                     {/* Ẩn trên mobile */}
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 2 }}>
                         <SearchBox onAdvancedSearchClick={handleOpenAdvancedSearch} />
-                        <ModeSelect label="Theme" value={themeMode} onChange={setThemeMode} />
+                        <ModeSelect value={themeMode} onChange={setThemeMode} />
                         <NotificationBell />
                     </Box>
 

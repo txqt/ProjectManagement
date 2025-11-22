@@ -1,5 +1,5 @@
-import React from 'react';
-import { FormControl, InputLabel, Select, MenuItem, Box } from '@mui/material';
+import React, { useState } from 'react';
+import { IconButton, Menu, MenuItem, Box, Tooltip } from '@mui/material';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness';
@@ -10,47 +10,69 @@ const options = {
   system: { label: 'System', icon: <SettingsBrightnessIcon fontSize="small" /> },
 };
 
-function ModeSelect({ label, value, onChange }) {
+function ModeSelect({ value, onChange }) {
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleSelect = (mode) => {
+    onChange(mode);
+    handleClose();
+  };
+
+  const currentOption = options[value] || options.system;
+
   return (
-    <FormControl size="small" sx={{ minWidth: '120px' }}>
-      <InputLabel sx={{
-        color: 'white',
-        '&.Mui-focused': { color: 'white' }
-      }}>
-        {label}
-      </InputLabel>
-      <Select
-        value={value}
-        label={label}
-        onChange={(e) => onChange(e.target.value)}
-        sx={{
-          color: 'white',
-          '.MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
-          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
-          '.MuiSvgIcon-root': { color: 'white' },
+    <>
+      <Tooltip title={`Theme: ${currentOption.label}`}>
+        <IconButton
+          onClick={handleClick}
+          sx={{
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            },
+          }}
+        >
+          {currentOption.icon}
+        </IconButton>
+      </Tooltip>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
         }}
-        renderValue={(selected) => {
-          const option = options[selected];
-          return (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {option.icon}
-              {option.label}
-            </Box>
-          );
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
         }}
       >
         {Object.entries(options).map(([key, opt]) => (
-          <MenuItem key={key} value={key}>
+          <MenuItem
+            key={key}
+            onClick={() => handleSelect(key)}
+            selected={key === value}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {opt.icon}
               {opt.label}
             </Box>
           </MenuItem>
         ))}
-      </Select>
-    </FormControl>
+      </Menu>
+    </>
   );
 }
 
 export default ModeSelect;
+
