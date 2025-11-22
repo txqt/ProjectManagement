@@ -7,6 +7,16 @@ import { ToastContainer } from 'react-toastify';
 createRoot(document.getElementById("root")).render(
     <ThemeModeProvider>
         <App />
-        <ToastContainer />
+        <ToastContainer
+            position="bottom-right"
+            autoClose={1000}
+            hideProgressBar={true}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+        />
     </ThemeModeProvider>
 );
