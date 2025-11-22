@@ -7,6 +7,7 @@ import AttachmentApi from './api/attachmentApi';
 import LabelApi from './api/labelApi';
 import ChecklistApi from './api/checklistApi';
 import MiscApi from './api/miscApi';
+import UserApi from './api/userApi';
 
 // Create a combined API service that includes all modules
 class ApiService {
@@ -20,6 +21,7 @@ class ApiService {
         this.labelApi = new LabelApi();
         this.checklistApi = new ChecklistApi();
         this.miscApi = new MiscApi();
+        this.userApi = new UserApi();
 
         // Share the same token across all modules
         this._token = localStorage.getItem('authToken');
@@ -36,6 +38,7 @@ class ApiService {
         this.labelApi.setAuthToken(token);
         this.checklistApi.setAuthToken(token);
         this.miscApi.setAuthToken(token);
+        this.userApi.setAuthToken(token);
     }
 
     // ========== AUTH ==========
@@ -147,6 +150,11 @@ class ApiService {
     quickSearch(...args) { return this.miscApi.quickSearch(...args); }
     advancedSearch(...args) { return this.miscApi.advancedSearch(...args); }
     getRecentSearches(...args) { return this.miscApi.getRecentSearches(...args); }
+
+    // ========== USER PROFILE ==========
+    getProfile(...args) { return this.userApi.getProfile(...args); }
+    updateProfile(...args) { return this.userApi.updateProfile(...args); }
+    changePassword(...args) { return this.userApi.changePassword(...args); }
 
     // ========== ACTIVITIES ==========
     getCardActivities(...args) { return this.miscApi.getCardActivities(...args); }

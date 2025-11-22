@@ -11,6 +11,7 @@ import AccountProfile from './pages/Users/AccountProfile';
 
 // Import component HomePage mới
 import HomePage from './pages/HomePage.jsx';
+import LandingPage from './pages/LandingPage/LandingPage.jsx';
 import JoinBoard from './pages/Boards/JoinBoard/JoinBoard.jsx';
 import { useLocation } from 'react-router-dom';
 
@@ -71,6 +72,28 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+// Root Route component (Landing page for guests, HomePage for authenticated users)
+const RootRoute = () => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh'
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return isAuthenticated ? <HomePage /> : <LandingPage />;
+};
+
 function AppRoutes() {
   return (
     <Routes>
@@ -92,15 +115,13 @@ function AppRoutes() {
         }
       />
 
-      {/* Protected routes */}
+      {/* Root route - Landing page for guests, HomePage for authenticated users */}
       <Route
         path="/"
-        element={
-          <ProtectedRoute>
-            <HomePage />
-          </ProtectedRoute>
-        }
+        element={<RootRoute />}
       />
+
+      {/* Protected routes */}
       <Route
         path="/account"
         element={

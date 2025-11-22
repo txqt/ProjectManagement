@@ -29,4 +29,4 @@ class UserApiService extends BaseApiService {
     }
 }
 
-export default new UserApiService();
+export default UserApiService;

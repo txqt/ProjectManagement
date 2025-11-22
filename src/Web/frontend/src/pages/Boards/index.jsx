@@ -41,9 +41,13 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useApi } from "~/hooks/useApi";
 import { apiService } from "~/services/api";
+import { useTheme } from "@mui/material/styles";
 
 export default function BoardListView() {
   const { executeRequest } = useApi();
+
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   const [boards, setBoards] = useState([]);
   const [open, setOpen] = useState(false);
@@ -315,23 +319,36 @@ export default function BoardListView() {
                     onClick={() => navigate(`/boards/${board.id}`)}
                     sx={{ height: "100%", position: "relative" }}
                   >
-                    <CardMedia
-                      component="img"
-                      image={
-                        board.cover ||
-                        "https://images.pexels.com/photos/1563356/pexels-photo-1563356.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
-                      }
-                      alt={board.title}
-                      sx={{
-                        height: "100%",
-                        width: "100%",
-                        objectFit: "cover",
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        zIndex: 1
-                      }}
-                    />
+                    {board.cover ? (
+                      <CardMedia
+                        component="img"
+                        image={board.cover}
+                        alt={board.title}
+                        sx={{
+                          height: "100%",
+                          width: "100%",
+                          objectFit: "cover",
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          zIndex: 1
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          height: "100%",
+                          width: "100%",
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          zIndex: 1,
+                          background: isDark
+                            ? 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)'
+                            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        }}
+                      />
+                    )}
 
                     <Box
                       sx={{

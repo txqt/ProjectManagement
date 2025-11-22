@@ -24,7 +24,7 @@ import {
     Save as SaveIcon
 } from '@mui/icons-material';
 import { useAuth } from '~/hooks/useAuth';
-import userApi from '~/services/api/userApi';
+import { apiService } from '~/services/api';
 import AppBar from '~/components/AppBar/AppBar';
 
 function TabPanel({ children, value, index }) {
@@ -64,7 +64,7 @@ function AccountProfile() {
     const loadProfile = async () => {
         try {
             setLoading(true);
-            const data = await userApi.getProfile();
+            const data = await apiService.getProfile();
             setProfile(data);
             setEditForm({
                 userName: data.userName || '',
@@ -100,7 +100,7 @@ function AccountProfile() {
         e.preventDefault();
         try {
             setLoading(true);
-            const updatedUser = await userApi.updateProfile(editForm);
+            const updatedUser = await apiService.updateProfile(editForm);
             setProfile(updatedUser);
 
             // Update auth context
@@ -127,7 +127,7 @@ function AccountProfile() {
 
         try {
             setLoading(true);
-            await userApi.changePassword({
+            await apiService.changePassword({
                 currentPassword: passwordForm.currentPassword,
                 newPassword: passwordForm.newPassword,
                 confirmPassword: passwordForm.confirmPassword
