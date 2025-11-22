@@ -284,7 +284,7 @@ export default function LandingPage() {
                                 content: '""',
                                 position: 'absolute',
                                 top: 8,
-                                left: '50%',
+                                left: '45%',
                                 transform: 'translateX(-50%)',
                                 width: 4,
                                 height: 8,
