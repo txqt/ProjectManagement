@@ -706,7 +706,7 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                         Description
                       </Typography>
                     </Box>
-                    {editing && !isTemplate ? (
+                    {(editing && !isTemplate) && (
                       <Button
                         size="small"
                         startIcon={<EditIcon />}
@@ -714,18 +714,6 @@ const CardDetailDialog = ({ open, onClose, card: initialCard, onSaveDescription 
                       >
                         {description ? 'Edit' : 'Add'}
                       </Button>
-                    ) : (
-                      <Box
-                        onClick={() => !isTemplate && setEditing(true)}
-                      >
-                        {description ? (
-                          <div dangerouslySetInnerHTML={{ __html: description }} />
-                        ) : (
-                          <Typography color="text.secondary">
-                            {isTemplate ? 'No description' : 'Add a more detailed description...'}
-                          </Typography>
-                        )}
-                      </Box>
                     )}
                   </Box>
 
