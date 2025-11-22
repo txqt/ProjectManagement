@@ -1,3 +1,5 @@
+import { parseApiError } from '~/utils/errorParser';
+
 class BaseApiService {
     constructor() {
         this.baseURL = import.meta.env.VITE_API_BASE_URL;
@@ -51,12 +53,17 @@ class BaseApiService {
                     body = null;
                 }
 
-                const error = new Error(body?.message || body || `HTTP error ${response.status}`);
+                // Parse error message using utility function
+                const errorMessage = parseApiError(body) || `HTTP error ${response.status}`;
+                console.log(errorMessage);
+                const error = new Error(errorMessage);
                 error.status = response.status;
                 error.body = body;
 
                 if (response.status === 401 && !options.skipAuthHandling) {
                     this.setAuthToken(null);
+                    window.location.href = '/login';
+                    return;
                 }
 
                 throw error;

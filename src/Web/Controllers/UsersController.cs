@@ -6,6 +6,7 @@ using ProjectManagement.Authorization;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs;
 using ProjectManagement.Models.DTOs.Users;
+using AutoMapper;
 
 namespace ProjectManagement.Controllers
 {
@@ -14,12 +15,106 @@ namespace ProjectManagement.Controllers
     public class UsersController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly RoleManager<ApplicationUser>  _roleManager;
+        private readonly RoleManager<IdentityRole>  _roleManager;
+        private readonly IMapper _mapper;
 
-        public UsersController(UserManager<ApplicationUser> userManager, RoleManager<ApplicationUser> roleManager)
+        public UsersController(
+            UserManager<ApplicationUser> userManager, 
+            RoleManager<IdentityRole> roleManager,
+            IMapper mapper)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _mapper = mapper;
+        }
+
+        // GET api/users/profile
+        [HttpGet("profile")]
+        [Authorize]
+        public async Task<ActionResult<UserDto>> GetProfile()
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound(new { error = "User not found" });
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var userDto = _mapper.Map<UserDto>(user);
+            userDto.Roles = roles.ToList();
+
+            return Ok(userDto);
+        }
+
+        // PUT api/users/profile
+        [HttpPut("profile")]
+        [Authorize]
+        public async Task<ActionResult<UserDto>> UpdateProfile([FromBody] UpdateProfileDto dto)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound(new { error = "User not found" });
+
+            // Check if username is taken by another user
+            if (user.UserName != dto.UserName)
+            {
+                var existingUser = await _userManager.FindByNameAsync(dto.UserName);
+                if (existingUser != null)
+                    return BadRequest(new { error = "Username is already taken" });
+            }
+
+            // Check if email is taken by another user
+            if (user.Email != dto.Email)
+            {
+                var existingUser = await _userManager.FindByEmailAsync(dto.Email);
+                if (existingUser != null)
+                    return BadRequest(new { error = "Email is already taken" });
+            }
+
+            // Update user properties
+            user.UserName = dto.UserName;
+            user.Email = dto.Email;
+            user.Avatar = dto.Avatar;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                return BadRequest(new { error = "Failed to update profile", details = result.Errors });
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var userDto = _mapper.Map<UserDto>(user);
+            userDto.Roles = roles.ToList();
+
+            return Ok(userDto);
+        }
+
+        // PUT api/users/password
+        [HttpPut("password")]
+        [Authorize]
+        public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound(new { error = "User not found" });
+
+            var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+            if (!result.Succeeded)
+            {
+                var errors = result.Errors.Select(e => e.Description).ToList();
+                return BadRequest(new { error = "Failed to change password", details = errors });
+            }
+
+            return Ok(new { message = "Password changed successfully" });
         }
 
         // GET api/users/search?q=thanh&page=1&pageSize=10

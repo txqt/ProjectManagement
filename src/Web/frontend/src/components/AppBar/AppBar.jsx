@@ -142,12 +142,8 @@ function AppBar() {
                     {/* Ẩn trên mobile */}
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 2 }}>
                         <SearchBox onAdvancedSearchClick={handleOpenAdvancedSearch} />
-
                         <ModeSelect label="Theme" value={themeMode} onChange={setThemeMode} />
                         <NotificationBell />
-                        <Tooltip title="Help">
-                            <HelpOutlineIcon sx={{ color: 'white' }} />
-                        </Tooltip>
                     </Box>
 
                     {/* Profile luôn hiển thị */}

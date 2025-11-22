@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
     // Check if user is already logged in
     const savedToken = localStorage.getItem('authToken');
     const userData = localStorage.getItem('userData');
-    
+
     if (savedToken && userData) {
       try {
         setUser(JSON.parse(userData));
@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
         logout();
       }
     }
-    
+
     setLoading(false);
   }, []);
 
@@ -30,13 +30,13 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await apiService.login(credentials);
       const { token: newToken, user: userData } = response;
-      
+
       setUser(userData);
       setToken(newToken);
       apiService.setAuthToken(newToken);
       localStorage.setItem('authToken', newToken);
       localStorage.setItem('userData', JSON.stringify(userData));
-      
+
       return { success: true, user: userData };
     } catch (error) {
       console.error('Login error:', error);
@@ -48,13 +48,13 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await apiService.register(userData);
       const { token: newToken, user: newUser } = response;
-      
+
       setUser(newUser);
       setToken(newToken);
       apiService.setAuthToken(newToken);
       localStorage.setItem('authToken', newToken);
       localStorage.setItem('userData', JSON.stringify(newUser));
-      
+
       return { success: true, user: newUser };
     } catch (error) {
       console.error('Registration error:', error);
@@ -70,12 +70,18 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('userData');
   };
 
+  const updateUser = (updatedUserData) => {
+    setUser(updatedUserData);
+    localStorage.setItem('userData', JSON.stringify(updatedUserData));
+  };
+
   const value = {
     user,
     token,
     login,
     register,
     logout,
+    updateUser,
     loading,
     isAuthenticated: !!user,
   };

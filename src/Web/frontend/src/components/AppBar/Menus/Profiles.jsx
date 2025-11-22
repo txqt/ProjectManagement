@@ -11,11 +11,13 @@ import PersonAdd from '@mui/icons-material/PersonAdd';
 import Settings from '@mui/icons-material/Settings';
 import Logout from '@mui/icons-material/Logout';
 import { useAuth } from '~/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 function Profiles({ user }) {
     const [anchorEl, setAnchorEl] = React.useState(null);
     const open = Boolean(anchorEl);
     const { logout } = useAuth();
+    const navigate = useNavigate();
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -27,6 +29,11 @@ function Profiles({ user }) {
 
     const handleLogout = () => {
         logout();
+        handleClose();
+    };
+
+    const handleNavigateToAccount = () => {
+        navigate('/account');
         handleClose();
     };
 
@@ -48,7 +55,7 @@ function Profiles({ user }) {
                                 loading: "lazy",
                             },
                         }}
-                        src={user?.avatar || "https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/avatar_vo_tri_a49436c5de.jpg"}
+                        src={user?.avatar }
                     />
                 </IconButton>
             </Tooltip>
@@ -63,11 +70,8 @@ function Profiles({ user }) {
                     },
                 }}
             >
-                {/* <MenuItem onClick={handleClose}>
-                    <Avatar sx={{width: '28px', height: '28px', mr: 2}}/> Profile
-                </MenuItem> */}
-                <MenuItem onClick={handleClose}>
-                    <Avatar sx={{ width: '28px', height: '28px', mr: 2 }} /> {user.userName}
+                <MenuItem onClick={handleNavigateToAccount}>
+                    <Avatar sx={{ width: '28px', height: '28px', mr: 2 }} /> My Account
                 </MenuItem>
                 <Divider />
                 {/* <MenuItem onClick={handleClose}>
@@ -76,12 +80,12 @@ function Profiles({ user }) {
                     </ListItemIcon>
                     Add another account
                 </MenuItem> */}
-                {/* <MenuItem onClick={handleClose}>
+                <MenuItem onClick={handleNavigateToAccount}>
                     <ListItemIcon>
                         <Settings fontSize="small" />
                     </ListItemIcon>
                     Settings
-                </MenuItem> */}
+                </MenuItem>
                 <MenuItem onClick={handleLogout}>
                     <ListItemIcon>
                         <Logout fontSize="small" />

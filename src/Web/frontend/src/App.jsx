@@ -7,6 +7,7 @@ import RegisterForm from '~/components/Auth/RegisterForm';
 import { Box, CircularProgress } from '@mui/material';
 import MyBoardInvite from './pages/Boards/MyBoardInvite/MyBoardInvite';
 import AppBar from './components/AppBar/AppBar';
+import AccountProfile from './pages/Users/AccountProfile';
 
 // Import component HomePage mới
 import HomePage from './pages/HomePage.jsx';
@@ -62,7 +63,7 @@ const PublicRoute = ({ children }) => {
       </Box>
     );
   }
-  
+
   if (isAuthenticated && !hasReturnUrl) {
     return <Navigate to="/" replace />;
   }
@@ -97,6 +98,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <HomePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/account"
+        element={
+          <ProtectedRoute>
+            <AccountProfile />
           </ProtectedRoute>
         }
       />
