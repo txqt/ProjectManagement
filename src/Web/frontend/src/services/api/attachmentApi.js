@@ -19,7 +19,7 @@ class AttachmentApi extends BaseApiService {
     }
 
     async uploadAttachment(boardId, columnId, cardId, file) {
-        const url = `${this.baseURL}/boards/${boardId}/columns/${columnId}/cards/${cardId}/attachments`;
+        const url = `${this.baseURL}/boards/${boardId}/columns/${columnId}/cards/${cardId}/attachments/upload`;
         const token = this.token;
         const form = new FormData();
         form.append('file', file);

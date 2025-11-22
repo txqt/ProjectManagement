@@ -24,7 +24,7 @@ namespace ProjectManagement.Controllers
             _userManager = userManager;
         }
 
-        [HttpPost]
+        [HttpPost("upload")]
         [RequireNotTemplate]
         public async Task<ActionResult<AttachmentDto>> Upload(string boardId, string columnId, string cardId, IFormFile file)
         {

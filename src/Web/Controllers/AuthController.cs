@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using ProjectManagement.Attributes;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs;
 using ProjectManagement.Models.DTOs.Auth;
@@ -11,6 +12,7 @@ namespace ProjectManagement.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [RateLimit(RequestsPerMinute = 30, RequestsPerHour = 100)]
     public class AuthController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
