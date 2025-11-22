@@ -148,20 +148,52 @@ export default function LandingPage() {
                     }}
                 />
 
-                {/* Theme Mode Select - Top Right */}
+
+                {/* Navigation - Top */}
                 <Box
                     sx={{
                         position: 'absolute',
                         top: 20,
-                        right: 20,
+                        left: 0,
+                        right: 0,
                         zIndex: 10,
+                        px: 4,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
                     }}
                 >
-                    <ModeSelect
-                        value={themeMode}
-                        onChange={setThemeMode}
-                    />
+                    <Typography
+                        variant="h6"
+                        sx={{
+                            fontWeight: 700,
+                            color: 'white',
+                            cursor: 'pointer',
+                        }}
+                        onClick={() => navigate('/')}
+                    >
+                        Project Management
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                        <Button
+                            onClick={() => navigate('/docs/getting-started')}
+                            sx={{
+                                color: 'white',
+                                fontWeight: 500,
+                                '&:hover': {
+                                    background: alpha('#fff', 0.1),
+                                },
+                            }}
+                        >
+                            Docs
+                        </Button>
+                        <ModeSelect
+                            value={themeMode}
+                            onChange={setThemeMode}
+                        />
+                    </Box>
                 </Box>
+
 
                 <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
                     <Box

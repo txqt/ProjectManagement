@@ -15,6 +15,15 @@ import LandingPage from './pages/LandingPage/LandingPage.jsx';
 import JoinBoard from './pages/Boards/JoinBoard/JoinBoard.jsx';
 import { useLocation } from 'react-router-dom';
 
+// Import Docs pages
+import Docs from './pages/Docs/Docs.jsx';
+import DocsWelcome from './pages/Docs/DocsWelcome.jsx';
+import Installation from './pages/Docs/Installation.jsx';
+import GettingStarted from './pages/Docs/GettingStarted.jsx';
+import RunningApp from './pages/Docs/RunningApp.jsx';
+import DeveloperGuide from './pages/Docs/DeveloperGuide.jsx';
+import Contribute from './pages/Docs/Contribute.jsx';
+
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -120,6 +129,16 @@ function AppRoutes() {
         path="/"
         element={<RootRoute />}
       />
+
+      {/* Documentation routes - Public */}
+      <Route path="/docs" element={<Docs />}>
+        <Route index element={<DocsWelcome />} />
+        <Route path="installation" element={<Installation />} />
+        <Route path="getting-started" element={<GettingStarted />} />
+        <Route path="running-app" element={<RunningApp />} />
+        <Route path="developer-guide" element={<DeveloperGuide />} />
+        <Route path="contribute" element={<Contribute />} />
+      </Route>
 
       {/* Protected routes */}
       <Route
