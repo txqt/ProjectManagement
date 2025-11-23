@@ -73,7 +73,8 @@ export default function Installation() {
                 <Box component="ul" sx={{ pl: 3 }}>
                     <li><strong>Backend:</strong> .NET 8.0 SDK or later</li>
                     <li><strong>Frontend:</strong> Node.js 18.x or later</li>
-                    <li><strong>Database:</strong> SQL Server 2019 or later / PostgreSQL 13+</li>
+                    <li><strong>Database:</strong> PostgreSQL 13+ (recommended) or SQL Server 2019+</li>
+                    <li><strong>Cache:</strong> Redis 6.0 or later</li>
                     <li><strong>Package Manager:</strong> pnpm (recommended) or npm</li>
                     <li><strong>Memory:</strong> Minimum 4GB RAM (8GB recommended)</li>
                 </Box>
@@ -84,8 +85,8 @@ export default function Installation() {
                     <strong>Step 1:</strong> Clone the repository
                 </Typography>
                 <CodeBlock>
-                    {`git clone https://github.com/your-org/project-management.git
-cd project-management/src/Web`}
+                    {`git clone https://github.com/txqt/ProjectManagement.git
+cd ProjectManagement/src/Web`}
                 </CodeBlock>
 
                 <Typography variant="body1" paragraph sx={{ mt: 3 }}>
@@ -97,13 +98,27 @@ cd project-management/src/Web`}
                 <CodeBlock language="json">
                     {`{
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=ProjectManagement;Trusted_Connection=True;"
+    "DefaultConnection": "Server=127.0.0.1;Port=5432;Database=ProjectManagement;Username=postgres;Password=your_password;",
+    "Redis": "localhost:6379"
   }
 }`}
                 </CodeBlock>
 
                 <Typography variant="body1" paragraph sx={{ mt: 3 }}>
-                    <strong>Step 3:</strong> Restore dependencies and run migrations
+                    <strong>Step 3:</strong> Install and start Redis
+                </Typography>
+                <CodeBlock>
+                    {`# Using Docker (recommended)
+docker run -d -p 6379:6379 --name redis redis:latest
+
+# Or install Redis locally
+# Windows: Download from https://redis.io/download
+# Linux: sudo apt-get install redis-server
+# macOS: brew install redis`}
+                </CodeBlock>
+
+                <Typography variant="body1" paragraph sx={{ mt: 3 }}>
+                    <strong>Step 4:</strong> Restore dependencies and run migrations
                 </Typography>
                 <CodeBlock>
                     {`dotnet restore
@@ -143,7 +158,7 @@ npm install`}
                 </Typography>
                 <CodeBlock language="env">
                     {`VITE_API_ROOT=https://localhost:7000
-VITE_SIGNALR_HUB_URL=https://localhost:7000/boardHub`}
+VITE_SIGNALR_HUB_URL=https://localhost:7000/hubs/board`}
                 </CodeBlock>
 
                 <Typography variant="body1" paragraph sx={{ mt: 3 }}>
@@ -222,7 +237,10 @@ pnpm build`}
                         <strong>Port already in use:</strong> Change the port in <code>launchSettings.json</code> (backend) or <code>vite.config.js</code> (frontend)
                     </li>
                     <li>
-                        <strong>Database connection failed:</strong> Verify your connection string and ensure SQL Server is running
+                        <strong>Database connection failed:</strong> Verify your connection string and ensure PostgreSQL is running
+                    </li>
+                    <li>
+                        <strong>Redis connection failed:</strong> Ensure Redis is running on port 6379
                     </li>
                     <li>
                         <strong>CORS errors:</strong> Check that the API URL in frontend environment variables matches your backend URL

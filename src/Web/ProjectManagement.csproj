@@ -8,24 +8,27 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AutoMapper"/>
-        <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection"/>
-        <PackageReference Include="LexoRank"/>
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer"/>
-        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools"/>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi"/>
-        <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis"/>
-        <PackageReference Include="Newtonsoft.Json"/>
-        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL"/>
-        <PackageReference Include="StackExchange.Redis"/>
-        <PackageReference Include="Swashbuckle.AspNetCore"/>
-        <PackageReference Include="System.IdentityModel.Tokens.Jwt"/>
+        <PackageReference Include="AutoMapper" />
+        <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" />
+        <PackageReference Include="LexoRank" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+        <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+        <PackageReference Include="Serilog.AspNetCore" />
+        <PackageReference Include="Serilog.Enrichers.Environment" />
+        <PackageReference Include="Serilog.Sinks.File" />
+        <PackageReference Include="StackExchange.Redis" />
+        <PackageReference Include="Swashbuckle.AspNetCore" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Remove="Services\RoleHierarchyService.cs"/>
+        <Compile Remove="Services\RoleHierarchyService.cs" />
     </ItemGroup>
 
 </Project>

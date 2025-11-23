@@ -1,5 +1,4 @@
-﻿// src/Web/Controllers/BoardJoinRequestsController.cs
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using ProjectManagement.Models.Domain.Entities;

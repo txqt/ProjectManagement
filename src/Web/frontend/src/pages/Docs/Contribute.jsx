@@ -103,8 +103,8 @@ export default function Contribute() {
                 </Typography>
                 <CodeBlock>
                     {`# Fork on GitHub, then clone your fork
-git clone https://github.com/YOUR-USERNAME/project-management.git
-cd project-management`}
+git clone https://github.com/txqt/ProjectManagement.git
+cd ProjectManagement`}
                 </CodeBlock>
 
                 <Typography variant="body1" paragraph sx={{ mt: 3 }}>

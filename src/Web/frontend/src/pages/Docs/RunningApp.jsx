@@ -184,33 +184,33 @@ docker-compose down`}
 
             <Section title="Database Management">
                 <Typography variant="body1" paragraph>
-                    Manage your database effectively:
+                    Manage your PostgreSQL database effectively:
                 </Typography>
-
                 <Typography variant="h6" sx={{ fontWeight: 600, mt: 3, mb: 2 }}>
                     Backup Database
                 </Typography>
                 <CodeBlock>
-                    {`# SQL Server backup
-BACKUP DATABASE ProjectManagement 
-TO DISK = 'C:\\Backups\\ProjectManagement.bak'
-WITH FORMAT, MEDIANAME = 'ProjectManagementBackup';
-
-# Or use command line
-sqlcmd -S localhost -Q "BACKUP DATABASE ProjectManagement TO DISK='backup.bak'"`}
+                    {`# PostgreSQL backup using pg_dump
+pg_dump -h localhost -U postgres -d ProjectManagement > backup.sql
+# Or with custom format (recommended for large databases)
+pg_dump -h localhost -U postgres -Fc -d ProjectManagement -f backup.dump
+# Automated daily backup script
+pg_dump -h localhost -U postgres -Fc -d ProjectManagement -f backup_$(date +%Y%m%d).dump`}
                 </CodeBlock>
-
                 <Typography variant="h6" sx={{ fontWeight: 600, mt: 3, mb: 2 }}>
                     Restore Database
                 </Typography>
                 <CodeBlock>
-                    {`RESTORE DATABASE ProjectManagement 
-FROM DISK = 'C:\\Backups\\ProjectManagement.bak'
-WITH REPLACE;`}
+                    {`# Restore from SQL format
+psql -h localhost -U postgres -d ProjectManagement < backup.sql
+# Restore from custom format
+pg_restore -h localhost -U postgres -d ProjectManagement -c backup.dump
+# Create new database and restore
+createdb -h localhost -U postgres ProjectManagement_restored
+pg_restore -h localhost -U postgres -d ProjectManagement_restored backup.dump`}
                 </CodeBlock>
-
                 <Alert severity="info" sx={{ mt: 2 }}>
-                    <strong>Tip:</strong> Set up automated daily backups to prevent data loss.
+                    <strong>Tip:</strong> Set up automated daily backups using cron jobs or Windows Task Scheduler to prevent data loss.
                 </Alert>
             </Section>
 
@@ -255,40 +255,69 @@ docker run -d -p 6379:6379 redis
 
             <Section title="Monitoring & Logging">
                 <Typography variant="body1" paragraph>
-                    Keep track of your application health:
+                    The application uses Serilog for structured logging. Monitor your application health effectively:
                 </Typography>
-
                 <Typography variant="h6" sx={{ fontWeight: 600, mt: 3, mb: 2 }}>
-                    Application Insights
+                    Serilog Configuration
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                    Configure Application Insights for monitoring:
+                    Serilog is already configured in <code>appsettings.json</code>. Logs are written to:
                 </Typography>
-                <CodeBlock language="json">
-                    {`{
-  "ApplicationInsights": {
-    "InstrumentationKey": "your-instrumentation-key"
-  }
-}`}
+                <Box component="ul" sx={{ pl: 3, mb: 2 }}>
+                    <li><strong>Console:</strong> Real-time logs with formatted output</li>
+                    <li><strong>Files:</strong> <code>logs/log-YYYYMMDD.txt</code> with 30-day retention</li>
+                </Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, mt: 3, mb: 2 }}>
+                    Viewing Logs
+                </Typography>
+                <CodeBlock>
+                    {`# View today's log file
+cat logs/log-$(date +%Y%m%d).txt
+# Follow logs in real-time
+tail -f logs/log-$(date +%Y%m%d).txt
+# Search for errors
+grep "ERR" logs/log-*.txt
+# Search for specific user actions
+grep "userId" logs/log-*.txt`}
                 </CodeBlock>
-
                 <Typography variant="h6" sx={{ fontWeight: 600, mt: 3, mb: 2 }}>
                     Log Levels
                 </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                    Configure log levels in <code>appsettings.json</code>:
+                </Typography>
                 <CodeBlock language="json">
                     {`{
-  "Logging": {
-    "LogLevel": {
+  "Serilog": {
+    "MinimumLevel": {
       "Default": "Information",
-      "Microsoft": "Warning",
-      "Microsoft.Hosting.Lifetime": "Information"
+      "Override": {
+        "Microsoft": "Warning",
+        "Microsoft.AspNetCore": "Warning",
+        "Microsoft.EntityFrameworkCore": "Warning"
+      }
     }
   }
 }`}
                 </CodeBlock>
-
+                <Typography variant="h6" sx={{ fontWeight: 600, mt: 3, mb: 2 }}>
+                    Health Check Endpoint
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                    Monitor application health via HTTP endpoint:
+                </Typography>
+                <CodeBlock>
+                    {`# Check application health
+curl http://localhost:7000/health
+# Expected response:
+{
+  "status": "Healthy",
+  "timestamp": "2024-01-01T00:00:00Z",
+  "version": "1.0.0"
+}`}
+                </CodeBlock>
                 <Alert severity="info" sx={{ mt: 2 }}>
-                    Monitor key metrics: Response times, error rates, database query performance, and SignalR connection health.
+                    <strong>Key Metrics to Monitor:</strong> Response times, error rates, database query performance, SignalR connection health, Redis cache hit rates, and memory usage.
                 </Alert>
             </Section>
 

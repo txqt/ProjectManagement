@@ -18,8 +18,23 @@ using ProjectManagement.Services.Interfaces;
 using StackExchange.Redis;
 using System.Reflection;
 using System.Text;
+using Serilog;
+
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json")
+        .Build())
+    .CreateLogger();
+
+try
+{
+    Log.Information("Starting Project Management application");
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Add Serilog
+builder.Host.UseSerilog();
 
 // Add services to the container.
 builder.Services.AddControllers(options =>
@@ -217,6 +232,9 @@ app.UseRouting();
 
 app.UseCors("AllowReactApp");
 
+// Add Serilog request logging
+app.UseSerilogRequestLogging();
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -243,4 +261,13 @@ using (var scope = app.Services.CreateScope())
 // Initialize database and roles
 await DataSeeder.InitializeDatabase(app);
 
-app.Run();
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

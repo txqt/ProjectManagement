@@ -164,7 +164,7 @@ export default function GettingStarted() {
                     <li><strong>Attachments:</strong> Upload files, images, or documents</li>
                     <li><strong>Comments:</strong> Discuss and collaborate with team members</li>
                     <li><strong>Labels:</strong> Categorize and organize cards</li>
-                    <li><strong>Due Dates:</strong> Set deadlines and track progress</li>
+                    <li><strong>Checklists:</strong> Break down tasks into smaller steps</li>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
                     Simply drag and drop cards between columns to update their status.
@@ -195,29 +195,8 @@ export default function GettingStarted() {
                     <li>Comment on cards to keep discussions organized</li>
                     <li>Regularly update card positions to reflect current status</li>
                     <li>Use labels and categories to organize cards</li>
-                    <li>Set realistic due dates and track progress</li>
+                    <li>Utilize checklists for complex tasks</li>
                 </Box>
-            </Section>
-
-            <Section title="Keyboard Shortcuts">
-                <Typography variant="body1" paragraph>
-                    Speed up your workflow with these keyboard shortcuts:
-                </Typography>
-                <Paper
-                    sx={{
-                        p: 2,
-                        background: isDark ? '#1e1e1e' : '#f5f5f5',
-                        borderRadius: 2,
-                    }}
-                >
-                    <Box component="ul" sx={{ pl: 3, m: 0 }}>
-                        <li><code>N</code> - Create new card</li>
-                        <li><code>B</code> - Create new board</li>
-                        <li><code>/</code> - Focus search</li>
-                        <li><code>Esc</code> - Close dialogs</li>
-                        <li><code>?</code> - Show keyboard shortcuts</li>
-                    </Box>
-                </Paper>
             </Section>
 
             <Section title="Next Steps">
@@ -226,7 +205,7 @@ export default function GettingStarted() {
                 </Typography>
                 <Box component="ul" sx={{ pl: 3 }}>
                     <li>Check out the <strong>Developer Guide</strong> for API integration</li>
-                    <li>Learn about advanced features in <strong>Running Your App</strong></li>
+                    <li>Learn about deployment in <strong>Running Your Store</strong></li>
                     <li>Contribute to the project - see our <strong>Contribute</strong> guide</li>
                 </Box>
             </Section>
