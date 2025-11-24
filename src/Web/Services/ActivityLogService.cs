@@ -8,6 +8,7 @@ using ProjectManagement.Hubs;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Models.DTOs.Activity;
 using ProjectManagement.Services.Interfaces;
+using Serilog;
 
 namespace ProjectManagement.Services
 {
@@ -155,7 +156,7 @@ namespace ProjectManagement.Services
             var cached = await _cache.GetAsync<ActivitySummaryDto>(cacheKey);
             if (cached != null)
             {
-                Console.WriteLine($"✅ Cache hit for {cacheKey}");
+                Log.Information($"✅ Cache hit for {cacheKey}");
                 return cached;
             }
 
@@ -185,7 +186,7 @@ namespace ProjectManagement.Services
             };
 
             await _cache.SetAsync(cacheKey, summary, TimeSpan.FromMinutes(10));
-            Console.WriteLine($"📝 Cache set for {cacheKey}");
+            Log.Information($"📝 Cache set for {cacheKey}");
 
             return summary;
         }

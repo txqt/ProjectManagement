@@ -31,235 +31,236 @@ try
 {
     Log.Information("Starting Project Management application");
 
-var builder = WebApplication.CreateBuilder(args);
+    var builder = WebApplication.CreateBuilder(args);
 
-// Add Serilog
-builder.Host.UseSerilog();
+    // Add Serilog
+    builder.Host.UseSerilog();
 
-// Add services to the container.
-builder.Services.AddControllers(options =>
-{
-    options.Filters.Add<TemplateReadOnlyFilter>();
-});
-
-builder.Services.AddScoped<IAuthorizationHandler, NotTemplateAuthorizationHandler>();
-
-// Add Entity Framework
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Add Identity
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
-{
-    // Password settings
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequireUppercase = true;
-    options.Password.RequiredLength = 6;
-    options.Password.RequiredUniqueChars = 1;
-
-    // Lockout settings
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-    options.Lockout.MaxFailedAccessAttempts = 5;
-    options.Lockout.AllowedForNewUsers = true;
-
-    // User settings
-    options.User.AllowedUserNameCharacters =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
-    options.User.RequireUniqueEmail = true;
-})
-.AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders();
-
-builder.Services.AddSignalR();
-
-// Add JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("Jwt");
-var key = Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key not found"));
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.SaveToken = true;
-    options.RequireHttpsMetadata = false;
-    options.TokenValidationParameters = new TokenValidationParameters
+    // Add services to the container.
+    builder.Services.AddControllers(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = TimeSpan.Zero
-    };
+        options.Filters.Add<TemplateReadOnlyFilter>();
+    });
 
-    options.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
+    builder.Services.AddScoped<IAuthorizationHandler, NotTemplateAuthorizationHandler>();
+
+    // Add Entity Framework
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+    // Add Identity
+    builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
         {
-            var accessToken = context.Request.Query["access_token"];
-            var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/board"))
+            // Password settings
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequireUppercase = true;
+            options.Password.RequiredLength = 6;
+            options.Password.RequiredUniqueChars = 1;
+
+            // Lockout settings
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.AllowedForNewUsers = true;
+
+            // User settings
+            options.User.AllowedUserNameCharacters =
+                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+            options.User.RequireUniqueEmail = true;
+        })
+        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddDefaultTokenProviders();
+
+    builder.Services.AddSignalR();
+
+    // Add JWT Authentication
+    var jwtSettings = builder.Configuration.GetSection("Jwt");
+    var key = Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key not found"));
+
+    builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.SaveToken = true;
+            options.RequireHttpsMetadata = false;
+            options.TokenValidationParameters = new TokenValidationParameters
             {
-                context.Token = accessToken;
-            }
-            return Task.CompletedTask;
-        }
-    };
-});
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings["Issuer"],
+                ValidAudience = jwtSettings["Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ClockSkew = TimeSpan.Zero
+            };
 
-// Add Authorization with custom permission system
-builder.Services.AddAuthorization();
-builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
-builder.Services.AddScoped<IPermissionService, PermissionService>();
-builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+                    var path = context.HttpContext.Request.Path;
+                    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/board"))
+                    {
+                        context.Token = accessToken;
+                    }
 
-// Add AutoMapper
-builder.Services.AddAutoMapper(typeof(Program).Assembly);
+                    return Task.CompletedTask;
+                }
+            };
+        });
 
-// Add Application Services
-builder.Services.AddScoped<IBoardShareService, BoardShareService>();
-builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<IBoardService, BoardService>();
-builder.Services.AddScoped<IColumnService, ColumnService>();
-builder.Services.AddScoped<ICardService, CardService>();
-builder.Services.AddSingleton<BoardPresenceTracker>();
-builder.Services.AddScoped<IBoardNotificationService, BoardNotificationService>();
-builder.Services.AddScoped<IBoardInviteService, BoardInviteService>();
-builder.Services.AddScoped<INotificationService, NotificationService>();
-// builder.Services.AddScoped<LexoRankMigrationService>();
-builder.Services.AddScoped<IBoardJoinRequestService, BoardJoinRequestService>();
-builder.Services.AddHttpClient();
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-{
-    var configuration = builder.Configuration.GetConnectionString("Redis");
-    return ConnectionMultiplexer.Connect(configuration);
-});
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
-});
+    // Add Authorization with custom permission system
+    builder.Services.AddAuthorization();
+    builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+    builder.Services.AddScoped<IPermissionService, PermissionService>();
+    builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
-// Attachment & Comment services
-builder.Services.AddScoped<IAttachmentService, AttachmentService>();
-builder.Services.AddScoped<ICommentService, CommentService>();
+    // Add AutoMapper
+    builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
-// Activity Log Service
-builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
-
-// Background service to clean old activities (optional)
-builder.Services.AddHostedService<ActivityLogCleanupService>();
-
-// Add Background Services
-builder.Services.AddHostedService<NotificationCleanupService>();
-
-builder.Services.Configure<RateLimitConfig>(
-    builder.Configuration.GetSection("RateLimit"));
-
-builder.Services.AddSingleton<IRateLimiterService, RedisRateLimiterService>();
-
-builder.Services.AddScoped<ICacheService, RedisCacheService>();
-builder.Services.AddScoped<ICacheInvalidationService, CacheInvalidationService>();
-
-builder.Services.AddScoped<ILabelService, LabelService>();
-builder.Services.AddScoped<IChecklistService, ChecklistService>();
-
-builder.Services.AddScoped<LexoRankMigrationService>();
-
-// Add CORS
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowReactApp", policy =>
+    // Add Application Services
+    builder.Services.AddScoped<IBoardShareService, BoardShareService>();
+    builder.Services.AddScoped<ITokenService, TokenService>();
+    builder.Services.AddScoped<IBoardService, BoardService>();
+    builder.Services.AddScoped<IColumnService, ColumnService>();
+    builder.Services.AddScoped<ICardService, CardService>();
+    builder.Services.AddSingleton<BoardPresenceTracker>();
+    builder.Services.AddScoped<IBoardNotificationService, BoardNotificationService>();
+    builder.Services.AddScoped<IBoardInviteService, BoardInviteService>();
+    builder.Services.AddScoped<INotificationService, NotificationService>();
+    // builder.Services.AddScoped<LexoRankMigrationService>();
+    builder.Services.AddScoped<IBoardJoinRequestService, BoardJoinRequestService>();
+    builder.Services.AddHttpClient();
+    builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000") // React dev server
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
+        var configuration = builder.Configuration.GetConnectionString("Redis");
+        return ConnectionMultiplexer.Connect(configuration);
     });
-});
-
-// Add Swagger
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new() { Title = "Project management API", Version = "v1" });
-
-    // Add JWT Authentication to Swagger
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    builder.Services.AddStackExchangeRedisCache(options =>
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\"",
-        Name = "Authorization",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        options.Configuration = builder.Configuration.GetConnectionString("Redis");
     });
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    // Attachment & Comment services
+    builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+    builder.Services.AddScoped<ICommentService, CommentService>();
+
+    // Activity Log Service
+    builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
+
+    // Background service to clean old activities (optional)
+    builder.Services.AddHostedService<ActivityLogCleanupService>();
+
+    // Add Background Services
+    builder.Services.AddHostedService<NotificationCleanupService>();
+
+    builder.Services.Configure<RateLimitConfig>(
+        builder.Configuration.GetSection("RateLimit"));
+
+    builder.Services.AddSingleton<IRateLimiterService, RedisRateLimiterService>();
+
+    builder.Services.AddScoped<ICacheService, RedisCacheService>();
+    builder.Services.AddScoped<ICacheInvalidationService, CacheInvalidationService>();
+
+    builder.Services.AddScoped<ILabelService, LabelService>();
+    builder.Services.AddScoped<IChecklistService, ChecklistService>();
+
+    builder.Services.AddScoped<LexoRankMigrationService>();
+
+    // Add CORS
+    builder.Services.AddCors(options =>
     {
+        options.AddPolicy("AllowReactApp", policy =>
         {
+            policy.WithOrigins("http://localhost:5173", "http://localhost:3000") // React dev server
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
+        });
+    });
+
+    // Add Swagger
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(c =>
+    {
+        c.SwaggerDoc("v1", new() { Title = "Project management API", Version = "v1" });
+
+        // Add JWT Authentication to Swagger
+        c.AddSecurityDefinition("Bearer",
             new Microsoft.OpenApi.Models.OpenApiSecurityScheme
             {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\"",
+                Name = "Authorization",
+                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+                Scheme = "Bearer"
+            });
+
+        c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+        {
+            {
+                new Microsoft.OpenApi.Models.OpenApiSecurityScheme
                 {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
+                    Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                    {
+                        Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer"
+                    }
+                },
+                Array.Empty<string>()
+            }
+        });
     });
-});
 
-var app = builder.Build();
+    var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    // Configure the HTTP request pipeline.
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
 
-app.UseHttpsRedirection();
+    app.UseHttpsRedirection();
 
-app.UseRouting();
+    app.UseRouting();
 
-app.UseCors("AllowReactApp");
+    app.UseCors("AllowReactApp");
 
-// Add Serilog request logging
-app.UseSerilogRequestLogging();
+    // Add Serilog request logging
+    app.UseSerilogRequestLogging();
 
-app.UseDefaultFiles();
-app.UseStaticFiles();
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
 
 
-app.UseAuthentication();
-app.UseAuthorization();
-app.UseGlobalRateLimit();
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.UseGlobalRateLimit();
 
-app.MapGet("/health", () => Results.Ok("Healthy"));
+    app.MapGet("/health", () => Results.Ok("Healthy"));
 
-app.MapControllers();
+    app.MapControllers();
 
-app.MapFallbackToFile("index.html");
+    app.MapFallbackToFile("index.html");
 
-app.MapHub<BoardHub>("/hubs/board");
+    app.MapHub<BoardHub>("/hubs/board");
 
-// Apply any pending migrations automatically
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
-}
+    // Apply any pending migrations automatically
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Database.Migrate();
+    }
 
-// Initialize database and roles
-await DataSeeder.InitializeDatabase(app);
+    // Initialize database and roles
+    await DataSeeder.InitializeDatabase(app);
 
     app.Run();
 }

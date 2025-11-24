@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using ProjectManagement.Attributes;
 using ProjectManagement.Models.DTOs.Unplash;
 using ProjectManagement.Services.Interfaces;
+using Serilog;
 using System.Text.RegularExpressions;
 
 namespace ProjectManagement.Controllers
@@ -54,7 +55,7 @@ namespace ProjectManagement.Controllers
 
             if (cached != null)
             {
-                Console.WriteLine($"✅ Cache hit for {cacheKey}");
+                Log.Information($"✅ Cache hit for {cacheKey}");
                 return Ok(cached);
             }
 
@@ -79,7 +80,7 @@ namespace ProjectManagement.Controllers
 
                 await _cacheService.SetAsync(cacheKey, images, TimeSpan.FromHours(24));
 
-                Console.WriteLine($"📝 Cache set for {cacheKey}");
+                Log.Information($"📝 Cache set for {cacheKey}");
                 return Ok(images);
             }
             catch (Exception ex)

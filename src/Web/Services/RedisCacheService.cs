@@ -1,4 +1,5 @@
 ﻿using ProjectManagement.Services.Interfaces;
+using Serilog;
 using StackExchange.Redis;
 using System.Security.Cryptography;
 using System.Text;
@@ -54,20 +55,20 @@ namespace ProjectManagement.Services
             var expiration = expiry ?? TimeSpan.FromHours(DEFAULT_EXPIRY_HOURS);
 
             await _db.StringSetAsync(actualKey, json, expiration);
-            Console.WriteLine($"📝 Cache set for: {actualKey}");
+            Log.Information($"📝 Cache set for: {actualKey}");
         }
 
         public async Task RemoveAsync(string key)
         {
             await _db.KeyDeleteAsync(key);
-            Console.WriteLine($"❌ Cache removed for: {key}");
+            Log.Information($"❌ Cache removed for: {key}");
         }
 
         public async Task ClearAsync()
         {
             var server = _connection.GetServer(_connection.GetEndPoints().First());
             await server.FlushDatabaseAsync();
-            Console.WriteLine("🗑️ All cache cleared");
+            Log.Information("🗑️ All cache cleared");
         }
         
         public async Task RemoveByPatternAsync(string pattern)
