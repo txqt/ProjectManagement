@@ -75,13 +75,56 @@ namespace ProjectManagement.Controllers
             {
                 return Unauthorized("Invalid credentials");
             }
-
-            var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
-
+            
+            if (!await _userManager.IsEmailConfirmedAsync(user))
+            {
+                return Unauthorized(new { 
+                    message = "Email not confirmed. Please check your email.",
+                    requiresEmailConfirmation = true
+                });
+            }
+            
+            if (await _userManager.IsLockedOutAsync(user))
+            {
+                var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
+                if (lockoutEnd.HasValue)
+                {
+                    var minutesRemaining = (int)(lockoutEnd.Value - DateTimeOffset.UtcNow).TotalMinutes;
+            
+                    return Unauthorized(new { 
+                        message = $"Account locked. Try again in {minutesRemaining} minutes.",
+                        lockedUntil = lockoutEnd.Value,
+                        isLockedOut = true
+                    });
+                }
+            }
+            var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, lockoutOnFailure: true);
+    
             if (!result.Succeeded)
             {
-                return Unauthorized("Email or password are incorrect.");
+                if (result.IsLockedOut)
+                {
+                    var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
+                    return Unauthorized(new { 
+                        message = "Account locked. Too many failed attempts.",
+                        lockedUntil = lockoutEnd,
+                        isLockedOut = true
+                    });
+                }
+        
+                // Get failed attempts count
+                var failedAttempts = await _userManager.GetAccessFailedCountAsync(user);
+                var maxAttempts = _userManager.Options.Lockout.MaxFailedAccessAttempts;
+                var remainingAttempts = maxAttempts - failedAttempts;
+        
+                return Unauthorized(new { 
+                    message = $"Invalid credentials ({failedAttempts}/{maxAttempts} attempts used)",
+                    remainingAttempts = remainingAttempts > 0 ? remainingAttempts : 0,
+                    failedAttempts = failedAttempts
+                });
             }
+            // Reset failed attempts on successful login
+            await _userManager.ResetAccessFailedCountAsync(user);
 
             var token = await _tokenService.GenerateTokenAsync(user);
 
