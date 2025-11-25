@@ -23,6 +23,7 @@ import GettingStarted from './pages/Docs/GettingStarted.jsx';
 import RunningApp from './pages/Docs/RunningApp.jsx';
 import DeveloperGuide from './pages/Docs/DeveloperGuide.jsx';
 import Contribute from './pages/Docs/Contribute.jsx';
+import { GlobalKeyboardShortcutsProvider } from '~/contexts/GlobalKeyboardShortcutsProvider';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -183,7 +184,9 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <AppRoutes />
+        <GlobalKeyboardShortcutsProvider>
+          <AppRoutes />
+        </GlobalKeyboardShortcutsProvider>
       </Router>
     </AuthProvider>
   );

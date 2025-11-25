@@ -3,20 +3,17 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { ThemeModeProvider } from '~/ThemeModeProvider';
 import { ToastContainer } from 'react-toastify';
+import ErrorBoundary from './components/ErrorBoundary';
+import { ToastProvider } from './contexts/ToastProvider';
 
-createRoot(document.getElementById("root")).render(
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
     <ThemeModeProvider>
-        <App />
-        <ToastContainer
-            position="bottom-right"
-            autoClose={1000}
-            hideProgressBar={true}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-        />
+      <ErrorBoundary>
+        <ToastProvider>
+          <App />
+        </ToastProvider>
+      </ErrorBoundary>
     </ThemeModeProvider>
+  </React.StrictMode>
 );

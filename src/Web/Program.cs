@@ -12,6 +12,7 @@ using ProjectManagement.Extensions;
 using ProjectManagement.Filters;
 using ProjectManagement.Hubs;
 using ProjectManagement.Mappings;
+using ProjectManagement.Middleware;
 using ProjectManagement.Models.Domain.Entities;
 using ProjectManagement.Services;
 using ProjectManagement.Services.Interfaces;
@@ -228,6 +229,7 @@ try
     }
 
     app.UseHttpsRedirection();
+    app.UseGlobalExceptionHandler();
 
     app.UseRouting();
 

@@ -25,6 +25,8 @@ import useThemeMode from '~/hooks/useThemeMode';
 import Profiles from './Menus/Profiles';
 import SearchBox from '../Search/SearchBox';
 import AdvancedSearchDialog from '../Search/AdvancedSearchDialog';
+import { useGlobalKeyboardShortcutsContext } from '~/contexts/GlobalKeyboardShortcutsProvider';
+import { useEffect, useRef } from 'react';
 
 function AppBar() {
     const { themeMode, setThemeMode } = useThemeMode();
@@ -47,6 +49,18 @@ function AppBar() {
     const handleCloseAdvancedSearch = () => {
         setOpenAdvancedSearch(false);
     };
+
+    const { registerSearchFocus } = useGlobalKeyboardShortcutsContext();
+    const searchInputRef = useRef(null);
+    useEffect(() => {
+        registerSearchFocus(() => {
+            // Focus search when / is pressed
+            const searchInput = document.querySelector('input[placeholder*="Search"]');
+            if (searchInput) {
+                searchInput.focus();
+            }
+        });
+    }, [registerSearchFocus]);
 
     const menuContent = (
         <Box sx={{ width: 250, p: 2 }}>
