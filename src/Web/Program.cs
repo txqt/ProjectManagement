@@ -229,6 +229,38 @@ try
     }
 
     app.UseHttpsRedirection();
+    // Security Headers using NWebsec
+    app.UseXContentTypeOptions();
+    app.UseReferrerPolicy(opts => opts.NoReferrer());
+    app.UseXXssProtection(opts => opts.Disabled()); // Deprecated, explicitly disable
+    app.UseXfo(opts => opts.Deny());
+    // Content Security Policy with Nonce
+    app.UseCsp(opts => opts
+        .DefaultSources(s => s.Self())
+        .ScriptSources(s => s.Self())
+        .StyleSources(s => s.Self())
+        .FontSources(s => s.Self())
+        .ImageSources(s => s.Self().CustomSources("data:", "https:"))
+        .ConnectSources(s => s.Self())
+        .FrameAncestors(s => s.None())
+    );
+    // HSTS (only in production)
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHsts(opts => opts
+            .MaxAge(365)
+            .IncludeSubdomains()
+            .Preload()
+        );
+    }
+
+    // Permissions Policy
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers.Add("Permissions-Policy",
+            "geolocation=(), microphone=(), camera=(), payment=()");
+        await next();
+    });
     app.UseGlobalExceptionHandler();
 
     app.UseRouting();
