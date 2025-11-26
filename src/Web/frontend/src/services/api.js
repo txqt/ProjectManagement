@@ -161,6 +161,7 @@ class ApiService {
     enable2FA(...args) { return this.userApi.enable2FA(...args); }
     verify2FA(...args) { return this.userApi.verify2FA(...args); }
     disable2FA(...args) { return this.userApi.disable2FA(...args); }
+    verify2FALogin(...args) { return this.userApi.verify2FALogin(...args); }
 
     // ========== ACTIVITIES ==========
     getCardActivities(...args) { return this.miscApi.getCardActivities(...args); }

@@ -18,6 +18,8 @@ import { useAuth } from '~/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { keyframes } from '@mui/system';
+import TwoFactorDialog from '~/components/TwoFactorDialog';
+import { apiService } from '~/services/api';
 
 // Animations
 const fadeInUp = keyframes`
@@ -49,6 +51,11 @@ const LoginForm = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const [show2FADialog, setShow2FADialog] = useState(false);
+  const [tempToken, setTempToken] = useState('');
+  const [twoFactorError, setTwoFactorError] = useState('');
+  const [verifying2FA, setVerifying2FA] = useState(false);
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -62,16 +69,57 @@ const LoginForm = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    try {
+      const result = await apiService.login(credentials);
 
-    const result = await login(credentials);
-    if (result.success) {
-      console.log('Redirecting to:', returnUrl);
-      navigate(returnUrl);
-    } else {
-      setError(result.error);
+      // CHECK IF 2FA IS REQUIRED
+      if (result.requiresTwoFactor) {
+        setTempToken(result.tempToken);
+        setShow2FADialog(true);
+        setLoading(false);
+        return;
+      }
+
+      // Normal login success
+      if (result.token && result.user) {
+        localStorage.setItem('authToken', result.token);
+        localStorage.setItem('userData', JSON.stringify(result.user));
+        apiService.setAuthToken(result.token);
+        console.log('Redirecting to:', returnUrl);
+        navigate(returnUrl);
+        window.location.reload();
+      } else {
+        setError(result.error || 'Login failed');
+      }
+    } catch (err) {
+      setError(err.message || 'Login failed');
     }
-
     setLoading(false);
+  };
+
+  const handle2FAVerify = async (code) => {
+    setVerifying2FA(true);
+    setTwoFactorError('');
+    try {
+      const result = await apiService.verify2FALogin({
+        tempToken: tempToken,
+        code: code
+      });
+      if (result.token && result.user) {
+        // Login successful - save both token and user data
+        localStorage.setItem('authToken', result.token);
+        localStorage.setItem('userData', JSON.stringify(result.user));
+        apiService.setAuthToken(result.token);
+        setShow2FADialog(false);
+        navigate(returnUrl);
+        window.location.reload(); // Reload to update AuthProvider
+      } else {
+        setTwoFactorError('Invalid 2FA code');
+      }
+    } catch (err) {
+      setTwoFactorError(err.message || 'Invalid 2FA code');
+    }
+    setVerifying2FA(false);
   };
 
   const handleChange = (e) => {
@@ -294,6 +342,14 @@ const LoginForm = () => {
           </Box>
         </CardContent>
       </Card>
+      <TwoFactorDialog
+        open={show2FADialog}
+        onClose={() => setShow2FADialog(false)}
+        onVerify={handle2FAVerify}
+        tempToken={tempToken}
+        loading={verifying2FA}
+        error={twoFactorError}
+      />
     </Box>
   );
 };

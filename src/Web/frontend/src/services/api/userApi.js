@@ -56,6 +56,13 @@ class UserApiService extends BaseApiService {
             method: 'POST'
         });
     }
+
+    async verify2FALogin(data) {
+    return this.request('/auth/verify-2fa', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+}
 }
 
 export default UserApiService;
