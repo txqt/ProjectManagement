@@ -1,14 +1,9 @@
+using ProjectManagement.Services.Interfaces;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
 namespace ProjectManagement.Services
 {
-    public interface ITempTokenService
-    {
-        string GenerateTempToken(string userId);
-        string ValidateTempToken(string token);
-    }
-
     public class TempTokenService : ITempTokenService
     {
         private readonly ILogger<TempTokenService> _logger;

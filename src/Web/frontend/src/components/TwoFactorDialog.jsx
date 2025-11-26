@@ -10,33 +10,50 @@ import {
     Box,
     Alert,
     CircularProgress,
-    IconButton
+    IconButton,
+    Link
 } from '@mui/material';
 import {
     Close as CloseIcon,
-    Shield as ShieldIcon
+    Shield as ShieldIcon,
+    VpnKey as KeyIcon
 } from '@mui/icons-material';
 
 function TwoFactorDialog({ open, onClose, onVerify, tempToken, loading, error }) {
     const [code, setCode] = useState('');
+    const [useRecoveryCode, setUseRecoveryCode] = useState(false);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (code.length === 6) {
+        const minLength = useRecoveryCode ? 8 : 6;
+        if (code.length >= minLength) {
             onVerify(code);
         }
     };
 
     const handleCodeChange = (e) => {
-        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-        setCode(value);
+        if (useRecoveryCode) {
+            // Recovery code: alphanumeric, no length limit during typing
+            const value = e.target.value.toUpperCase();
+            setCode(value);
+        } else {
+            // TOTP code: 6 digits only
+            const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+            setCode(value);
+        }
     };
 
     const handleClose = () => {
         if (!loading) {
             setCode('');
+            setUseRecoveryCode(false);
             onClose();
         }
+    };
+
+    const toggleMode = () => {
+        setCode('');
+        setUseRecoveryCode(!useRecoveryCode);
     };
 
     return (
@@ -54,8 +71,10 @@ function TwoFactorDialog({ open, onClose, onVerify, tempToken, loading, error })
                 pb: 1
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ShieldIcon color="primary" />
-                    <Typography variant="h6">Two-Factor Authentication</Typography>
+                    {useRecoveryCode ? <KeyIcon color="primary" /> : <ShieldIcon color="primary" />}
+                    <Typography variant="h6">
+                        {useRecoveryCode ? 'Recovery Code' : 'Two-Factor Authentication'}
+                    </Typography>
                 </Box>
                 <IconButton
                     onClick={handleClose}
@@ -69,7 +88,10 @@ function TwoFactorDialog({ open, onClose, onVerify, tempToken, loading, error })
             <form onSubmit={handleSubmit}>
                 <DialogContent>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        Enter the 6-digit code from your authenticator app to complete login.
+                        {useRecoveryCode
+                            ? 'Enter one of your recovery codes to complete login.'
+                            : 'Enter the 6-digit code from your authenticator app to complete login.'
+                        }
                     </Typography>
 
                     {error && (
@@ -80,28 +102,54 @@ function TwoFactorDialog({ open, onClose, onVerify, tempToken, loading, error })
 
                     <TextField
                         autoFocus
-                        label="Authentication Code"
+                        label={useRecoveryCode ? "Recovery Code" : "Authentication Code"}
                         value={code}
                         onChange={handleCodeChange}
                         fullWidth
                         required
                         disabled={loading}
-                        placeholder="000000"
-                        inputProps={{
-                            maxLength: 6,
-                            pattern: '[0-9]{6}',
-                            style: {
-                                fontSize: '1.5rem',
-                                letterSpacing: '0.5rem',
-                                textAlign: 'center'
-                            }
-                        }}
-                        helperText="Enter the 6-digit code from your authenticator app"
+                        placeholder={useRecoveryCode ? "XXXXXXXX" : "000000"}
+                        inputProps={
+                            useRecoveryCode
+                                ? {
+                                    style: {
+                                        fontSize: '1.2rem',
+                                        letterSpacing: '0.2rem',
+                                        textAlign: 'center',
+                                        fontFamily: 'monospace'
+                                    }
+                                }
+                                : {
+                                    maxLength: 6,
+                                    pattern: '[0-9]{6}',
+                                    style: {
+                                        fontSize: '1.5rem',
+                                        letterSpacing: '0.5rem',
+                                        textAlign: 'center'
+                                    }
+                                }
+                        }
+                        helperText={useRecoveryCode
+                            ? "Enter the recovery code exactly as shown (case-insensitive)"
+                            : "Enter the 6-digit code from your authenticator app"
+                        }
                     />
 
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
-                        Lost your device? You can use a recovery code instead.
-                    </Typography>
+                    <Box sx={{ mt: 2, textAlign: 'center' }}>
+                        <Link
+                            component="button"
+                            type="button"
+                            variant="caption"
+                            onClick={toggleMode}
+                            disabled={loading}
+                            sx={{ cursor: 'pointer' }}
+                        >
+                            {useRecoveryCode
+                                ? '← Back to authenticator code'
+                                : 'Lost your device? Use a recovery code →'
+                            }
+                        </Link>
+                    </Box>
                 </DialogContent>
 
                 <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -114,8 +162,8 @@ function TwoFactorDialog({ open, onClose, onVerify, tempToken, loading, error })
                     <Button
                         type="submit"
                         variant="contained"
-                        disabled={loading || code.length !== 6}
-                        startIcon={loading ? <CircularProgress size={20} /> : <ShieldIcon />}
+                        disabled={loading || (useRecoveryCode ? code.length < 8 : code.length !== 6)}
+                        startIcon={loading ? <CircularProgress size={20} /> : (useRecoveryCode ? <KeyIcon /> : <ShieldIcon />)}
                     >
                         {loading ? 'Verifying...' : 'Verify'}
                     </Button>
