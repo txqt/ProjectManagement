@@ -27,6 +27,35 @@ class UserApiService extends BaseApiService {
             body: JSON.stringify(data)
         });
     }
+
+    // Get 2FA status
+    async get2FAStatus() {
+        return this.request('/twofactor/status', {
+            method: 'GET'
+        });
+    }
+
+    // Enable 2FA
+    async enable2FA() {
+        return this.request('/twofactor/enable', {
+            method: 'POST'
+        });
+    }
+
+    // Verify 2FA code
+    async verify2FA(code) {
+        return this.request('/twofactor/verify', {
+            method: 'POST',
+            body: JSON.stringify({ code })
+        });
+    }
+
+    // Disable 2FA
+    async disable2FA() {
+        return this.request('/twofactor/disable', {
+            method: 'POST'
+        });
+    }
 }
 
 export default UserApiService;

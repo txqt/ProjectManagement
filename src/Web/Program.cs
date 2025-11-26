@@ -174,6 +174,8 @@ try
     builder.Services.AddScoped<IChecklistService, ChecklistService>();
 
     builder.Services.AddScoped<LexoRankMigrationService>();
+    
+    builder.Services.AddSingleton<ITempTokenService, TempTokenService>();
 
     // Add CORS
     builder.Services.AddCors(options =>

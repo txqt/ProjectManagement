@@ -156,6 +156,12 @@ class ApiService {
     updateProfile(...args) { return this.userApi.updateProfile(...args); }
     changePassword(...args) { return this.userApi.changePassword(...args); }
 
+    // ========== TWO-FACTOR AUTHENTICATION ==========
+    get2FAStatus(...args) { return this.userApi.get2FAStatus(...args); }
+    enable2FA(...args) { return this.userApi.enable2FA(...args); }
+    verify2FA(...args) { return this.userApi.verify2FA(...args); }
+    disable2FA(...args) { return this.userApi.disable2FA(...args); }
+
     // ========== ACTIVITIES ==========
     getCardActivities(...args) { return this.miscApi.getCardActivities(...args); }
     getBoardActivities(...args) { return this.miscApi.getBoardActivities(...args); }

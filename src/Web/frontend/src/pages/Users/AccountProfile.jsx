@@ -21,7 +21,11 @@ import {
     Person as PersonIcon,
     Edit as EditIcon,
     Lock as LockIcon,
-    Save as SaveIcon
+    Save as SaveIcon,
+    Security as SecurityIcon,
+    Shield as ShieldIcon,
+    QrCode2 as QrCodeIcon,
+    ContentCopy as CopyIcon
 } from '@mui/icons-material';
 import { useAuth } from '~/hooks/useAuth';
 import { apiService } from '~/services/api';
@@ -56,6 +60,20 @@ function AccountProfile() {
         confirmPassword: ''
     });
 
+    // 2FA state
+    const [twoFactorStatus, setTwoFactorStatus] = useState({
+        isTwoFactorEnabled: false,
+        recoveryCodesLeft: 0
+    });
+    const [twoFactorSetup, setTwoFactorSetup] = useState({
+        sharedKey: '',
+        authenticatorUri: '',
+        qrCodeUrl: ''
+    });
+    const [verificationCode, setVerificationCode] = useState('');
+    const [recoveryCodes, setRecoveryCodes] = useState([]);
+    const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
+
     // Load profile on mount
     useEffect(() => {
         loadProfile();
@@ -71,6 +89,9 @@ function AccountProfile() {
                 email: data.email || '',
                 avatar: data.avatar || ''
             });
+
+            // Load 2FA status
+            await load2FAStatus();
         } catch (error) {
             showSnackbar(error.message || 'Failed to load profile', 'error');
         } finally {
@@ -146,6 +167,90 @@ function AccountProfile() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // 2FA Functions
+    const load2FAStatus = async () => {
+        try {
+            const status = await apiService.get2FAStatus();
+            setTwoFactorStatus(status);
+        } catch (error) {
+            console.error('Failed to load 2FA status:', error);
+        }
+    };
+
+    const handleEnable2FA = async () => {
+        try {
+            setLoading(true);
+            const data = await apiService.enable2FA();
+            setTwoFactorSetup({
+                sharedKey: data.sharedKey,
+                authenticatorUri: data.authenticatorUri,
+                qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.authenticatorUri)}`
+            });
+            showSnackbar('Scan the QR code with your authenticator app', 'info');
+        } catch (error) {
+            showSnackbar(error.message || 'Failed to enable 2FA', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerify2FA = async (e) => {
+        e.preventDefault();
+        if (!verificationCode || verificationCode.length !== 6) {
+            showSnackbar('Please enter a valid 6-digit code', 'error');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const result = await apiService.verify2FA(verificationCode);
+
+            if (result.success) {
+                setRecoveryCodes(result.recoveryCodes);
+                setShowRecoveryCodes(true);
+                setTwoFactorStatus({
+                    isTwoFactorEnabled: true,
+                    recoveryCodesLeft: result.recoveryCodes.length
+                });
+                setTwoFactorSetup({ sharedKey: '', authenticatorUri: '', qrCodeUrl: '' });
+                setVerificationCode('');
+                showSnackbar('Two-factor authentication enabled successfully!', 'success');
+            }
+        } catch (error) {
+            showSnackbar(error.message || 'Invalid verification code', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDisable2FA = async () => {
+        if (!window.confirm('Are you sure you want to disable two-factor authentication? This will make your account less secure.')) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await apiService.disable2FA();
+            setTwoFactorStatus({
+                isTwoFactorEnabled: false,
+                recoveryCodesLeft: 0
+            });
+            setRecoveryCodes([]);
+            setShowRecoveryCodes(false);
+            showSnackbar('Two-factor authentication disabled', 'warning');
+        } catch (error) {
+            showSnackbar(error.message || 'Failed to disable 2FA', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCopyRecoveryCodes = () => {
+        const codesText = recoveryCodes.join('\n');
+        navigator.clipboard.writeText(codesText);
+        showSnackbar('Recovery codes copied to clipboard', 'success');
     };
 
     const showSnackbar = (message, severity) => {
@@ -225,6 +330,7 @@ function AccountProfile() {
                         <Tab icon={<PersonIcon />} label="Profile Info" />
                         <Tab icon={<EditIcon />} label="Edit Profile" />
                         <Tab icon={<LockIcon />} label="Change Password" />
+                        <Tab icon={<SecurityIcon />} label="Security (2FA)" />
                     </Tabs>
 
                     <CardContent>
@@ -345,7 +451,7 @@ function AccountProfile() {
                                         fullWidth
                                         required
                                         disabled={loading}
-                                        helperText="Password must be at least 6 characters"
+                                        helperText="Password must be at least 8 characters with uppercase, lowercase, number, and special character"
                                     />
                                     <TextField
                                         label="Confirm New Password"
@@ -369,6 +475,168 @@ function AccountProfile() {
                                     </Button>
                                 </Stack>
                             </Box>
+                        </TabPanel>
+
+                        {/* Tab 4: Security (2FA) */}
+                        <TabPanel value={tabValue} index={3}>
+                            <Stack spacing={3}>
+                                {/* 2FA Status */}
+                                <Box sx={{
+                                    p: 2,
+                                    bgcolor: twoFactorStatus.isTwoFactorEnabled ? 'success.light' : 'warning.light',
+                                    borderRadius: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 2
+                                }}>
+                                    <ShieldIcon sx={{ fontSize: 40, color: twoFactorStatus.isTwoFactorEnabled ? 'success.dark' : 'warning.dark' }} />
+                                    <Box>
+                                        <Typography variant="h6">
+                                            Two-Factor Authentication {twoFactorStatus.isTwoFactorEnabled ? 'Enabled' : 'Disabled'}
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            {twoFactorStatus.isTwoFactorEnabled
+                                                ? `Your account is protected with 2FA. ${twoFactorStatus.recoveryCodesLeft} recovery codes remaining.`
+                                                : 'Add an extra layer of security to your account'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {!twoFactorStatus.isTwoFactorEnabled && !twoFactorSetup.qrCodeUrl && (
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                            Two-factor authentication adds an extra layer of security to your account.
+                                            You'll need to enter a code from your authenticator app in addition to your password when logging in.
+                                        </Typography>
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            startIcon={<SecurityIcon />}
+                                            onClick={handleEnable2FA}
+                                            disabled={loading}
+                                        >
+                                            Enable Two-Factor Authentication
+                                        </Button>
+                                    </Box>
+                                )}
+
+                                {/* Setup 2FA - Show QR Code */}
+                                {twoFactorSetup.qrCodeUrl && !twoFactorStatus.isTwoFactorEnabled && (
+                                    <Box>
+                                        <Alert severity="info" sx={{ mb: 2 }}>
+                                            Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+                                        </Alert>
+
+                                        <Box sx={{ textAlign: 'center', mb: 3 }}>
+                                            <img
+                                                src={twoFactorSetup.qrCodeUrl}
+                                                alt="2FA QR Code"
+                                                style={{ maxWidth: '200px', border: '2px solid #ddd', borderRadius: '8px' }}
+                                            />
+                                        </Box>
+
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                            Or enter this key manually:
+                                        </Typography>
+                                        <Box sx={{
+                                            p: 2,
+                                            bgcolor: 'grey.100',
+                                            borderRadius: 1,
+                                            fontFamily: 'monospace',
+                                            wordBreak: 'break-all',
+                                            mb: 3
+                                        }}>
+                                            {twoFactorSetup.sharedKey}
+                                        </Box>
+
+                                        <Divider sx={{ my: 2 }} />
+
+                                        <Typography variant="subtitle1" gutterBottom>
+                                            Verify Setup
+                                        </Typography>
+                                        <Box component="form" onSubmit={handleVerify2FA}>
+                                            <Stack spacing={2}>
+                                                <TextField
+                                                    label="Enter 6-digit code"
+                                                    value={verificationCode}
+                                                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                    fullWidth
+                                                    required
+                                                    disabled={loading}
+                                                    helperText="Enter the 6-digit code from your authenticator app"
+                                                    inputProps={{ maxLength: 6, pattern: '[0-9]{6}' }}
+                                                />
+                                                <Button
+                                                    type="submit"
+                                                    variant="contained"
+                                                    color="success"
+                                                    disabled={loading || verificationCode.length !== 6}
+                                                    startIcon={loading ? <CircularProgress size={20} /> : <ShieldIcon />}
+                                                >
+                                                    {loading ? 'Verifying...' : 'Verify and Enable 2FA'}
+                                                </Button>
+                                            </Stack>
+                                        </Box>
+                                    </Box>
+                                )}
+
+                                {/* Recovery Codes Display */}
+                                {showRecoveryCodes && recoveryCodes.length > 0 && (
+                                    <Box>
+                                        <Alert severity="warning" sx={{ mb: 2 }}>
+                                            <Typography variant="subtitle2" gutterBottom>
+                                                Save Your Recovery Codes
+                                            </Typography>
+                                            <Typography variant="body2">
+                                                Store these codes in a safe place. You can use them to access your account if you lose your authenticator device.
+                                                Each code can only be used once.
+                                            </Typography>
+                                        </Alert>
+
+                                        <Box sx={{
+                                            p: 2,
+                                            bgcolor: 'grey.100',
+                                            borderRadius: 1,
+                                            mb: 2
+                                        }}>
+                                            <Stack spacing={1}>
+                                                {recoveryCodes.map((code, index) => (
+                                                    <Typography key={index} sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                                                        {index + 1}. {code}
+                                                    </Typography>
+                                                ))}
+                                            </Stack>
+                                        </Box>
+
+                                        <Button
+                                            variant="outlined"
+                                            startIcon={<CopyIcon />}
+                                            onClick={handleCopyRecoveryCodes}
+                                            fullWidth
+                                        >
+                                            Copy Recovery Codes
+                                        </Button>
+                                    </Box>
+                                )}
+
+                                {/* Disable 2FA */}
+                                {twoFactorStatus.isTwoFactorEnabled && (
+                                    <Box sx={{ mt: 3 }}>
+                                        <Divider sx={{ mb: 2 }} />
+                                        <Typography variant="subtitle2" color="error" gutterBottom>
+                                            Danger Zone
+                                        </Typography>
+                                        <Button
+                                            variant="outlined"
+                                            color="error"
+                                            onClick={handleDisable2FA}
+                                            disabled={loading}
+                                        >
+                                            Disable Two-Factor Authentication
+                                        </Button>
+                                    </Box>
+                                )}
+                            </Stack>
                         </TabPanel>
                     </CardContent>
                 </Card>
