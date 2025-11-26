@@ -4,17 +4,17 @@ import { usePermissionStore } from '~/stores/permissionStore';
 import { useAuth } from './useAuth';
 
 export const usePermissions = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const permissions = usePermissionStore(state => state.permissions);
   const loading = usePermissionStore(state => state.loading);
   const loadPermissions = usePermissionStore(state => state.loadPermissions);
   const refreshPermissions = usePermissionStore(state => state.refreshPermissions);
 
   useEffect(() => {
-    if (user?.id) {
-      loadPermissions(); // chỉ gọi store.loadPermissions(), store đảm bảo không gọi nhiều lần
+    if (token || user) {
+      loadPermissions();
     }
-  }, [user?.id, loadPermissions]);
+  }, [token, user, loadPermissions]);
 
   const hasSystemPermission = useCallback((permission) => {
     if (!permissions) return false;
